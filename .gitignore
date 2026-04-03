@@ -1,0 +1,9 @@
+.DS_Store
+.pytest_cache/
+.venv/
+__pycache__/
+*.pyc
+
+/jobs_market_v2/runtime/
+/jobs_market_v2/.env
+/jobs_market_v2/.jupyter_smoke/
