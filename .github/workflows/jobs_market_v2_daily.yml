@@ -40,9 +40,16 @@ jobs:
           from pathlib import Path
 
           encoded_path = Path(".deploy/jobs_market_v2_source.tar.gz.base64")
-          if not encoded_path.exists():
+          chunk_paths = sorted(Path(".deploy").glob("jobs_market_v2_source.tar.gz.base64.part-*"))
+          if encoded_path.exists():
+              encoded = "".join(encoded_path.read_text(encoding="utf-8").splitlines())
+          elif chunk_paths:
+              encoded = "".join(
+                  "".join(path.read_text(encoding="utf-8").splitlines())
+                  for path in chunk_paths
+              )
+          else:
               raise SystemExit(f"Missing source bundle: {encoded_path}")
-          encoded = "".join(encoded_path.read_text(encoding="utf-8").splitlines())
           tar_path = Path("jobs_market_v2_source.tar.gz")
           tar_path.write_bytes(base64.b64decode(encoded))
           PY
