@@ -1,0 +1,181 @@
+sources:
+  - company_name: 당근
+    company_tier: 스타트업
+    source_name: 당근 Greenhouse 공개 채용
+    source_url: https://boards-api.greenhouse.io/v1/boards/daangn/jobs?content=true
+    source_type: greenhouse
+    official_domain: about.daangn.com
+    is_official_hint: true
+    structure_hint: json
+    discovery_method: manual_seed_live
+  - company_name: 쿠팡
+    company_tier: 대기업
+    source_name: 쿠팡 Greenhouse 공개 채용
+    source_url: https://boards-api.greenhouse.io/v1/boards/coupang/jobs?content=true
+    source_type: greenhouse
+    official_domain: coupang.jobs
+    is_official_hint: true
+    structure_hint: json
+    discovery_method: manual_seed_live
+  - company_name: 채널코퍼레이션
+    company_tier: 스타트업
+    source_name: 채널코퍼레이션 Lever 공개 채용
+    source_url: https://api.lever.co/v0/postings/zoyi?mode=json
+    source_type: lever
+    official_domain: channel.io
+    is_official_hint: true
+    structure_hint: json
+    discovery_method: manual_seed_live
+  - company_name: 센드버드
+    company_tier: 스타트업
+    source_name: 센드버드 Greenhouse 공개 채용
+    source_url: https://boards-api.greenhouse.io/v1/boards/sendbird/jobs?content=true
+    source_type: greenhouse
+    official_domain: sendbird.com
+    is_official_hint: true
+    structure_hint: json
+    discovery_method: manual_seed_live
+  - company_name: 클로버추얼패션
+    company_tier: 중견/중소
+    source_name: 클로버추얼패션 Lever 공개 채용
+    source_url: https://api.lever.co/v0/postings/clovirtualfashion?mode=json
+    source_type: lever
+    official_domain: clovirtualfashion.com
+    is_official_hint: true
+    structure_hint: json
+    discovery_method: manual_seed_live
+  - company_name: 몰로코
+    company_tier: 외국계 한국법인
+    source_name: 몰로코 Greenhouse 공개 채용
+    source_url: https://boards-api.greenhouse.io/v1/boards/moloco/jobs?content=true
+    source_type: greenhouse
+    official_domain: moloco.com
+    is_official_hint: true
+    structure_hint: json
+    discovery_method: manual_seed_live
+  - company_name: 크래프톤
+    company_tier: 대기업
+    source_name: 크래프톤 Greenhouse 공개 채용
+    source_url: https://boards-api.greenhouse.io/v1/boards/krafton/jobs?content=true
+    source_type: greenhouse
+    official_domain: krafton.com
+    is_official_hint: true
+    structure_hint: json
+    discovery_method: manual_seed_live
+  - company_name: 하이퍼커넥트
+    company_tier: 외국계 한국법인
+    source_name: 하이퍼커넥트·매치그룹 Lever 공개 채용
+    source_url: https://api.lever.co/v0/postings/matchgroup?mode=json
+    source_type: lever
+    official_domain: hyperconnect.com
+    is_official_hint: true
+    structure_hint: json
+    discovery_method: manual_seed_live
+  - company_name: 서울로보틱스
+    company_tier: 스타트업
+    source_name: 서울로보틱스 Greenhouse 공개 채용
+    source_url: https://boards-api.greenhouse.io/v1/boards/seoulrobotics/jobs?content=true
+    source_type: greenhouse
+    official_domain: seoulrobotics.com
+    is_official_hint: true
+    structure_hint: json
+    discovery_method: manual_seed_live
+  - company_name: 카카오모빌리티
+    company_tier: 대기업
+    source_name: 카카오모빌리티 GreetingHR 공개 채용
+    source_url: https://kakaomobility.career.greetinghr.com
+    source_type: greetinghr
+    official_domain: kakaomobility.com
+    is_official_hint: true
+    structure_hint: next_data
+    discovery_method: manual_seed_live
+  - company_name: 여기어때
+    company_tier: 중견/중소
+    source_name: 여기어때 GreetingHR 공개 채용
+    source_url: https://gccompany.career.greetinghr.com
+    source_type: greetinghr
+    official_domain: gccompany.co.kr
+    is_official_hint: true
+    structure_hint: next_data
+    discovery_method: manual_seed_live
+  - company_name: 고위드
+    company_tier: 스타트업
+    source_name: 고위드 GreetingHR 공개 채용
+    source_url: https://gowid.career.greetinghr.com
+    source_type: greetinghr
+    official_domain: gowid.com
+    is_official_hint: true
+    structure_hint: next_data
+    discovery_method: manual_seed_live
+  - company_name: 뷰노
+    company_tier: 중견/중소
+    source_name: 뷰노 GreetingHR 공개 채용
+    source_url: https://vunohire.career.greetinghr.com
+    source_type: greetinghr
+    official_domain: vuno.co
+    is_official_hint: true
+    structure_hint: next_data
+    discovery_method: manual_seed_live
+  - company_name: 인터엑스
+    company_tier: 중견/중소
+    source_name: 인터엑스 GreetingHR 공개 채용
+    source_url: https://interxlab.career.greetinghr.com
+    source_type: greetinghr
+    official_domain: interxlab.com
+    is_official_hint: true
+    structure_hint: next_data
+    discovery_method: manual_seed_live
+  - company_name: 자화전자
+    company_tier: 지역기업
+    source_name: 자화전자 GreetingHR 공개 채용
+    source_url: https://jahwa.career.greetinghr.com
+    source_type: greetinghr
+    official_domain: jahwa.co.kr
+    is_official_hint: true
+    structure_hint: next_data
+    discovery_method: manual_seed_live
+  - company_name: 한국뇌연구원 AI 실증지원사업단
+    company_tier: 공공·연구기관
+    source_name: 한국뇌연구원 AI 실증지원사업단 Recruiter 공개 채용
+    source_url: https://kbri-ai.recruiter.co.kr
+    source_type: recruiter
+    official_domain: kbri.re.kr
+    is_official_hint: true
+    structure_hint: recruiter
+    discovery_method: manual_seed_live
+  - company_name: 업스테이지
+    company_tier: 스타트업
+    source_name: 업스테이지 GreetingHR 공개 채용
+    source_url: https://careers.upstage.ai
+    source_type: greetinghr
+    official_domain: upstage.ai
+    is_official_hint: true
+    structure_hint: next_data
+    discovery_method: manual_seed_live
+  - company_name: 노타
+    company_tier: 스타트업
+    source_name: 노타 GreetingHR 공개 채용
+    source_url: https://career.nota.ai/en/jobs
+    source_type: greetinghr
+    official_domain: nota.ai
+    is_official_hint: true
+    structure_hint: next_data
+    discovery_method: manual_seed_live
+  - company_name: 리벨리온
+    company_tier: 스타트업
+    source_name: 리벨리온 GreetingHR 공개 채용
+    source_url: https://rebellions.career.greetinghr.com
+    source_type: greetinghr
+    official_domain: rebellions.ai
+    is_official_hint: true
+    structure_hint: next_data
+    discovery_method: manual_seed_live
+  - company_name: 퓨리오사AI
+    company_tier: 스타트업
+    source_name: 퓨리오사AI Careers 공개 채용
+    source_url: https://furiosa.ai/careers
+    source_type: html_page
+    official_domain: furiosa.ai
+    is_official_hint: true
+    structure_hint: html
+    discovery_method: manual_seed_live

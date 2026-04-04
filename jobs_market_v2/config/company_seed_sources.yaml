@@ -1,0 +1,61 @@
+sources:
+  - source_name: KIND 상장법인목록 ICT/디지털 후보
+    source_type: kind_corp_list
+    source_url: https://kind.krx.co.kr/corpgeneral/corpList.do?method=loadInitPage
+    request_url: https://kind.krx.co.kr/corpgeneral/corpList.do
+    source_title: KIND 상장법인목록
+    company_tier: 중견/중소
+    candidate_seed_type: 상장법인목록
+    candidate_seed_reason: KIND 상장법인목록에서 소프트웨어·데이터·인공지능·반도체·플랫폼·보안·콘텐츠 관련 업종과 주요제품을 1차 추출
+    filter_text_columns: industry;products;company_name
+    include_keywords: 소프트웨어;데이터;인공지능;반도체;통신;플랫폼;인터넷;정보서비스;클라우드;보안;게임;콘텐츠;솔루션;포털;모빌리티;로봇
+
+  - source_name: ALIO 기술/데이터 공공기관 후보
+    source_type: alio_public_agency_list
+    source_url: https://www.alio.go.kr/guide/publicAgencyList.do
+    request_url: https://www.alio.go.kr/organ/findOrganApbaList.json
+    source_title: ALIO 공공기관 현황
+    company_tier: 공공·연구기관
+    candidate_seed_type: 공공기관목록
+    candidate_seed_reason: ALIO 공공기관 현황에서 데이터·정보통신·과학기술·산업기술·로봇·보건산업 관련 기관명을 1차 추출
+    filter_text_columns: apbaNa
+    include_keywords: 과학기술;정보통신;소프트웨어;데이터;지능정보;로봇;콘텐츠;보건의료정보;전자통신;산업기술;특구진흥;국방과학;국방기술;항공우주;에너지;기상산업;교통과학기술;보건산업;표준;인터넷진흥;기술정보;기술진흥;수리과학;기초과학
+
+  - source_name: NST 소관 출연연 후보
+    source_type: nst_research_institutes
+    source_url: https://audit.nst.re.kr/reference_agency.jsp
+    request_url: https://audit.nst.re.kr/reference_agency.jsp
+    source_title: NST 소관 출연연 소개
+    company_tier: 공공·연구기관
+    candidate_seed_type: 출연연기관목록
+    candidate_seed_reason: NST 소관 정부출연연구기관 공식 소개 기준 후보
+
+  - source_name: NIPA 사업공고 기업목록 카탈로그
+    source_type: html_link_catalog_url
+    source_url: https://www.nipa.kr/home/index
+    source_title: NIPA 공식 홈페이지 주요사업 링크
+    company_tier: 중견/중소
+    candidate_seed_type: 사업참여기업목록
+    candidate_seed_reason: NIPA 공식 홈페이지와 사업공고에서 참여기업·공급기업·수행기관 목록 링크를 자동 발견
+    allowed_domains: nipa.kr
+    discovery_include_keywords: 참여기업;공급기업;수행기관;지원기업;선정기업;기업 목록;pool
+    discovery_exclude_keywords: 채용;교육;세미나;설명회;사업계획서;안내문;pdf
+    max_discovered_sources: 10
+
+  - source_name: NIPA AI바우처 공급기업 목록 카탈로그
+    source_type: html_link_catalog
+    discovered_source_type: xlsx_url
+    source_url: https://www.nipa.kr/home/2-2/16546
+    source_title: NIPA AI 통합 바우처 지원사업 공고
+    company_tier: 중견/중소
+    candidate_seed_type: 정부지원사업공급기업목록
+    candidate_seed_reason: NIPA AI바우처 지원사업 공식 공고 첨부 공급기업 POOL 최종 목록 기준 후보
+    header_row: 2
+    company_name_column: 기업명
+    official_domain_column: 기업정보
+    region_column: 기업정보
+    filter_text_columns: 기업명;전문분야;AI솔루션;기업정보
+    allowed_domains: nipa.kr
+    discovery_include_keywords: 공급기업;POOL;최종 목록
+    discovery_exclude_keywords: 매뉴얼;서식;zip;pdf
+    max_discovered_sources: 3

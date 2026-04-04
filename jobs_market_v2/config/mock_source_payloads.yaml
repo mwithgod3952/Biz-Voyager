@@ -1,0 +1,37 @@
+sources:
+  https://careers.samsung.com/job-feed/data-ai.json:
+    file: tests/fixtures/sources/samsung_jobs.json
+    content_type: application/json
+  https://careers.navercorp.com/jobs/data-ai.html:
+    file: tests/fixtures/sources/naver_jobs.html
+    content_type: text/html
+  https://career.daangn.com/jobs/data-ai.html:
+    file: tests/fixtures/sources/daangn_jobs.html
+    content_type: text/html
+  https://careers.tmaxsoft.com/jobs/data-ai.html:
+    file: tests/fixtures/sources/tmax_jobs.html
+    content_type: text/html
+  https://recruit.etri.re.kr/rss/research-jobs.xml:
+    file: tests/fixtures/sources/etri_jobs.xml
+    content_type: application/xml
+  https://careers.microsoft.com/v2/global/ko-kr/jobs-korea.json:
+    file: tests/fixtures/sources/microsoft_jobs.json
+    content_type: application/json
+  https://jobs.bosch.co.kr/kr/rss/jobs.xml:
+    file: tests/fixtures/sources/bosch_jobs.xml
+    content_type: application/xml
+  https://sunbo.careers/jobs/ai-engineer.html:
+    file: tests/fixtures/sources/sunbo_jobs.html
+    content_type: text/html
+  https://toss.im/careers:
+    file: tests/fixtures/sources/empty_jobs.html
+    content_type: text/html
+  https://careers.saltlux.com/careers:
+    file: tests/fixtures/sources/empty_jobs.html
+    content_type: text/html
+  https://recruit.kist.re.kr/careers:
+    file: tests/fixtures/sources/empty_jobs.html
+    content_type: text/html
+  https://busantech.co.kr/careers:
+    file: tests/fixtures/sources/empty_jobs.html
+    content_type: text/html
