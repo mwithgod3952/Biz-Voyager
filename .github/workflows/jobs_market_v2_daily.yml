@@ -72,14 +72,7 @@ jobs:
           STATE_JSON="$STATE_WORKTREE/$STATE_DIR/workflow_state.json"
           if [[ -f "$STATE_JSON" ]]; then
             cp "$STATE_JSON" "$PROJECT_DIR/runtime/github_workflow_state.json"
-            FAILURE_STREAK="$(python - <<'PY'
-            import json
-            from pathlib import Path
-            path = Path("jobs_market_v2/runtime/github_workflow_state.json")
-            data = json.loads(path.read_text(encoding="utf-8"))
-            print(int(data.get("consecutive_failures", 0)))
-            PY
-            )"
+            FAILURE_STREAK="$(python -c 'import json; from pathlib import Path; data = json.loads(Path("jobs_market_v2/runtime/github_workflow_state.json").read_text(encoding="utf-8")); print(int(data.get("consecutive_failures", 0)))')"
           else
             FAILURE_STREAK="0"
           fi
@@ -202,15 +195,7 @@ jobs:
           state_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
           print(payload["consecutive_failures"])
           PY
-          FAILURE_STREAK="$(python - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-          state_path = Path(os.environ["STATE_WORKTREE"]) / os.environ["STATE_DIR"] / "workflow_state.json"
-          payload = json.loads(state_path.read_text(encoding="utf-8"))
-          print(int(payload.get("consecutive_failures", 0)))
-          PY
-          )"
+          FAILURE_STREAK="$(python -c 'import json, os; from pathlib import Path; state_path = Path(os.environ["STATE_WORKTREE"]) / os.environ["STATE_DIR"] / "workflow_state.json"; payload = json.loads(state_path.read_text(encoding="utf-8")); print(int(payload.get("consecutive_failures", 0)))')"
           echo "failure_streak=$FAILURE_STREAK" >> "$GITHUB_OUTPUT"
           pushd "$STATE_WORKTREE" >/dev/null
           git add "$STATE_DIR/workflow_state.json"
