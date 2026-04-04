@@ -4,6 +4,16 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
+
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent
+SRC_ROOT = PROJECT_ROOT / "src"
+for candidate in (SRC_ROOT, PROJECT_ROOT):
+    candidate_str = str(candidate)
+    if candidate.exists() and candidate_str not in sys.path:
+        sys.path.insert(0, candidate_str)
 
 from jobs_market_v2.runtime_state import (
     build_runtime_state_bundle,
