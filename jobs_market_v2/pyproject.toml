@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jobs-market-v2"
+version = "0.1.0"
+description = "국내 채용시장 모집단 확보를 위한 리콜 우선형 수집 파이프라인"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "beautifulsoup4>=4.12.3",
+  "gspread>=6.1.2",
+  "httpx>=0.28.1",
+  "ipykernel>=6.29.5",
+  "jupyterlab>=4.4.1",
+  "lxml>=5.3.1",
+  "openpyxl>=3.1.5",
+  "pandas>=2.2.3",
+  "pyarrow>=19.0.1",
+  "pydantic>=2.11.2",
+  "pytest>=8.3.5",
+  "python-dotenv>=1.0.1",
+  "pyyaml>=6.0.2",
+  "tenacity>=9.0.0",
+  "tqdm>=4.67.1",
+]
+
+[project.optional-dependencies]
+dev = []
+
+[project.scripts]
+jobs-market-v2 = "jobs_market_v2.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"

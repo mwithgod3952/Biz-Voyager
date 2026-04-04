@@ -32,29 +32,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Restore project source bundle
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import base64
-          from pathlib import Path
-
-          encoded_path = Path(".deploy/jobs_market_v2_source.tar.gz.base64")
-          chunk_paths = sorted(Path(".deploy").glob("jobs_market_v2_source.tar.gz.base64.part-*"))
-          if encoded_path.exists():
-              encoded = "".join(encoded_path.read_text(encoding="utf-8").splitlines())
-          elif chunk_paths:
-              encoded = "".join(
-                  "".join(path.read_text(encoding="utf-8").splitlines())
-                  for path in chunk_paths
-              )
-          else:
-              raise SystemExit(f"Missing source bundle: {encoded_path}")
-          tar_path = Path("jobs_market_v2_source.tar.gz")
-          tar_path.write_bytes(base64.b64decode(encoded))
-          PY
-          tar -xzf jobs_market_v2_source.tar.gz
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
