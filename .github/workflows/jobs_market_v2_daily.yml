@@ -125,14 +125,41 @@ jobs:
         run: |
           set +e
           cd "$PROJECT_DIR"
-          ./.venv/bin/python -m jobs_market_v2.cli run-collection-cycle
-          EXIT_CODE=$?
+          SUMMARY_PATH="$PWD/runtime/github_workflow_cycle_summary.json"
+          ./.venv/bin/python -m jobs_market_v2.cli run-collection-cycle | tee "$SUMMARY_PATH"
+          EXIT_CODE=${PIPESTATUS[0]}
           echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+          SUMMARY_PATH="$SUMMARY_PATH" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          summary_path = Path(os.environ["SUMMARY_PATH"])
+          summary = {}
+          if summary_path.exists():
+              try:
+                  summary = json.loads(summary_path.read_text(encoding="utf-8"))
+              except json.JSONDecodeError:
+                  summary = {}
+          published_state = summary.get("published_state", {}) if isinstance(summary, dict) else {}
+          promotion_block_reason = str(published_state.get("promotion_block_reason", "") or "")
+          hold_reason = (
+              promotion_block_reason
+              if promotion_block_reason == "bootstrap_source_scan_incomplete"
+              else ""
+          )
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
+              output.write(f"automation_ready={str(bool(summary.get('automation_ready', False))).lower()}\n")
+              output.write(f"promotion_block_reason={promotion_block_reason}\n")
+              output.write(f"hold_reason={hold_reason}\n")
+          PY
           exit 0
 
-      - name: Save runtime state on success
-        if: steps.cycle.outputs.exit_code == '0'
+      - name: Save runtime state after success or bootstrap hold
+        if: always() && (steps.cycle.outputs.exit_code == '0' || steps.cycle.outputs.hold_reason == 'bootstrap_source_scan_incomplete')
         env:
+          CYCLE_EXIT_CODE: ${{ steps.cycle.outputs.exit_code }}
+          CYCLE_HOLD_REASON: ${{ steps.cycle.outputs.hold_reason }}
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           STATE_WORKTREE: ${{ runner.temp }}/jobs-market-v2-state
         run: |
@@ -154,7 +181,8 @@ jobs:
           payload = {
               "updated_at": datetime.now(timezone.utc).isoformat(),
               "consecutive_failures": 0,
-              "last_result": "success",
+              "last_result": "success" if os.environ["CYCLE_EXIT_CODE"] == "0" else "hold",
+              "hold_reason": os.environ.get("CYCLE_HOLD_REASON", ""),
               "run_url": os.environ["GITHUB_RUN_URL"],
           }
           if runtime_status_path.exists():
@@ -225,13 +253,18 @@ jobs:
           PY
 
       - name: Update failure state
-        if: steps.cycle.outputs.exit_code != '0'
+        if: steps.cycle.outputs.exit_code != '0' && steps.cycle.outputs.hold_reason == ''
         id: failure_state
         env:
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           STATE_WORKTREE: ${{ runner.temp }}/jobs-market-v2-state
         run: |
           set -euo pipefail
+          BUNDLE_PATH="$STATE_WORKTREE/$STATE_DIR/runtime_state.tar.gz"
+          python "$PROJECT_DIR/scripts/runtime_state_bundle.py" create \
+            --project-root "$PROJECT_DIR" \
+            --bundle-path "$BUNDLE_PATH" \
+            --manifest-path "$PROJECT_DIR/config/runtime_state_manifest.txt"
           python - <<'PY'
           import json
           import os
@@ -249,7 +282,7 @@ jobs:
           payload["last_result"] = "failure"
           payload["run_url"] = os.environ["GITHUB_RUN_URL"]
           state_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-          print(payload["consecutive_failures"))
+          print(payload["consecutive_failures"])
           PY
           FAILURE_STREAK="$(python -c 'import json, os; from pathlib import Path; state_path = Path(os.environ["STATE_WORKTREE"]) / os.environ["STATE_DIR"] / "workflow_state.json"; payload = json.loads(state_path.read_text(encoding="utf-8")); print(int(payload.get("consecutive_failures", 0)))')"
           echo "failure_streak=$FAILURE_STREAK" >> "$GITHUB_OUTPUT"
@@ -277,7 +310,7 @@ jobs:
             jobs_market_v2/runtime/source_registry.csv
 
       - name: Notify Slack on repeated failures
-        if: steps.cycle.outputs.exit_code != '0' && fromJSON(steps.failure_state.outputs.failure_streak) >= 3
+        if: steps.cycle.outputs.exit_code != '0' && steps.cycle.outputs.hold_reason == '' && fromJSON(steps.failure_state.outputs.failure_streak) >= 3
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -310,7 +343,7 @@ jobs:
           PY
 
       - name: Create or update GitHub issue on failure
-        if: steps.cycle.outputs.exit_code != '0'
+        if: steps.cycle.outputs.exit_code != '0' && steps.cycle.outputs.hold_reason == ''
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_API_URL: ${{ github.api_url }}
@@ -388,5 +421,5 @@ jobs:
           PY
 
       - name: Fail workflow if production cycle failed
-        if: steps.cycle.outputs.exit_code != '0'
+        if: steps.cycle.outputs.exit_code != '0' && steps.cycle.outputs.hold_reason == ''
         run: exit 1
