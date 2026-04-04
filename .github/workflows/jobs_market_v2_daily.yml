@@ -111,6 +111,8 @@ jobs:
               lines.append(f"{key}={quote(value)}")
           lines.append("JOBS_MARKET_V2_USE_MOCK_SOURCES=false")
           lines.append("JOBS_MARKET_V2_ENABLE_FALLBACK_SOURCE_GUESS=false")
+          lines.append("JOBS_MARKET_V2_ENABLE_GEMINI_FALLBACK=true")
+          lines.append("JOBS_MARKET_V2_GEMINI_MAX_CALLS_PER_RUN=24")
           for key, value in optional.items():
               if value:
                   lines.append(f"{key}={quote(value)}")
