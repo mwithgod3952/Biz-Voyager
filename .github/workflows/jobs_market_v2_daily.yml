@@ -51,9 +51,7 @@ jobs:
             pushd "$STATE_WORKTREE" >/dev/null
             find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
             mkdir -p "$STATE_DIR"
-            cat > "$STATE_DIR/workflow_state.json" <<'EOF'
-            {"consecutive_failures": 0, "last_result": "bootstrap"}
-            EOF
+            printf '%s\n' '{"consecutive_failures": 0, "last_result": "bootstrap"}' > "$STATE_DIR/workflow_state.json"
             git add -A
             git commit -m "Initialize automation state branch"
             git push origin "HEAD:$STATE_BRANCH"
