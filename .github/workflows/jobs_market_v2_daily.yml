@@ -134,9 +134,9 @@ jobs:
         if: steps.cycle.outputs.exit_code == '0'
         env:
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          STATE_WORKTREE: ${{ runner.temp }}/jobs-market-v2-state
         run: |
           set -euo pipefail
-          STATE_WORKTREE="${RUNNER_TEMP}/jobs-market-v2-state"
           BUNDLE_PATH="$STATE_WORKTREE/$STATE_DIR/runtime_state.tar.gz"
           python "$PROJECT_DIR/scripts/runtime_state_bundle.py" create \
             --project-root "$PROJECT_DIR" \
@@ -229,9 +229,9 @@ jobs:
         id: failure_state
         env:
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          STATE_WORKTREE: ${{ runner.temp }}/jobs-market-v2-state
         run: |
           set -euo pipefail
-          STATE_WORKTREE="${RUNNER_TEMP}/jobs-market-v2-state"
           python - <<'PY'
           import json
           import os
@@ -249,7 +249,7 @@ jobs:
           payload["last_result"] = "failure"
           payload["run_url"] = os.environ["GITHUB_RUN_URL"]
           state_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-          print(payload["consecutive_failures"])
+          print(payload["consecutive_failures"))
           PY
           FAILURE_STREAK="$(python -c 'import json, os; from pathlib import Path; state_path = Path(os.environ["STATE_WORKTREE"]) / os.environ["STATE_DIR"] / "workflow_state.json"; payload = json.loads(state_path.read_text(encoding="utf-8")); print(int(payload.get("consecutive_failures", 0)))')"
           echo "failure_streak=$FAILURE_STREAK" >> "$GITHUB_OUTPUT"
