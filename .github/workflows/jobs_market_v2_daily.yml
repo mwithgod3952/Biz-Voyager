@@ -238,13 +238,16 @@ jobs:
             jobs_market_v2/runtime/source_registry.csv
 
       - name: Notify Slack on repeated failures
-        if: steps.cycle.outputs.exit_code != '0' && fromJSON(steps.failure_state.outputs.failure_streak) >= 3 && secrets.SLACK_WEBHOOK_URL != ''
+        if: steps.cycle.outputs.exit_code != '0' && fromJSON(steps.failure_state.outputs.failure_streak) >= 3
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           FAILURE_STREAK: ${{ steps.failure_state.outputs.failure_streak }}
         run: |
           set -euo pipefail
+          if [[ -z "${SLACK_WEBHOOK_URL:-}" ]]; then
+            exit 0
+          fi
           python - <<'PY'
           import json
           import os
