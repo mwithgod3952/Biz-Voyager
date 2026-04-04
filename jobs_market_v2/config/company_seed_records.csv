@@ -1,0 +1,7 @@
+company_name,company_tier,official_domain,company_name_en,region,aliases,discovery_method,candidate_seed_type,candidate_seed_url,candidate_seed_title,candidate_seed_reason
+삼성전자,대기업,samsungcareers.com,Samsung Electronics,수도권,삼성,company_seed_record,상장사목록,https://kind.krx.co.kr/common/JLDDST35000.html,KIND 상장법인목록,KRX 상장기업 기준 대기업 후보
+네이버,대기업,recruit.navercorp.com,NAVER,수도권,NAVER,company_seed_record,상장사목록,https://kind.krx.co.kr/common/JLDDST35000.html,KIND 상장법인목록,KRX 상장기업 기준 대기업 후보
+솔트룩스,중견/중소,careers.saltlux.com,Saltlux,수도권,,company_seed_record,상장사목록,https://kind.krx.co.kr/common/JLDDST35000.html,KIND 상장법인목록,KRX 상장기업 기준 AI·데이터 적합 중견기업 후보
+자화전자,지역기업,jahwa.co.kr,Jahwa Electronics,충청권,자화전자,company_seed_record,상장사목록,https://kind.krx.co.kr/common/JLDDST35000.html,KIND 상장법인목록,KRX 상장기업 기준 지역기업 후보
+한국전자통신연구원,공공·연구기관,etri.re.kr,ETRI,대전,ETRI,company_seed_record,출연연기관목록,https://www.nst.re.kr/www/index.do,NST 소관 연구기관,국가과학기술연구회 소관 출연연 기준 AI·데이터 연구기관 후보
+한국과학기술연구원,공공·연구기관,kist.re.kr,KIST,수도권,KIST,company_seed_record,출연연기관목록,https://www.nst.re.kr/www/index.do,NST 소관 연구기관,국가과학기술연구회 소관 출연연 기준 AI·데이터 연구기관 후보

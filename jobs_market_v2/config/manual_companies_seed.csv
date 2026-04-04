@@ -1,0 +1,32 @@
+company_name,company_tier,official_domain,company_name_en,region,aliases,discovery_method
+쿠팡,대기업,coupang.jobs,Coupang,수도권,,manual_seed_live
+채널코퍼레이션,스타트업,channel.io,Channel Corp,수도권,채널톡,manual_seed_live
+센드버드,스타트업,sendbird.com,Sendbird,수도권,Sendbird,manual_seed_live
+클로버추얼패션,중견/중소,clovirtualfashion.com,CLO Virtual Fashion,수도권,CLO,manual_seed_live
+몰로코,외국계 한국법인,moloco.com,Moloco,수도권,Moloco,manual_seed_live
+삼성전자,대기업,samsungcareers.com,Samsung Electronics,수도권,삼성,manual_seed
+네이버,대기업,recruit.navercorp.com,NAVER,수도권,NAVER,manual_seed
+당근,스타트업,about.daangn.com,Daangn,수도권,당근마켓,manual_seed_live
+크래프톤,대기업,krafton.com,KRAFTON,수도권,크래프톤,manual_seed_live
+하이퍼커넥트,외국계 한국법인,hyperconnect.com,Hyperconnect,수도권,Hyperconnect;매치그룹,manual_seed_live
+서울로보틱스,스타트업,seoulrobotics.com,Seoul Robotics,수도권,Seoul Robotics,manual_seed_live
+카카오모빌리티,대기업,kakaomobility.com,Kakao Mobility,수도권,카카오T;Kakao Mobility,manual_seed_live
+여기어때,중견/중소,gccompany.co.kr,GC Company,수도권,여기어때;Good Choice,manual_seed_live
+고위드,스타트업,gowid.com,Gowid,수도권,GoWid,manual_seed_live
+뷰노,중견/중소,vuno.co,VUNO,수도권,VUNO,manual_seed_live
+인터엑스,중견/중소,interxlab.com,InterX,수도권,InterX,manual_seed_live
+자화전자,지역기업,jahwa.co.kr,Jahwa Electronics,충청권,자화전자,manual_seed_live
+한국뇌연구원 AI 실증지원사업단,공공·연구기관,kbri.re.kr,KBRI AI Demonstration Unit,대구,한국뇌연구원;KBRI,manual_seed_live
+토스,스타트업,toss.im,Toss,수도권,비바리퍼블리카;토스뱅크,manual_seed
+티맥스소프트,중견/중소,careers.tmaxsoft.com,TmaxSoft,수도권,티맥스,manual_seed
+솔트룩스,중견/중소,careers.saltlux.com,Saltlux,수도권,,manual_seed
+한국전자통신연구원,공공·연구기관,etri.re.kr,ETRI,대전,ETRI,manual_seed
+한국과학기술연구원,공공·연구기관,kist.re.kr,KIST,수도권,KIST,manual_seed
+한국마이크로소프트,외국계 한국법인,microsoft.com,Microsoft Korea,수도권,마이크로소프트,manual_seed
+보쉬코리아,외국계 한국법인,bosch.co.kr,Bosch Korea,수도권,보쉬,manual_seed
+선보공업,지역기업,sunbo.careers,Sunbo,부산,,manual_seed
+부산테크,지역기업,busantech.co.kr,Busan Tech,부산,,manual_seed
+업스테이지,스타트업,upstage.ai,Upstage,수도권,Upstage,manual_seed_live
+노타,스타트업,nota.ai,NOTA AI,수도권,NOTA;Nota,manual_seed_live
+리벨리온,스타트업,rebellions.ai,Rebellions,수도권,Rebellions,manual_seed_live
+퓨리오사AI,스타트업,furiosa.ai,FuriosaAI,수도권,FuriosaAI;Furiosa,manual_seed_live
