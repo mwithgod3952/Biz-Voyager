@@ -16,7 +16,6 @@ concurrency:
 env:
   PROJECT_DIR: jobs_market_v2
   STATE_BRANCH: automation-state
-  STATE_WORKTREE: ${{ runner.temp }}/jobs-market-v2-state
   STATE_DIR: jobs_market_v2/.ci_state
 
 jobs:
@@ -40,6 +39,7 @@ jobs:
       - name: Prepare state branch worktree
         run: |
           set -euo pipefail
+          STATE_WORKTREE="${RUNNER_TEMP}/jobs-market-v2-state"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           rm -rf "$STATE_WORKTREE"
@@ -63,6 +63,7 @@ jobs:
       - name: Restore runtime state
         run: |
           set -euo pipefail
+          STATE_WORKTREE="${RUNNER_TEMP}/jobs-market-v2-state"
           mkdir -p "$PROJECT_DIR/runtime"
           BUNDLE_PATH="$STATE_WORKTREE/$STATE_DIR/runtime_state.tar.gz"
           if [[ -f "$BUNDLE_PATH" ]]; then
@@ -143,6 +144,7 @@ jobs:
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
+          STATE_WORKTREE="${RUNNER_TEMP}/jobs-market-v2-state"
           BUNDLE_PATH="$STATE_WORKTREE/$STATE_DIR/runtime_state.tar.gz"
           python "$PROJECT_DIR/scripts/runtime_state_bundle.py" create \
             --project-root "$PROJECT_DIR" \
@@ -182,6 +184,7 @@ jobs:
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
+          STATE_WORKTREE="${RUNNER_TEMP}/jobs-market-v2-state"
           python - <<'PY'
           import json
           import os
