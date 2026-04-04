@@ -222,7 +222,9 @@ def get_settings(project_root: Path | None = None) -> AppSettings:
         company_seed_record_refresh_hours=int(os.getenv("JOBS_MARKET_V2_COMPANY_SEED_RECORD_REFRESH_HOURS", "6")),
         company_seed_catalog_max_passes=int(os.getenv("JOBS_MARKET_V2_COMPANY_SEED_CATALOG_MAX_PASSES", "2")),
         company_seed_catalog_batch_size=int(os.getenv("JOBS_MARKET_V2_COMPANY_SEED_CATALOG_BATCH_SIZE", "10")),
-        company_seed_catalog_max_runtime_seconds=float(os.getenv("JOBS_MARKET_V2_COMPANY_SEED_CATALOG_MAX_RUNTIME_SECONDS", "60")),
+        company_seed_catalog_max_runtime_seconds=float(
+            os.getenv("JOBS_MARKET_V2_COMPANY_SEED_CATALOG_MAX_RUNTIME_SECONDS", "60")
+        ),
         company_seed_catalog_host_limit=int(os.getenv("JOBS_MARKET_V2_COMPANY_SEED_CATALOG_HOST_LIMIT", "25")),
         company_seed_catalog_skip_cooldown_hours=int(os.getenv("JOBS_MARKET_V2_COMPANY_SEED_CATALOG_SKIP_COOLDOWN_HOURS", "24")),
         company_seed_catalog_refresh_hours=int(os.getenv("JOBS_MARKET_V2_COMPANY_SEED_CATALOG_REFRESH_HOURS", "24")),
@@ -234,6 +236,7 @@ def get_settings(project_root: Path | None = None) -> AppSettings:
         company_seed_invalid_max_rows=int(os.getenv("JOBS_MARKET_V2_COMPANY_SEED_INVALID_MAX_ROWS", "5000")),
         company_seed_shadow_batch_size=int(os.getenv("JOBS_MARKET_V2_COMPANY_SEED_SHADOW_BATCH_SIZE", "200")),
         company_seed_shadow_max_batches_per_run=int(os.getenv("JOBS_MARKET_V2_COMPANY_SEED_SHADOW_MAX_BATCHES_PER_RUN", "2")),
-        company_seed_shadow_max_runtime_seconds=float(os.getenv("JOBS_MARKET_V2_COMPANY_SEED_SHADOW_MAX_RUNTIME_SECONDS", "30")),
-        source_failure_threshold=int(os.getenv("JOBS_MARKET_V2_SOURCE_FAILURE_THRESHOLD", "2")),
+        company_seed_shadow_max_runtime_seconds=float(
+            os.getenv("JOBS_MARKET_V2_COMPANY_SEED_SHADOW_MAX_RUNTIME_SECONDS", "30")
+        ),
     )

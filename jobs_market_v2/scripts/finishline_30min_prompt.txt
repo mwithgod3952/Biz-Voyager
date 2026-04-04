@@ -1,0 +1,35 @@
+Continue improving the jobs_market_v2 pipeline toward completion-quality results.
+
+Mandatory goals for every run:
+- Keep quality_score_100 at or above 99.
+- Increase growth safely, with priority order:
+  1. master row count
+  2. approved company count
+  3. verified source success count
+
+At the start of the run:
+- Read docs/HANDOFF.md and docs/WORK_UNITS.md to resume the exact state.
+- Reassess the current bottleneck using local runtime files and the latest logs.
+- If subagents are useful, redesign their roles for the current bottleneck before spawning them, with clear ownership for growth, quality, or operations. Do not spawn agents reflexively.
+
+Execution rules:
+- Prefer small safe changes.
+- Focus on unresolved core problems, not cosmetic edits.
+- Treat these as top-priority bottlenecks:
+  - approved/source growth not translating into master growth
+  - practical duplicates and weak job distinction
+  - weak recall for hiring track / focus / requirements / preferred sections
+  - bookkeeping gaps that make run outcomes hard to trust
+- After each code change, run targeted pytest for the touched behavior.
+- Before finishing, run `python -m jobs_market_v2.cli doctor` and `python -m jobs_market_v2.cli run-collection-cycle`.
+- Only keep changes if doctor passes, the cycle completes successfully, and quality_score_100 stays at or above 99.
+- If a change causes a safety incident, do not keep unsafe changes. Restore the last known safe state if possible and record the failure.
+
+Required documentation at the end of the run:
+- Append exact before and after metrics, kept changes, reverted changes, last_known_safe_state, last_successful_run_id, resume_next_step, failures, and next priorities to docs/HANDOFF.md and docs/WORK_UNITS.md.
+- Keep manual handoff possible if this temporary campaign is stopped midway.
+
+If no safe code change is justified for this run:
+- Still run one full doctor + collection cycle.
+- Record the metrics and the exact bottleneck.
+- Stop for this run without forcing a speculative edit.

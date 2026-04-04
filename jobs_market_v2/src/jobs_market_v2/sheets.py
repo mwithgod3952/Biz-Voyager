@@ -1,4 +1,4 @@
-"""Google Sheets synchronization helpers."""
+"""Google Sheets export and optional sync."""
 
 from __future__ import annotations
 
@@ -11,54 +11,50 @@ import pandas as pd
 from .constants import KOREAN_HEADER_MAP, SHEET_TAB_NAMES
 from .storage import read_csv_or_empty, read_jsonl, write_csv
 
+GOOGLE_SHEETS_MAX_CELL_CHARS = 50000
+GOOGLE_SHEETS_SAFE_CELL_CHARS = 49000
 GOOGLE_SHEETS_UPDATE_RETRY_ATTEMPTS = 3
-GOOGLE_SHEETS_UPDATE_RETRY_BASE_SECONDS = 2.0
-GOOGLE_SHEETS_MAX_CELL_LENGTH = 50000
+GOOGLE_SHEETS_UPDATE_RETRY_BASE_SECONDS = 1.0
 
 
 def _rename_headers(frame: pd.DataFrame) -> pd.DataFrame:
-    if frame.empty:
-        return frame.copy()
-    return frame.rename(columns={column: KOREAN_HEADER_MAP.get(column, column) for column in frame.columns})
+    renamed = frame.copy()
+    renamed.columns = [KOREAN_HEADER_MAP.get(column, column) for column in renamed.columns]
+    return renamed
 
 
-def _truncate_sheet_cell(value: object) -> object:
-    if not isinstance(value, str):
-        return value
-    if len(value) <= GOOGLE_SHEETS_MAX_CELL_LENGTH:
-        return value
-    return value[: GOOGLE_SHEETS_MAX_CELL_LENGTH - 1] + "…"
+def _truncate_sheet_cell(value: object) -> str:
+    text = "" if value is None else str(value)
+    if len(text) <= GOOGLE_SHEETS_MAX_CELL_CHARS:
+        return text
+    return text[:GOOGLE_SHEETS_SAFE_CELL_CHARS]
 
 
 def _is_retryable_sheet_error(exc: Exception) -> bool:
-    message = str(exc).lower()
-    retryable_tokens = (
-        "timeout",
-        "timed out",
-        "deadline exceeded",
-        "connection aborted",
-        "connection reset",
-        "temporarily unavailable",
-        "internal error",
-        "rate limit",
-        "too many requests",
-        "502",
-        "503",
-        "504",
-    )
-    return any(token in message for token in retryable_tokens)
+    if isinstance(exc, TimeoutError):
+        return True
+    module = exc.__class__.__module__.lower()
+    name = exc.__class__.__name__.lower()
+    text = str(exc).lower()
+    if module.startswith(("requests", "urllib3", "httpx")):
+        return True
+    if any(token in name for token in ("timeout", "connection")):
+        return True
+    if "timed out" in text or "timeout" in text or "connection reset" in text:
+        return True
+    return False
 
 
-def _update_worksheet_with_retry(worksheet, values: list[list[object]]) -> None:
+def _update_worksheet_with_retry(worksheet, values) -> None:
     last_error: Exception | None = None
     for attempt in range(GOOGLE_SHEETS_UPDATE_RETRY_ATTEMPTS):
         try:
-            worksheet.clear()
-            worksheet.update(values)
+            worksheet.update(values if values else [[]])
             return
         except Exception as exc:  # noqa: BLE001
             last_error = exc
-            if attempt + 1 >= GOOGLE_SHEETS_UPDATE_RETRY_ATTEMPTS or not _is_retryable_sheet_error(exc):
+            is_last_attempt = attempt == GOOGLE_SHEETS_UPDATE_RETRY_ATTEMPTS - 1
+            if is_last_attempt or not _is_retryable_sheet_error(exc):
                 raise
             sleep(GOOGLE_SHEETS_UPDATE_RETRY_BASE_SECONDS * (attempt + 1))
     if last_error is not None:

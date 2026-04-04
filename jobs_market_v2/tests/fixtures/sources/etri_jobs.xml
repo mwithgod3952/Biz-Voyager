@@ -1,0 +1,24 @@
+<jobs>
+  <job>
+    <title>AI Researcher</title>
+    <title_ko>인공지능 리서처</title_ko>
+    <description_html><![CDATA[
+      <div>
+        <h2>주요업무</h2>
+        <ul><li>차세대 인공지능 알고리즘을 연구합니다.</li></ul>
+        <h2>자격요건</h2>
+        <ul><li>연구 논문 작성 경험</li><li>실험 설계 역량</li></ul>
+        <h2>우대사항</h2>
+        <ul><li>국책과제 경험</li></ul>
+        <h2>핵심기술</h2>
+        <ul><li>딥러닝</li><li>실험설계</li></ul>
+      </div>
+    ]]></description_html>
+    <requirements><![CDATA[<ul><li>연구 논문 작성 경험</li><li>실험 설계 역량</li></ul>]]></requirements>
+    <preferred><![CDATA[<ul><li>국책과제 경험</li></ul>]]></preferred>
+    <core_skills><![CDATA[<ul><li>딥러닝</li><li>실험설계</li></ul>]]></core_skills>
+    <experience_level>경력</experience_level>
+    <experience_level_ko>경력</experience_level_ko>
+    <job_url>https://recruit.etri.re.kr/jobs/ai-research-510</job_url>
+  </job>
+</jobs>

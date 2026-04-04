@@ -5,7 +5,7 @@
 중요:
 - 이 절차는 **현재 로컬 runtime 상태를 유지한 채** 새 Google Sheet에 연결하는 방식이다.
 - `runtime`을 지우지 않는다.
-- 즉, 지금까지 쌓아 둔 후보군/근거/source registry/master 상태를 새 시트로 이어서 반영한다.
+- 즉, 지금까지 쌓아 둔 후보군/근거/source registry/master 상태를 새 시트에 이어서 반영한다.
 
 ## 배포 범위
 

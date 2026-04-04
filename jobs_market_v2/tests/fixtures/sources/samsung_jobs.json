@@ -1,0 +1,12 @@
+{
+  "jobs": [
+    {
+      "title": "Data Analyst",
+      "title_ko": "데이터 분석가",
+      "description_html": "<div><h2>주요업무</h2><ul><li>서비스 지표를 분석합니다.</li><li>실험 결과를 해석합니다.</li></ul><h2>자격요건</h2><ul><li>SQL 활용 경험</li><li>통계 기반 분석 역량</li></ul><h2>우대사항</h2><ul><li>A/B 테스트 경험</li></ul><h2>핵심기술</h2><ul><li>파이썬</li><li>SQL</li></ul></div>",
+      "experience_level": "Experienced",
+      "experience_level_ko": "경력",
+      "job_url": "https://careers.samsung.com/jobs/da-001"
+    }
+  ]
+}

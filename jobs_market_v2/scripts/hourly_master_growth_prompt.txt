@@ -1,0 +1,28 @@
+Continue improving the jobs_market_v2 pipeline with two mandatory goals: keep quality_score_100 at or above 99 and increase published growth safely.
+
+At the start of the run:
+- Read docs/HANDOFF.md and docs/WORK_UNITS.md to resume the exact state.
+- Reassess the current bottleneck and decide whether subagents are needed.
+- If subagents are useful, redesign their roles for the current bottleneck before spawning them, with clear ownership for growth, quality, or operations. Do not spawn agents reflexively.
+
+Execution rules:
+- Prefer small safe changes.
+- Focus on growth first, but never let quality_score_100 drop below 99.
+- Growth means, in priority order:
+  1. master row count increase
+  2. approved company count increase
+  3. verified source success count increase
+- If none of those improve, treat the run as a growth failure and prioritize growth-engine fixes over cosmetic quality work.
+- After each code change, run targeted pytest for the touched behavior.
+- Before finishing, run `python -m jobs_market_v2.cli doctor` and `python -m jobs_market_v2.cli run-collection-cycle`.
+- Only keep changes if doctor passes, the cycle completes successfully, and quality_score_100 stays at or above 99.
+- If a change causes a safety incident, do not keep unsafe changes. Restore the last known safe state if possible and record the failure.
+
+Required documentation at the end of the run:
+- Append exact before and after metrics, kept changes, reverted changes, last_known_safe_state, last_successful_run_id, resume_next_step, failures, and next priorities to docs/HANDOFF.md and docs/WORK_UNITS.md.
+- Make sure manual handoff remains possible if the automation is stopped after this run.
+
+If no safe code change is justified for this run:
+- Still run one full doctor + collection cycle
+- Record the metrics and the exact bottleneck
+- Stop for this run without forcing a speculative edit

@@ -1,0 +1,12 @@
+{
+  "jobs": [
+    {
+      "title": "Data Scientist",
+      "title_ko": "데이터 사이언티스트",
+      "description_html": "<div><h2>주요업무</h2><ul><li>국내 고객 문제를 데이터로 정의합니다.</li></ul><h2>자격요건</h2><ul><li>머신러닝 모델 개발 경험</li></ul><h2>우대사항</h2><ul><li>클라우드 경험</li></ul><h2>핵심기술</h2><ul><li>파이썬</li><li>클라우드 머신러닝</li></ul></div>",
+      "experience_level": "Experienced",
+      "experience_level_ko": "경력",
+      "job_url": "https://careers.microsoft.com/jobs/ds-korea-610"
+    }
+  ]
+}

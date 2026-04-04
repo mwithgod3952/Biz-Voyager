@@ -64,81 +64,111 @@ def score_source_quality(row: dict) -> float:
     source_type = row.get("source_type") or ""
     source_domain = strip_protocol(row.get("source_domain"))
     official_domain = strip_protocol(row.get("official_domain"))
-    structure_hint = row.get("structure_hint") or infer_structure_hint(str(row.get("source_url") or ""), source_type)
-    source_url = normalize_whitespace(row.get("source_url"))
-    is_official_hint = coerce_bool(row.get("is_official_hint"))
+    structure_hint = row.get("structure_hint") or infer_structure_hint(row.get("source_url", ""), source_type)
+    domain_confidence = float(row.get("official_domain_confidence") or 0.0)
+    is_structured_source = source_type in ATS_SOURCE_TYPES or structure_hint in {"json", "rss", "sitemap", "ats"}
+
+    if source_domain and official_domain and source_domain == official_domain:
+        score += 0.5
+    elif source_type in ATS_SOURCE_TYPES and official_domain:
+        score += 0.35
+    elif coerce_bool(row.get("is_official_hint")):
+        score += 0.2
 
     if source_type in APPROVED_SOURCE_TYPES:
-        score += 0.45
-    elif source_type == "html_page":
-        if source_url:
-            parsed = urlparse(source_url)
-            path = normalize_whitespace(parsed.path).lower()
-            if any(token in path for token in _HTML_HIRING_PATH_HINTS):
-                score += 0.22
-            else:
-                score -= 0.25
-        else:
-            score -= 0.25
-
-    if official_domain and source_domain and source_domain.endswith(official_domain):
         score += 0.25
-    if is_official_hint:
+    elif source_type in SUPPORTED_SOURCE_TYPES:
         score += 0.1
-    if structure_hint in {"json", "rss", "sitemap", "ats"}:
-        score += 0.1
-    if source_domain in BLOCKED_SOURCE_DOMAINS:
-        score -= 1.0
-    if source_type == "html_page":
-        source_name = normalize_whitespace(str(row.get("source_name") or "")).lower()
-        candidate_text = f"{source_name} {source_url.lower()}"
-        if any(token in candidate_text for token in _HTML_HIRING_TEXT_HINTS):
-            score += 0.08
-        if "about" in candidate_text and not any(token in candidate_text for token in _HTML_HIRING_PATH_HINTS):
-            score -= 0.18
-    return max(min(round(score, 3), 1.0), 0.0)
+
+    if is_structured_source:
+        score += 0.15
+    elif structure_hint == "html":
+        score += 0.05
+
+    score += min(domain_confidence, 1.0) * 0.1
+    return round(min(score, 1.0), 2)
 
 
-def _apply_screening_row(row: pd.Series) -> pd.Series:
-    source_url = canonicalize_runtime_source_url(row.get("source_url"))
+def _has_html_hiring_signal(row: dict) -> bool:
+    parsed = urlparse(normalize_whitespace(row.get("source_url")))
+    path_and_query = f"{parsed.path} {parsed.query}".lower()
+    title = normalize_whitespace(row.get("source_title")).lower()
+    return any(hint in path_and_query for hint in _HTML_HIRING_PATH_HINTS) or any(
+        hint in title for hint in _HTML_HIRING_TEXT_HINTS
+    )
+
+
+def _reject_reason(row: dict) -> str | None:
+    source_url = normalize_whitespace(str(row.get("source_url") or ""))
     source_type = normalize_whitespace(str(row.get("source_type") or ""))
-    source_domain = extract_domain(source_url)
-    official_domain = strip_protocol(row.get("official_domain"))
-    structure_hint = normalize_whitespace(str(row.get("structure_hint") or infer_structure_hint(source_url, source_type)))
-    is_official_hint = coerce_bool(row.get("is_official_hint"))
-    quality_score = score_source_quality(
-        {
-            **row.to_dict(),
-            "source_url": source_url,
-            "source_domain": source_domain,
-            "official_domain": official_domain,
-            "structure_hint": structure_hint,
-            "is_official_hint": is_official_hint,
-        }
-    )
-    bucket = "approved" if quality_score >= 0.5 else "candidate"
-    if source_domain in BLOCKED_SOURCE_DOMAINS:
-        bucket = "rejected"
-    return pd.Series(
-        {
-            **row.to_dict(),
-            "source_url": source_url,
-            "source_domain": source_domain,
-            "official_domain": official_domain,
-            "structure_hint": structure_hint,
-            "is_official_hint": is_official_hint,
-            "source_quality_score": quality_score,
-            "source_bucket": bucket,
-        }
-    )
+    domain = extract_domain(source_url)
+    path = urlparse(source_url).path.lower()
+    if not source_url.startswith(("http://", "https://")):
+        return "비공개 또는 비표준 URL"
+    if domain in BLOCKED_SOURCE_DOMAINS:
+        return "채용 포털 직접 수집 금지"
+    if re.search(r"\.(png|jpg|jpeg|svg|webp)$", path):
+        return "파싱 불가 에셋 URL"
+    if source_type not in SUPPORTED_SOURCE_TYPES:
+        return "지원하지 않는 source_type"
+    return None
 
 
-def screen_source_registry(frame: pd.DataFrame) -> pd.DataFrame:
-    if frame.empty:
-        return pd.DataFrame(columns=list(SOURCE_REGISTRY_COLUMNS))
-    screened = frame.apply(_apply_screening_row, axis=1)
+def screen_sources(source_candidates: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    bucket_columns = list(SOURCE_REGISTRY_COLUMNS) + ["reject_reason"]
+    approved_rows: list[dict] = []
+    candidate_rows: list[dict] = []
+    rejected_rows: list[dict] = []
+
+    for row in source_candidates.fillna("").to_dict(orient="records"):
+        row["source_url"] = canonicalize_runtime_source_url(row.get("source_url") or "")
+        row["source_domain"] = extract_domain(row.get("source_url") or "")
+        row["official_domain"] = strip_protocol(row.get("official_domain"))
+        row["structure_hint"] = row.get("structure_hint") or infer_structure_hint(row.get("source_url", ""), row.get("source_type", ""))
+        row["official_domain_confidence"] = float(row.get("official_domain_confidence") or (0.99 if row.get("official_domain") else 0.0))
+        row["source_quality_score"] = score_source_quality(row)
+        row["failure_count"] = int(row.get("failure_count") or 0)
+        row["last_success_at"] = row.get("last_success_at") or ""
+        row["last_active_job_count"] = int(row.get("last_active_job_count") or 0)
+        row["quarantine_reason"] = row.get("quarantine_reason") or ""
+        row["is_quarantined"] = coerce_bool(row.get("is_quarantined"))
+        row["verification_status"] = row.get("verification_status") or "미검증"
+
+        reject_reason = _reject_reason(row)
+        if reject_reason:
+            rejected_rows.append({**row, "source_bucket": "rejected", "reject_reason": reject_reason})
+            continue
+
+        is_official_domain_match = row["source_domain"] == row["official_domain"] and row["official_domain"] != ""
+        is_official_ats = row["source_type"] in ATS_SOURCE_TYPES and row["official_domain"] != ""
+        html_approved_eligible = (
+            row["source_type"] != "html_page"
+            or row["last_active_job_count"] > 0
+            or _has_html_hiring_signal(row)
+        )
+
+        if (
+            (is_official_domain_match or is_official_ats or row["is_official_hint"])
+            and row["source_quality_score"] >= 0.75
+            and html_approved_eligible
+        ):
+            approved_rows.append({**row, "source_bucket": "approved"})
+        elif row["source_quality_score"] >= 0.35:
+            candidate_rows.append({**row, "source_bucket": "candidate"})
+        else:
+            rejected_rows.append({**row, "source_bucket": "rejected", "reject_reason": "공식성/구조 신뢰도 부족"})
+
+    approved = pd.DataFrame(approved_rows, columns=bucket_columns)
+    candidate = pd.DataFrame(candidate_rows, columns=bucket_columns)
+    rejected = pd.DataFrame(rejected_rows, columns=bucket_columns)
+    approved = _dedupe_screened_sources(approved)
+    candidate = _dedupe_screened_sources(candidate)
+    rejected = _dedupe_screened_sources(rejected)
+    registry = pd.concat([approved, candidate, rejected], ignore_index=True) if any(
+        not frame.empty for frame in (approved, candidate, rejected)
+    ) else pd.DataFrame(columns=list(SOURCE_REGISTRY_COLUMNS))
+
     for column in SOURCE_REGISTRY_COLUMNS:
-        if column not in screened.columns:
-            screened[column] = None
-    screened = screened[list(SOURCE_REGISTRY_COLUMNS)]
-    return _dedupe_screened_sources(screened)
+        if column not in registry.columns:
+            registry[column] = None
+    return approved, candidate, rejected, registry[list(SOURCE_REGISTRY_COLUMNS)]
