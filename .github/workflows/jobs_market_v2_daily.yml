@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   actions: read
+  issues: write
 
 concurrency:
   group: jobs-market-v2-production
@@ -251,6 +252,84 @@ jobs:
           with urllib.request.urlopen(request, timeout=15) as response:
               if response.status >= 300:
                   raise SystemExit(f"Slack webhook failed with status {response.status}")
+          PY
+
+      - name: Create or update GitHub issue on repeated failures
+        if: steps.cycle.outputs.exit_code != '0' && fromJSON(steps.failure_state.outputs.failure_streak) >= 3
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          FAILURE_STREAK: ${{ steps.failure_state.outputs.failure_streak }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import urllib.parse
+          import urllib.request
+
+          api_url = os.environ["GITHUB_API_URL"].rstrip("/")
+          repo = os.environ["REPOSITORY"]
+          token = os.environ["GITHUB_TOKEN"]
+          run_url = os.environ["GITHUB_RUN_URL"]
+          failure_streak = os.environ["FAILURE_STREAK"]
+          title = "[Automation] jobs_market_v2 production failures"
+          labels = ["automation", "incident"]
+          body = (
+              "jobs_market_v2 production cycle is repeatedly failing.\n\n"
+              f"- Consecutive failures: {failure_streak}\n"
+              f"- Latest run: {run_url}\n"
+          )
+
+          def request(method: str, url: str, payload: dict | None = None):
+              data = None if payload is None else json.dumps(payload).encode("utf-8")
+              req = urllib.request.Request(
+                  url,
+                  data=data,
+                  headers={
+                      "Accept": "application/vnd.github+json",
+                      "Authorization": f"Bearer {token}",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                      "Content-Type": "application/json",
+                  },
+                  method=method,
+              )
+              with urllib.request.urlopen(req, timeout=20) as resp:
+                  return json.loads(resp.read().decode("utf-8")) if resp.length != 0 else None
+
+          encoded_title = urllib.parse.quote(title, safe="")
+          issues = request(
+              "GET",
+              f"{api_url}/repos/{repo}/issues?state=open&labels={urllib.parse.quote(','.join(labels), safe='')}&per_page=100",
+          )
+          existing = None
+          for issue in issues:
+              if issue.get("title") == title:
+                  existing = issue
+                  break
+
+          if existing is None:
+              issue = request(
+                  "POST",
+                  f"{api_url}/repos/{repo}/issues",
+                  {"title": title, "body": body, "labels": labels},
+              )
+              issue_number = issue["number"]
+          else:
+              issue_number = existing["number"]
+              request(
+                  "PATCH",
+                  f"{api_url}/repos/{repo}/issues/{issue_number}",
+                  {"body": body},
+              )
+
+          request(
+              "POST",
+              f"{api_url}/repos/{repo}/issues/{issue_number}/comments",
+              {"body": f"Repeated failure detected again.\n\n- Latest run: {run_url}\n- Consecutive failures: {failure_streak}"},
+          )
           PY
 
       - name: Fail workflow if production cycle failed
