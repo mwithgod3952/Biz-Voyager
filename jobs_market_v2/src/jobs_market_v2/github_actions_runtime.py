@@ -253,6 +253,70 @@ def write_failure_state(
     return payload
 
 
+def finalize_cycle(
+    *,
+    project_root: Path,
+    status_path: Path,
+    state_path: Path,
+    run_url: str,
+    runtime_status_path: Path,
+    api_url: str = "",
+    repo: str = "",
+    token: str = "",
+    slack_webhook_url: str = "",
+) -> dict[str, Any]:
+    status = resolve_cycle_status(project_root, status_path)
+    issue_closed = False
+    issue_number: int | None = None
+    slack_notified = False
+
+    if status.should_save_state:
+        payload = write_success_or_hold_state(
+            state_path=state_path,
+            status=status,
+            run_url=run_url,
+            runtime_status_path=runtime_status_path,
+        )
+        failure_streak = int(payload.get("consecutive_failures", 0))
+        if status.is_recovered and api_url and repo and token:
+            issue_closed = close_incident_issue(api_url, repo, token)
+    elif status.is_failure:
+        payload = write_failure_state(
+            state_path=state_path,
+            run_url=run_url,
+            runtime_status_path=runtime_status_path,
+        )
+        failure_streak = int(payload.get("consecutive_failures", 0))
+        if api_url and repo and token:
+            issue_number = open_or_update_incident_issue(
+                api_url,
+                repo,
+                token,
+                run_url=run_url,
+                failure_streak=failure_streak,
+            )
+        if slack_webhook_url and failure_streak >= 3:
+            send_slack_notification(slack_webhook_url, run_url, failure_streak)
+            slack_notified = True
+    else:
+        payload = _load_json(state_path)
+        failure_streak = int(payload.get("consecutive_failures", 0))
+
+    return {
+        "exit_code": status.exit_code,
+        "quality_gate_passed": status.quality_gate_passed,
+        "hold_reason": status.hold_reason,
+        "should_save_state": status.should_save_state,
+        "is_failure": status.is_failure,
+        "is_recovered": status.is_recovered,
+        "last_result": status.last_result,
+        "failure_streak": failure_streak,
+        "issue_closed": issue_closed,
+        "issue_number": issue_number,
+        "slack_notified": slack_notified,
+    }
+
+
 def _github_request(method: str, url: str, token: str, payload: dict[str, Any] | None = None) -> Any:
     data = None if payload is None else json.dumps(payload).encode("utf-8")
     request = urllib.request.Request(

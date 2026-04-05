@@ -20,6 +20,7 @@ from jobs_market_v2.github_actions_runtime import (
     append_github_output,
     capture_cycle_status,
     close_incident_issue,
+    finalize_cycle,
     open_or_update_incident_issue,
     resolve_cycle_status,
     send_slack_notification,
@@ -54,6 +55,18 @@ def _build_parser() -> argparse.ArgumentParser:
     write_state.add_argument("--status-path", required=True)
     write_state.add_argument("--run-url", required=True)
     write_state.add_argument("--runtime-status-path")
+
+    finalize = subparsers.add_parser("finalize-cycle")
+    finalize.add_argument("--project-root", required=True)
+    finalize.add_argument("--state-path", required=True)
+    finalize.add_argument("--status-path", required=True)
+    finalize.add_argument("--run-url", required=True)
+    finalize.add_argument("--runtime-status-path")
+    finalize.add_argument("--api-url", default="")
+    finalize.add_argument("--repo", default="")
+    finalize.add_argument("--token", default="")
+    finalize.add_argument("--slack-webhook-url", default="")
+    finalize.add_argument("--result-path", required=True)
 
     write_failure = subparsers.add_parser("write-failure-state")
     write_failure.add_argument("--project-root", required=True)
@@ -124,6 +137,25 @@ def main() -> int:
             runtime_status_path=runtime_status_path,
         )
         print(json.dumps(payload, ensure_ascii=False))
+        return 0
+
+    if args.command == "finalize-cycle":
+        runtime_status_path = Path(args.runtime_status_path) if args.runtime_status_path else Path(args.project_root) / "runtime" / "automation_status.json"
+        result = finalize_cycle(
+            project_root=Path(args.project_root),
+            status_path=Path(args.status_path),
+            state_path=Path(args.state_path),
+            run_url=args.run_url,
+            runtime_status_path=runtime_status_path,
+            api_url=args.api_url,
+            repo=args.repo,
+            token=args.token,
+            slack_webhook_url=args.slack_webhook_url,
+        )
+        result_path = Path(args.result_path)
+        result_path.parent.mkdir(parents=True, exist_ok=True)
+        result_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(json.dumps(result, ensure_ascii=False))
         return 0
 
     if args.command == "write-failure-state":

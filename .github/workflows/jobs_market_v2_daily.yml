@@ -114,33 +114,33 @@ jobs:
             --exit-code "$EXIT_CODE"
           exit 0
 
-      - name: Resolve cycle status
+      - name: Finalize workflow state and incident handling
         if: always()
-        id: cycle_status
-        run: |
-          set -euo pipefail
-          python "$PROJECT_DIR/scripts/github_actions_runtime.py" emit-cycle-status \
-            --project-root "$PROJECT_DIR" \
-            --status-path "$PROJECT_DIR/runtime/github_workflow_cycle_status.json" \
-            --github-output "$GITHUB_OUTPUT"
-
-      - name: Save runtime state after success or bootstrap hold
-        if: always() && steps.cycle_status.outputs.should_save_state == 'true'
         env:
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           STATE_WORKTREE: ${{ runner.temp }}/jobs-market-v2-state
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           set -euo pipefail
           BUNDLE_PATH="$STATE_WORKTREE/$STATE_DIR/runtime_state.tar.gz"
+          RESULT_PATH="$PROJECT_DIR/runtime/github_workflow_finalize_result.json"
           python "$PROJECT_DIR/scripts/runtime_state_bundle.py" create \
             --project-root "$PROJECT_DIR" \
             --bundle-path "$BUNDLE_PATH" \
             --manifest-path "$PROJECT_DIR/config/runtime_state_manifest.txt"
-          python "$PROJECT_DIR/scripts/github_actions_runtime.py" write-workflow-state \
+          python "$PROJECT_DIR/scripts/github_actions_runtime.py" finalize-cycle \
             --project-root "$PROJECT_DIR" \
             --status-path "$PROJECT_DIR/runtime/github_workflow_cycle_status.json" \
             --state-path "$STATE_WORKTREE/$STATE_DIR/workflow_state.json" \
-            --run-url "$GITHUB_RUN_URL"
+            --run-url "$GITHUB_RUN_URL" \
+            --api-url "$GITHUB_API_URL" \
+            --repo "$REPOSITORY" \
+            --token "$GITHUB_TOKEN" \
+            --slack-webhook-url "${SLACK_WEBHOOK_URL:-}" \
+            --result-path "$RESULT_PATH"
           pushd "$STATE_WORKTREE" >/dev/null
           git add "$STATE_DIR"
           if ! git diff --cached --quiet; then
@@ -148,45 +148,15 @@ jobs:
             git push origin "HEAD:$STATE_BRANCH"
           fi
           popd >/dev/null
+          python - <<'PY'
+          import json
+          import sys
+          from pathlib import Path
 
-      - name: Close GitHub issue after recovery
-        if: steps.cycle_status.outputs.is_recovered == 'true'
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_API_URL: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          python "$PROJECT_DIR/scripts/github_actions_runtime.py" close-incident-issue \
-            --api-url "$GITHUB_API_URL" \
-            --repo "$REPOSITORY" \
-            --token "$GITHUB_TOKEN"
-
-      - name: Update failure state
-        if: steps.cycle_status.outputs.is_failure == 'true'
-        id: failure_state
-        env:
-          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          STATE_WORKTREE: ${{ runner.temp }}/jobs-market-v2-state
-        run: |
-          set -euo pipefail
-          BUNDLE_PATH="$STATE_WORKTREE/$STATE_DIR/runtime_state.tar.gz"
-          python "$PROJECT_DIR/scripts/runtime_state_bundle.py" create \
-            --project-root "$PROJECT_DIR" \
-            --bundle-path "$BUNDLE_PATH" \
-            --manifest-path "$PROJECT_DIR/config/runtime_state_manifest.txt"
-          python "$PROJECT_DIR/scripts/github_actions_runtime.py" write-failure-state \
-            --project-root "$PROJECT_DIR" \
-            --state-path "$STATE_WORKTREE/$STATE_DIR/workflow_state.json" \
-            --run-url "$GITHUB_RUN_URL" \
-            --github-output "$GITHUB_OUTPUT"
-          pushd "$STATE_WORKTREE" >/dev/null
-          git add "$STATE_DIR"
-          if ! git diff --cached --quiet; then
-            git commit -m "Record automation failure for run $GITHUB_RUN_ID"
-            git push origin "HEAD:$STATE_BRANCH"
-          fi
-          popd >/dev/null
+          result_path = Path("jobs_market_v2/runtime/github_workflow_finalize_result.json")
+          result = json.loads(result_path.read_text(encoding="utf-8"))
+          sys.exit(1 if result.get("is_failure") else 0)
+          PY
 
       - name: Upload runtime artifacts
         if: always()
@@ -202,40 +172,6 @@ jobs:
             jobs_market_v2/runtime/master_jobs.csv
             jobs_market_v2/runtime/staging_jobs.csv
             jobs_market_v2/runtime/source_registry.csv
-
-      - name: Notify Slack on repeated failures
-        if: steps.cycle_status.outputs.is_failure == 'true' && fromJSON(steps.failure_state.outputs.failure_streak) >= 3
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          FAILURE_STREAK: ${{ steps.failure_state.outputs.failure_streak }}
-        run: |
-          set -euo pipefail
-          if [[ -z "${SLACK_WEBHOOK_URL:-}" ]]; then
-            exit 0
-          fi
-          python "$PROJECT_DIR/scripts/github_actions_runtime.py" notify-slack \
-            --webhook-url "$SLACK_WEBHOOK_URL" \
-            --run-url "$GITHUB_RUN_URL" \
-            --failure-streak "$FAILURE_STREAK"
-
-      - name: Create or update GitHub issue on failure
-        if: steps.cycle_status.outputs.is_failure == 'true'
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_API_URL: ${{ github.api_url }}
-          REPOSITORY: ${{ github.repository }}
-          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          FAILURE_STREAK: ${{ steps.failure_state.outputs.failure_streak }}
-        run: |
-          set -euo pipefail
-          python "$PROJECT_DIR/scripts/github_actions_runtime.py" open-or-update-incident-issue \
-            --api-url "$GITHUB_API_URL" \
-            --repo "$REPOSITORY" \
-            --token "$GITHUB_TOKEN" \
-            --run-url "$GITHUB_RUN_URL" \
-            --failure-streak "$FAILURE_STREAK"
-
-      - name: Fail workflow if production cycle failed
-        if: steps.cycle_status.outputs.is_failure == 'true'
-        run: exit 1
+            jobs_market_v2/runtime/github_workflow_cycle_summary.json
+            jobs_market_v2/runtime/github_workflow_cycle_status.json
+            jobs_market_v2/runtime/github_workflow_finalize_result.json
