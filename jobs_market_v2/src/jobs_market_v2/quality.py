@@ -22,7 +22,7 @@ from .presentation import (
     build_display_fields,
     compose_detail_fallback,
     count_english_leaks,
-    detail_prefers_structured_sections,
+    detail_should_fallback_to_structured_sections,
     sanitize_core_skill_text,
     sanitize_name_or_title_text,
     sanitize_section_text,
@@ -1162,9 +1162,10 @@ def normalize_job_analysis_fields(staging_jobs: pd.DataFrame) -> pd.DataFrame:
         normalized["상세본문_분석용"] = normalized["상세본문_분석용"].map(
             lambda value: value if section_output_is_substantive(value) else ""
         )
+        normalized["_상세본문_원본정제"] = normalized["상세본문_분석용"]
         normalized["상세본문_분석용"] = normalized.apply(
             lambda row: ""
-            if detail_prefers_structured_sections(
+            if detail_should_fallback_to_structured_sections(
                 row.get("상세본문_분석용"),
                 row.get("주요업무_분석용"),
                 row.get("자격요건_분석용"),
@@ -1185,7 +1186,10 @@ def normalize_job_analysis_fields(staging_jobs: pd.DataFrame) -> pd.DataFrame:
     if "우대사항_분석용" in normalized.columns and "상세본문_분석용" in normalized.columns:
         normalized["우대사항_분석용"] = normalized.apply(
             lambda row: row.get("우대사항_분석용")
-            or _extract_section_from_raw_detail(row.get("상세본문_분석용"), _PREFERRED_HEADING_PATTERNS),
+            or _extract_section_from_raw_detail(
+                row.get("_상세본문_원본정제") or row.get("상세본문_분석용"),
+                _PREFERRED_HEADING_PATTERNS,
+            ),
             axis=1,
         )
     normalized = normalized.apply(_recover_missing_analysis_fields, axis=1)
@@ -1233,6 +1237,7 @@ def normalize_job_analysis_fields(staging_jobs: pd.DataFrame) -> pd.DataFrame:
         normalized["우대사항_표시"] = normalized["우대사항_표시"].fillna("").astype(str).map(normalize_whitespace)
         normalized["우대사항_표시"] = normalized["우대사항_표시"].replace("", _DEFAULT_PREFERRED_DISPLAY)
 
+    normalized = normalized.drop(columns=["_상세본문_원본정제"], errors="ignore")
     return _disambiguate_duplicate_display_titles(normalized)
 
 

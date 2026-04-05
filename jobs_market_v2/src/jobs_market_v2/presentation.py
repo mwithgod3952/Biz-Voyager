@@ -250,6 +250,15 @@ _SECTION_TERMINATION_PATTERNS = (
     re.compile(r"^제출 서류"),
 )
 
+_DETAIL_FALLBACK_NOISE_PATTERNS = (
+    re.compile(r"지원\s*시\s*참고사항"),
+    re.compile(r"채용인원"),
+    re.compile(r"수탁연구사업\s*종료일"),
+    re.compile(r"채용 관련 문의"),
+    re.compile(r"접수기간"),
+    re.compile(r"^\d+\s*제\d+차.*채용공고"),
+)
+
 _MAIN_TASK_HEADING_PATTERNS = (
     re.compile(r"주요업무"),
     re.compile(r"담당업무"),
@@ -1050,6 +1059,64 @@ def detail_prefers_structured_sections(
     return any(pattern.search(detail_text) for pattern in _DETAIL_PREFER_SECTION_PATTERNS)
 
 
+def detail_has_admin_or_ocr_noise(detail: str | None) -> bool:
+    text = normalize_whitespace(detail)
+    if not text:
+        return False
+
+    lines = [normalize_whitespace(line) for line in text.split("\n") if normalize_whitespace(line)]
+    if not lines:
+        return False
+
+    admin_lines = 0
+    numbered_lines = 0
+    ocr_lines = 0
+    for line in lines:
+        if any(pattern.search(line) for pattern in _DETAIL_FALLBACK_NOISE_PATTERNS):
+            admin_lines += 1
+        if line.startswith("※"):
+            ocr_lines += 1
+        if re.search(r"^\d+\)", line):
+            numbered_lines += 1
+        punctuation_count = sum(character in "[](),.;:!/" for character in line)
+        punctuation_ratio = punctuation_count / max(len(line), 1)
+        if punctuation_ratio >= 0.08 and len(_KOREAN_TOKEN_RE.findall(line)) <= 6:
+            ocr_lines += 1
+        if re.search(r"[가-힣A-Za-z0-9]+(?:[,./][가-힣A-Za-z0-9]+){2,}", line):
+            ocr_lines += 1
+
+    if admin_lines >= 2:
+        return True
+    if admin_lines >= 1 and ocr_lines >= 2:
+        return True
+    if admin_lines >= 1 and numbered_lines >= 3:
+        return True
+    if numbered_lines >= 5 and ocr_lines >= 2:
+        return True
+    return False
+
+
+def detail_should_fallback_to_structured_sections(
+    detail: str | None,
+    main_tasks: str | None,
+    requirements: str | None,
+    preferred: str | None,
+) -> bool:
+    detail_text = normalize_whitespace(detail)
+    if not detail_text:
+        return False
+    structured_detail = compose_detail_fallback(main_tasks, requirements, preferred)
+    if not section_output_is_substantive(structured_detail):
+        return False
+    if detail_prefers_structured_sections(detail_text, main_tasks, requirements, preferred):
+        return True
+    if detail_has_admin_or_ocr_noise(detail_text):
+        return True
+    if section_loss_looks_high(structured_detail, detail_text):
+        return True
+    return False
+
+
 def sanitize_section_text(value: str | None) -> str:
     text = _coerce_section_input(value)
     if not text:
@@ -1388,10 +1455,8 @@ def build_analysis_fields(record: dict) -> dict[str, str]:
     detail = sanitize_section_text(raw_detail)
     if detail and not section_output_is_substantive(detail):
         detail = ""
-    if detail and detail_prefers_structured_sections(detail, main_tasks, requirements, preferred):
-        detail = ""
     structured_detail = compose_detail_fallback(main_tasks, requirements, preferred)
-    if detail and section_loss_looks_high(structured_detail, detail):
+    if detail_should_fallback_to_structured_sections(detail, main_tasks, requirements, preferred):
         detail = ""
     if not detail:
         detail = structured_detail

@@ -1825,10 +1825,49 @@ def _recover_recruiter_detail_text(
     return "\n".join(parts)
 
 
+_RECRUITER_RECOVERY_TERMINATION_PATTERNS = (
+    re.compile(r"지원\s*시\s*참고사항"),
+    re.compile(r"채용 관련 문의"),
+    re.compile(r"문의 부탁"),
+    re.compile(r"수탁연구사업\s*종료일"),
+)
+_RECRUITER_RECOVERY_DROP_PATTERNS = (
+    re.compile(r"채용인원"),
+    re.compile(r"접수기간"),
+    re.compile(r"근무지"),
+    re.compile(r"^\d+\s*제\d+차.*채용공고"),
+)
+
+
+def _sanitize_recruiter_recovered_text(recovered_text: str) -> str:
+    if not recovered_text:
+        return ""
+
+    sanitized_lines: list[str] = []
+    seen: set[str] = set()
+    for raw_line in re.split(r"[\r\n]+|•", recovered_text):
+        line = normalize_whitespace(raw_line)
+        if not line:
+            continue
+        if any(pattern.search(line) for pattern in _RECRUITER_RECOVERY_TERMINATION_PATTERNS):
+            break
+        if any(pattern.search(line) for pattern in _RECRUITER_RECOVERY_DROP_PATTERNS):
+            continue
+        if line in seen:
+            continue
+        seen.add(line)
+        sanitized_lines.append(line)
+    return "\n".join(sanitized_lines)
+
+
 def _append_recovered_text_to_description(description_html: str, recovered_text: str) -> str:
     if not recovered_text:
         return description_html
-    escaped_lines = [html.escape(line) for line in recovered_text.splitlines() if normalize_whitespace(line)]
+    escaped_lines = [
+        html.escape(line)
+        for line in _sanitize_recruiter_recovered_text(recovered_text).splitlines()
+        if normalize_whitespace(line)
+    ]
     if not escaped_lines:
         return description_html
     recovered_block = "<div>" + "<br>".join(escaped_lines) + "</div>"
