@@ -2,6 +2,12 @@ name: jobs_market_v2_daily
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/jobs_market_v2_daily.yml"
+      - "jobs_market_v2/**"
   schedule:
     - cron: "17 */2 * * *"
 
