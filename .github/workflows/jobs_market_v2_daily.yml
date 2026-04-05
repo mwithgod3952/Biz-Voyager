@@ -144,13 +144,21 @@ jobs:
                   summary = json.loads(summary_path.read_text(encoding="utf-8"))
               except json.JSONDecodeError:
                   summary = {}
+          run_mode = str(summary.get("run_mode", "") or "")
           published_state = summary.get("published_state", {}) if isinstance(summary, dict) else {}
+          collection_summary = summary.get("collection", {}) if isinstance(summary, dict) else {}
           promotion_block_reason = str(published_state.get("promotion_block_reason", "") or "")
-          hold_reason = (
-              promotion_block_reason
-              if promotion_block_reason == "bootstrap_source_scan_incomplete"
-              else ""
-          )
+          collection_ready = bool(published_state.get("collection_ready", True))
+          collection_ready_reason = str(published_state.get("collection_ready_reason", "") or "")
+          completed_full_source_scan = bool(collection_summary.get("completed_full_source_scan", True))
+          hold_reason = ""
+          if run_mode in {"bootstrap", "bootstrap_resume"}:
+              if not collection_ready:
+                  hold_reason = collection_ready_reason or "bootstrap_collection_not_ready"
+              elif promotion_block_reason == "bootstrap_source_scan_incomplete":
+                  hold_reason = promotion_block_reason
+              elif not completed_full_source_scan:
+                  hold_reason = "bootstrap_source_scan_incomplete"
           with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
               output.write(f"automation_ready={str(bool(summary.get('automation_ready', False))).lower()}\n")
               output.write(f"promotion_block_reason={promotion_block_reason}\n")
@@ -159,7 +167,7 @@ jobs:
           exit 0
 
       - name: Save runtime state after success or bootstrap hold
-        if: always() && (steps.cycle.outputs.exit_code == '0' || steps.cycle.outputs.hold_reason == 'bootstrap_source_scan_incomplete')
+        if: always() && (steps.cycle.outputs.exit_code == '0' || steps.cycle.outputs.hold_reason != '')
         env:
           CYCLE_EXIT_CODE: ${{ steps.cycle.outputs.exit_code }}
           CYCLE_HOLD_REASON: ${{ steps.cycle.outputs.hold_reason }}
@@ -283,6 +291,7 @@ jobs:
           payload["updated_at"] = datetime.now(timezone.utc).isoformat()
           payload["consecutive_failures"] = int(payload.get("consecutive_failures", 0)) + 1
           payload["last_result"] = "failure"
+          payload["hold_reason"] = ""
           payload["run_url"] = os.environ["GITHUB_RUN_URL"]
           state_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
           print(payload["consecutive_failures"])
@@ -290,7 +299,7 @@ jobs:
           FAILURE_STREAK="$(python -c 'import json, os; from pathlib import Path; state_path = Path(os.environ["STATE_WORKTREE"]) / os.environ["STATE_DIR"] / "workflow_state.json"; payload = json.loads(state_path.read_text(encoding="utf-8")); print(int(payload.get("consecutive_failures", 0)))')"
           echo "failure_streak=$FAILURE_STREAK" >> "$GITHUB_OUTPUT"
           pushd "$STATE_WORKTREE" >/dev/null
-          git add "$STATE_DIR/workflow_state.json"
+          git add "$STATE_DIR"
           if ! git diff --cached --quiet; then
             git commit -m "Record automation failure for run $GITHUB_RUN_ID"
             git push origin "HEAD:$STATE_BRANCH"
