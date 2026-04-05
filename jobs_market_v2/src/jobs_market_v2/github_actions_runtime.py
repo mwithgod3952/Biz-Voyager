@@ -166,6 +166,17 @@ def shell_quote_env_value(value: str) -> str:
     return "'" + value.replace("'", "'\"'\"'") + "'"
 
 
+def _materialize_service_account_json(service_account_json: str, env_dir: Path) -> str:
+    candidate = Path(service_account_json).expanduser()
+    if candidate.exists():
+        return str(candidate)
+    payload = json.loads(service_account_json)
+    service_account_path = env_dir / ".ci" / "google_service_account.json"
+    service_account_path.parent.mkdir(parents=True, exist_ok=True)
+    service_account_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    return str(service_account_path)
+
+
 def write_actions_env_file(
     env_path: Path,
     spreadsheet_id: str,
@@ -174,9 +185,11 @@ def write_actions_env_file(
 ) -> list[str]:
     if not spreadsheet_id or not service_account_json:
         raise ValueError("Missing required secrets: GOOGLE_SHEETS_SPREADSHEET_ID, GOOGLE_SERVICE_ACCOUNT_JSON")
+    env_path = env_path.resolve()
+    service_account_value = _materialize_service_account_json(service_account_json, env_path.parent)
     lines = [
         f"GOOGLE_SHEETS_SPREADSHEET_ID={shell_quote_env_value(spreadsheet_id)}",
-        f"GOOGLE_SERVICE_ACCOUNT_JSON={shell_quote_env_value(service_account_json)}",
+        f"GOOGLE_SERVICE_ACCOUNT_JSON={shell_quote_env_value(service_account_value)}",
     ]
     lines.extend(f"{key}={value}" for key, value in DEFAULT_ENV_FLAGS)
     if gemini_api_key:
