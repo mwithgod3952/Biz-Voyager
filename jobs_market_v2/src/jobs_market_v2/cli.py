@@ -65,7 +65,10 @@ def _summary_exit_code(command: str, summary: dict) -> int:
     if command == "doctor":
         return 0 if summary.get("passed") else 1
     if command == "run-collection-cycle":
-        return 0 if summary.get("automation_ready") else 1
+        # run-collection-cycle can complete successfully while intentionally
+        # holding promotion/sync, so automation policy should be decided by the
+        # caller from the returned summary rather than by a generic shell code.
+        return 0
     if command in {"update-incremental", "collect-jobs"}:
         return 0 if summary.get("quality_gate_passed", False) else 1
     if command == "promote-staging":
