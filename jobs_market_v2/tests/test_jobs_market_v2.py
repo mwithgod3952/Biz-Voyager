@@ -13,6 +13,7 @@ import httpx
 import pandas as pd
 import pytest
 
+import jobs_market_v2.cli as cli_module
 import jobs_market_v2.collection as collection_module
 import jobs_market_v2.company_screening as company_screening_module
 import jobs_market_v2.company_seed_sources as company_seed_module
@@ -78,6 +79,7 @@ from jobs_market_v2.pipelines import (
 from jobs_market_v2.presentation import (
     build_analysis_fields,
     build_display_fields,
+    count_english_leaks,
     sanitize_core_skill_text,
     sanitize_section_text,
     section_output_is_substantive,
@@ -89,7 +91,7 @@ from jobs_market_v2.settings import AppSettings, ProjectPaths
 from jobs_market_v2.sheets import build_sheet_tabs, export_tabs_locally, sync_tabs_to_google_sheets
 from jobs_market_v2.storage import read_csv_or_empty
 from jobs_market_v2.storage import write_csv
-from jobs_market_v2.utils import canonicalize_runtime_source_url
+from jobs_market_v2.utils import canonicalize_runtime_source_url, contains_english
 
 
 @pytest.fixture()
@@ -4793,15 +4795,18 @@ def test_parse_html_jobs_extracts_next_rsc_notice_family_roles(tmp_path: Path) -
         for job in jobs
     ]
     assert [row["job_role"] for row in normalized] == ["인공지능 리서처", "데이터 사이언티스트"]
-    assert "Reinforcement learning for robot control" in normalized[0]["주요업무_표시"]
-    assert "Human-robot integrative big-data management" in normalized[1]["주요업무_표시"]
+    assert normalized[0]["주요업무_분석용"] == ""
+    assert normalized[0]["주요업무_표시"] == ""
+    assert contains_english(normalized[1]["주요업무_표시"]) is False
     assert "포지션(분야)" not in normalized[0]["주요업무_표시"]
     assert "관련 연구 또는 개발 경험이 있는 분" in normalized[0]["자격요건_표시"]
     assert "로보틱스 프로젝트 경험이 있는 분" in normalized[1]["우대사항_표시"]
     filtered, dropped = filter_low_quality_jobs(pd.DataFrame(normalized), settings=AppSettings(), paths=paths)
-    assert len(filtered) == 2
-    assert dropped.empty
-    assert "Reinforcement learning for robot control" in filtered.iloc[0]["주요업무_표시"]
+    assert len(filtered) == 1
+    assert len(dropped) == 1
+    assert filtered.iloc[0]["job_role"] == "인공지능 리서처"
+    assert dropped.iloc[0]["job_role"] == "데이터 사이언티스트"
+    assert filtered.iloc[0]["자격요건_표시"] == "관련 연구 또는 개발 경험이 있는 분"
 
 
 def test_classify_job_role_accepts_neural_network_optimization_engineer() -> None:
@@ -5350,6 +5355,34 @@ def test_display_fields_infer_broad_experience_from_strong_professional_signals(
     )
     assert display["경력수준_표시"] == "경력"
     assert display["경력근거_표시"] == "자격요건"
+
+
+def test_display_fields_drop_english_only_prose_from_visible_sections() -> None:
+    display = build_display_fields(
+        {
+            "company_name": "몰로코",
+            "source_name": "몰로코 채용",
+            "job_title_raw": "Senior Applied Scientist",
+            "experience_level_raw": "",
+            "job_role": "데이터 사이언티스트",
+            "requirements": "",
+            "preferred": "",
+            "main_tasks": "",
+            "core_skills": "",
+        },
+        analysis_fields={
+            "주요업무_분석용": (
+                "Leading research projects with cross-functional collaborators to evaluate "
+                "system health and drive infrastructure improvements."
+            ),
+            "자격요건_분석용": "",
+            "우대사항_분석용": "",
+            "핵심기술_분석용": "",
+            "상세본문_분석용": "",
+        },
+    )
+    assert display["주요업무_표시"] == ""
+    assert display["우대사항_표시"] == "별도 우대사항 미기재"
 
 
 def test_display_fields_default_experience_to_unspecified_without_polluting_summary() -> None:
@@ -5913,6 +5946,41 @@ def test_analysis_prefers_korean_lines_when_section_is_bilingual() -> None:
     assert "데이터 모델과 대시보드를 구축합니다." in analysis["주요업무_분석용"]
     assert "실험 결과를 분석합니다." in analysis["주요업무_분석용"]
     assert "Build data models" not in analysis["주요업무_분석용"]
+
+
+def test_analysis_drops_english_only_main_task_lines_that_cause_display_leaks() -> None:
+    analysis = build_analysis_fields(
+        {
+            "main_tasks": (
+                "Leading research projects, possibly with a small team of applied scientists, "
+                "as part of a group of cross-functional collaborators to evaluate the health "
+                "of both internal and external components."
+            ),
+            "description_text": "",
+        }
+    )
+    display = build_display_fields(
+        {
+            "company_name": "테스트회사",
+            "source_name": "테스트소스",
+            "job_title_raw": "응용 과학자",
+            "job_role": "데이터 사이언티스트",
+            "experience_level_raw": "경력",
+            "main_tasks": (
+                "Leading research projects, possibly with a small team of applied scientists, "
+                "as part of a group of cross-functional collaborators to evaluate the health "
+                "of both internal and external components."
+            ),
+            "requirements": "",
+            "preferred": "",
+            "core_skills": "",
+        },
+        analysis_fields=analysis,
+    )
+    frame = pd.DataFrame([display])
+    assert analysis["주요업무_분석용"] == ""
+    assert display["주요업무_표시"] == ""
+    assert count_english_leaks(frame) == 0
 
 
 def test_core_skills_are_inferred_from_requirements_and_description() -> None:
@@ -6551,6 +6619,67 @@ def test_quality_gate_reports_semantic_placeholder_ratios() -> None:
     assert gate.metrics["preferred_placeholder_ratio"] == 1.0
     assert gate.metrics["preferred_blank_ratio"] == 1.0
     assert "경력수준 표시값 미기재 비율이 너무 높습니다." in gate.reasons
+
+
+def test_normalize_job_analysis_fields_sanitizes_visible_sections_from_analysis_text() -> None:
+    staging = pd.DataFrame(
+        [
+            {
+                "company_name": "몰로코",
+                "source_name": "몰로코 채용",
+                "job_title_raw": "Senior Applied Scientist",
+                "job_title_ko": "Senior Applied Scientist",
+                "job_role": "데이터 사이언티스트",
+                "job_url": "https://example.com/jobs/english-leak",
+                "source_url": "https://example.com/feed",
+                "source_bucket": "approved",
+                "company_tier": "스타트업",
+                "record_status": "유지",
+                "is_active": True,
+                "주요업무_분석용": (
+                    "Leading research projects with cross-functional collaborators to evaluate "
+                    "system health and drive infrastructure improvements."
+                ),
+                "자격요건_분석용": "",
+                "우대사항_분석용": "",
+                "핵심기술_분석용": "",
+                "상세본문_분석용": "",
+                "회사명_표시": "몰로코",
+                "소스명_표시": "몰로코 채용",
+                "공고제목_표시": "Senior Applied Scientist",
+                "경력수준_표시": "미기재",
+                "경력근거_표시": "",
+                "채용트랙_표시": "일반채용",
+                "채용트랙근거_표시": "",
+                "직무초점_표시": "",
+                "직무초점근거_표시": "",
+                "구분요약_표시": "",
+                "직무명_표시": "데이터 사이언티스트",
+                "주요업무_표시": (
+                    "Leading research projects with cross-functional collaborators to evaluate "
+                    "system health and drive infrastructure improvements."
+                ),
+                "자격요건_표시": "",
+                "우대사항_표시": "",
+                "핵심기술_표시": "",
+            }
+        ]
+    )
+    registry = pd.DataFrame(
+        [
+            {
+                "source_url": "https://example.com/feed",
+                "source_bucket": "approved",
+                "verification_status": "성공",
+            }
+        ]
+    )
+
+    normalized = normalize_job_analysis_fields(staging)
+    gate = evaluate_quality_gate(normalized, registry, already_filtered=True)
+
+    assert normalized.iloc[0]["주요업무_표시"] == ""
+    assert gate.metrics["english_leak_count"] == 0
 
 
 def test_discover_sources_prefers_approved_companies_when_bucket_exists(sandbox_project: Path) -> None:
@@ -8359,6 +8488,11 @@ def test_run_collection_cycle_pipeline_bootstrap_and_incremental(
     assert "검증실패보류" in staging["record_status"].tolist()
     assert incremental_summary["collection"]["held_job_count"] >= 1
     assert incremental_summary["collection"]["dropped_low_quality_job_count"] >= 0
+
+
+def test_run_collection_cycle_summary_exit_code_ignores_automation_ready() -> None:
+    assert cli_module._summary_exit_code("run-collection-cycle", {"automation_ready": False}) == 0
+    assert cli_module._summary_exit_code("run-collection-cycle", {"automation_ready": True}) == 0
 
 
 def test_run_collection_cycle_pipeline_bootstrap_resume_until_full_scan(

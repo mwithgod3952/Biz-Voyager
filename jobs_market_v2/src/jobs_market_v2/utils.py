@@ -22,11 +22,14 @@ _ROOT_CANONICAL_SOURCE_HOST_HINTS = (
 )
 
 
-def normalize_whitespace(value: str | None) -> str:
+def normalize_whitespace(value: object | None) -> str:
     if value is None:
         return ""
-    value = value.replace("\u00a0", " ").replace("\r\n", "\n").replace("\r", "\n")
-    lines = [_MULTISPACE_RE.sub(" ", line).strip() for line in value.split("\n")]
+    text = str(value).strip()
+    if not text or text.lower() == "nan":
+        return ""
+    value_text = text.replace("\u00a0", " ").replace("\r\n", "\n").replace("\r", "\n")
+    lines = [_MULTISPACE_RE.sub(" ", line).strip() for line in value_text.split("\n")]
     return "\n".join(line for line in lines if line)
 
 

@@ -1209,7 +1209,20 @@ def _preserve_english_task_lines(raw_text: str | None) -> str:
             continue
         if len(_ENGLISH_WORD_RE.findall(line)) < 3:
             continue
-        preserved.append(line)
+        localized_line = _localize_common_terms(line)
+        replaced = _LATIN_TOKEN_RE.sub(
+            lambda match: _translate_english_token(match.group(0)) or "영문토큰",
+            localized_line,
+        )
+        replaced = replaced.replace("'", " ").replace("’", " ").replace("`", " ")
+        replaced = _EMPTY_BRACKETS_RE.sub(" ", replaced)
+        replaced = _SPACE_BEFORE_PUNCT_RE.sub(r"\1", replaced)
+        replaced = normalize_whitespace(replaced)
+        if not replaced or contains_english(replaced):
+            continue
+        if "영문토큰" in replaced or not has_hangul(replaced):
+            continue
+        preserved.append(replaced)
 
     joined = "\n".join(preserved)
     if not section_output_is_substantive(joined):
@@ -1393,11 +1406,16 @@ def build_analysis_fields(record: dict) -> dict[str, str]:
 
 def build_display_fields(record: dict, analysis_fields: dict[str, str] | None = None) -> dict[str, str]:
     analysis_fields = analysis_fields or build_analysis_fields(record)
+    main_tasks_display = sanitize_section_text(analysis_fields.get("주요업무_분석용", ""))
+    requirements_display = sanitize_section_text(analysis_fields.get("자격요건_분석용", ""))
+    preferred_display = sanitize_section_text(analysis_fields.get("우대사항_분석용", ""))
+    if not preferred_display:
+        preferred_display = _DEFAULT_PREFERRED_DISPLAY
+    core_skills_display = sanitize_core_skill_text(analysis_fields.get("핵심기술_분석용", ""))
     experience_display, experience_source = _infer_experience_display(record, analysis_fields)
     hiring_track_display, hiring_track_source = _infer_hiring_track_display(record, analysis_fields)
     focus_display, focus_source = _infer_focus_display(record, analysis_fields)
     position_summary = _build_position_summary_display(record, experience_display, hiring_track_display, focus_display)
-    preferred_display = analysis_fields.get("우대사항_분석용", "") or _DEFAULT_PREFERRED_DISPLAY
     return {
         "회사명_표시": sanitize_name_or_title_text(record.get("company_name"), unknown_name=True),
         "소스명_표시": sanitize_name_or_title_text(record.get("source_name"), unknown_name=True),
@@ -1410,10 +1428,10 @@ def build_display_fields(record: dict, analysis_fields: dict[str, str] | None = 
         "직무초점근거_표시": focus_source,
         "구분요약_표시": position_summary,
         "직무명_표시": sanitize_name_or_title_text(record.get("job_role")),
-        "주요업무_표시": analysis_fields.get("주요업무_분석용", ""),
-        "자격요건_표시": analysis_fields.get("자격요건_분석용", ""),
+        "주요업무_표시": main_tasks_display,
+        "자격요건_표시": requirements_display,
         "우대사항_표시": preferred_display,
-        "핵심기술_표시": analysis_fields.get("핵심기술_분석용", ""),
+        "핵심기술_표시": core_skills_display,
     }
 
 

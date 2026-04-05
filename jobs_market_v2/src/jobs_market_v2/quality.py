@@ -1225,7 +1225,10 @@ def normalize_job_analysis_fields(staging_jobs: pd.DataFrame) -> pd.DataFrame:
         ("핵심기술_분석용", "핵심기술_표시"),
     ):
         if analysis_column in normalized.columns and display_column in normalized.columns:
-            normalized[display_column] = normalized[analysis_column]
+            if analysis_column == "핵심기술_분석용":
+                normalized[display_column] = normalized[analysis_column].fillna("").astype(str).map(sanitize_core_skill_text)
+            else:
+                normalized[display_column] = normalized[analysis_column].fillna("").astype(str).map(sanitize_section_text)
     if "우대사항_표시" in normalized.columns:
         normalized["우대사항_표시"] = normalized["우대사항_표시"].fillna("").astype(str).map(normalize_whitespace)
         normalized["우대사항_표시"] = normalized["우대사항_표시"].replace("", _DEFAULT_PREFERRED_DISPLAY)
