@@ -135,15 +135,17 @@ jobs:
           set +e
           cd "$PROJECT_DIR"
           SUMMARY_PATH="$PWD/runtime/github_workflow_cycle_summary.json"
+          STATUS_PATH="$PWD/runtime/github_workflow_cycle_status.json"
           ./.venv/bin/python -m jobs_market_v2.cli run-collection-cycle | tee "$SUMMARY_PATH"
           EXIT_CODE=${PIPESTATUS[0]}
-          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
-          SUMMARY_PATH="$SUMMARY_PATH" python - <<'PY'
+          STATUS_PATH="$STATUS_PATH" SUMMARY_PATH="$SUMMARY_PATH" EXIT_CODE="$EXIT_CODE" python - <<'PY'
           import json
           import os
           from pathlib import Path
 
           summary_path = Path(os.environ["SUMMARY_PATH"])
+          status_path = Path(os.environ["STATUS_PATH"])
+          exit_code = str(os.environ.get("EXIT_CODE", "1") or "1")
           summary = {}
           if summary_path.exists():
               try:
@@ -166,9 +168,16 @@ jobs:
                   hold_reason = promotion_block_reason
               elif not completed_full_source_scan:
                   hold_reason = "bootstrap_source_scan_incomplete"
+          status = {
+              "exit_code": exit_code,
+              "quality_gate_passed": quality_gate_passed,
+              "hold_reason": hold_reason,
+              "promotion_block_reason": promotion_block_reason,
+              "automation_ready": bool(summary.get("automation_ready", False)),
+          }
+          status_path.write_text(json.dumps(status, ensure_ascii=False, indent=2), encoding="utf-8")
           with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
-              output.write(f"automation_ready={str(bool(summary.get('automation_ready', False))).lower()}\n")
-              output.write(f"promotion_block_reason={promotion_block_reason}\n")
+              output.write(f"exit_code={exit_code}\n")
               output.write(f"quality_gate_passed={str(quality_gate_passed).lower()}\n")
               output.write(f"hold_reason={hold_reason}\n")
           PY
@@ -177,11 +186,6 @@ jobs:
       - name: Resolve cycle status
         if: always()
         id: cycle_status
-        env:
-          CYCLE_CONCLUSION: ${{ steps.cycle.conclusion }}
-          CYCLE_EXIT_CODE: ${{ steps.cycle.outputs.exit_code }}
-          CYCLE_HOLD_REASON: ${{ steps.cycle.outputs.hold_reason }}
-          CYCLE_QUALITY_GATE_PASSED: ${{ steps.cycle.outputs.quality_gate_passed }}
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -192,24 +196,26 @@ jobs:
           project_dir = Path("jobs_market_v2")
           quality_gate_path = project_dir / "runtime/quality_gate.json"
           summary_path = project_dir / "runtime/github_workflow_cycle_summary.json"
+          status_path = project_dir / "runtime/github_workflow_cycle_status.json"
 
-          cycle_conclusion = str(os.environ.get("CYCLE_CONCLUSION", "") or "")
-          exit_code = str(os.environ.get("CYCLE_EXIT_CODE", "") or "").strip()
-          if not exit_code:
-              exit_code = "0" if cycle_conclusion == "success" else "1"
+          exit_code = "1"
+          quality_gate_passed_text = "false"
+          hold_reason = ""
 
-          hold_reason = str(os.environ.get("CYCLE_HOLD_REASON", "") or "").strip()
-          quality_gate_passed_text = str(os.environ.get("CYCLE_QUALITY_GATE_PASSED", "") or "").strip().lower()
+          if status_path.exists():
+              try:
+                  status = json.loads(status_path.read_text(encoding="utf-8"))
+              except Exception:
+                  status = {}
+              exit_code = str(status.get("exit_code", "1") or "1").strip() or "1"
+              quality_gate_passed_text = "true" if bool(status.get("quality_gate_passed", False)) else "false"
+              hold_reason = str(status.get("hold_reason", "") or "").strip()
 
-          if quality_gate_passed_text not in {"true", "false"}:
-              quality_gate_passed = False
-              if quality_gate_path.exists():
-                  try:
-                      quality_gate_passed = bool(
-                          json.loads(quality_gate_path.read_text(encoding="utf-8")).get("passed", False)
-                      )
-                  except Exception:
-                      quality_gate_passed = False
+          if quality_gate_passed_text not in {"true", "false"} and quality_gate_path.exists():
+              try:
+                  quality_gate_passed = bool(json.loads(quality_gate_path.read_text(encoding="utf-8")).get("passed", False))
+              except Exception:
+                  quality_gate_passed = False
               quality_gate_passed_text = "true" if quality_gate_passed else "false"
 
           if not hold_reason and summary_path.exists():
@@ -410,7 +416,7 @@ jobs:
           FAILURE_STREAK: ${{ steps.failure_state.outputs.failure_streak }}
         run: |
           set -euo pipefail
-          if [[ -z "${SLACK_WEBHOOK_URM:-}" ]]; then
+          if [[ -z "${SLACK_WEBHOOK_URL:-}" ]]; then
             exit 0
           fi
           python - <<'PY'
