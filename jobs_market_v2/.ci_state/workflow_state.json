@@ -1,7 +1,8 @@
 {
-  "updated_at": "2026-04-05T06:16:42.894389+00:00",
-  "consecutive_failures": 3,
-  "last_result": "failure",
-  "hold_reason": "bootstrap_source_scan_incomplete",
-  "run_url": "https://github.com/mwithgod3952/Biz-Voyager/actions/runs/23995413871"
+  "updated_at": "2026-04-05T06:49:09.296957+00:00",
+  "consecutive_failures": 0,
+  "last_result": "success",
+  "hold_reason": "",
+  "run_url": "",
+  "seeded_from": "local_validated_runtime_minimal"
 }
