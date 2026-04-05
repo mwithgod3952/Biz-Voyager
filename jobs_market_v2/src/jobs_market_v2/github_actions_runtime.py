@@ -167,10 +167,23 @@ def shell_quote_env_value(value: str) -> str:
 
 
 def _materialize_service_account_json(service_account_json: str, env_dir: Path) -> str:
-    candidate = Path(service_account_json).expanduser()
-    if candidate.exists():
-        return str(candidate)
-    payload = json.loads(service_account_json)
+    raw_value = str(service_account_json or "").strip()
+    if not raw_value:
+        raise ValueError("Missing required secret: GOOGLE_SERVICE_ACCOUNT_JSON")
+
+    payload: dict[str, Any] | None = None
+    if raw_value.startswith("{"):
+        payload = json.loads(raw_value)
+    else:
+        try:
+            candidate = Path(raw_value).expanduser()
+            if candidate.exists():
+                return str(candidate)
+        except OSError:
+            payload = json.loads(raw_value)
+
+    if payload is None:
+        payload = json.loads(raw_value)
     service_account_path = env_dir / ".ci" / "google_service_account.json"
     service_account_path.parent.mkdir(parents=True, exist_ok=True)
     service_account_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
