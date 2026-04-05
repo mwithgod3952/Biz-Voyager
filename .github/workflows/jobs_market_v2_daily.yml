@@ -174,12 +174,76 @@ jobs:
           PY
           exit 0
 
-      - name: Save runtime state after success or bootstrap hold
-        if: always() && (steps.cycle.outputs.exit_code == '0' || steps.cycle.outputs.hold_reason != '')
+      - name: Resolve cycle status
+        if: always()
+        id: cycle_status
         env:
+          CYCLE_CONCLUSION: ${{ steps.cycle.conclusion }}
           CYCLE_EXIT_CODE: ${{ steps.cycle.outputs.exit_code }}
           CYCLE_HOLD_REASON: ${{ steps.cycle.outputs.hold_reason }}
           CYCLE_QUALITY_GATE_PASSED: ${{ steps.cycle.outputs.quality_gate_passed }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          project_dir = Path("jobs_market_v2")
+          quality_gate_path = project_dir / "runtime/quality_gate.json"
+          summary_path = project_dir / "runtime/github_workflow_cycle_summary.json"
+
+          cycle_conclusion = str(os.environ.get("CYCLE_CONCLUSION", "") or "")
+          exit_code = str(os.environ.get("CYCLE_EXIT_CODE", "") or "").strip()
+          if not exit_code:
+              exit_code = "0" if cycle_conclusion == "success" else "1"
+
+          hold_reason = str(os.environ.get("CYCLE_HOLD_REASON", "") or "").strip()
+          quality_gate_passed_text = str(os.environ.get("CYCLE_QUALITY_GATE_PASSED", "") or "").strip().lower()
+
+          if quality_gate_passed_text not in {"true", "false"}:
+              quality_gate_passed = False
+              if quality_gate_path.exists():
+                  try:
+                      quality_gate_passed = bool(
+                          json.loads(quality_gate_path.read_text(encoding="utf-8")).get("passed", False)
+                      )
+                  except Exception:
+                      quality_gate_passed = False
+              quality_gate_passed_text = "true" if quality_gate_passed else "false"
+
+          if not hold_reason and summary_path.exists():
+              try:
+                  summary = json.loads(summary_path.read_text(encoding="utf-8"))
+              except Exception:
+                  summary = {}
+              run_mode = str(summary.get("run_mode", "") or "")
+              published_state = summary.get("published_state", {}) if isinstance(summary, dict) else {}
+              collection_summary = summary.get("collection", {}) if isinstance(summary, dict) else {}
+              promotion_block_reason = str(published_state.get("promotion_block_reason", "") or "")
+              collection_ready = bool(published_state.get("collection_ready", True))
+              collection_ready_reason = str(published_state.get("collection_ready_reason", "") or "")
+              completed_full_source_scan = bool(collection_summary.get("completed_full_source_scan", True))
+              if run_mode in {"bootstrap", "bootstrap_resume"}:
+                  if not collection_ready:
+                      hold_reason = collection_ready_reason or "bootstrap_collection_not_ready"
+                  elif promotion_block_reason == "bootstrap_source_scan_incomplete":
+                      hold_reason = promotion_block_reason
+                  elif not completed_full_source_scan:
+                      hold_reason = "bootstrap_source_scan_incomplete"
+
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
+              output.write(f"exit_code={exit_code}\n")
+              output.write(f"quality_gate_passed={quality_gate_passed_text}\n")
+              output.write(f"hold_reason={hold_reason}\n")
+          PY
+
+      - name: Save runtime state after success or bootstrap hold
+        if: always() && (steps.cycle_status.outputs.exit_code == '0' || steps.cycle_status.outputs.hold_reason != '')
+        env:
+          CYCLE_EXIT_CODE: ${{ steps.cycle_status.outputs.exit_code }}
+          CYCLE_HOLD_REASON: ${{ steps.cycle_status.outputs.hold_reason }}
+          CYCLE_QUALITY_GATE_PASSED: ${{ steps.cycle_status.outputs.quality_gate_passed }}
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           STATE_WORKTREE: ${{ runner.temp }}/jobs-market-v2-state
         run: |
@@ -226,7 +290,7 @@ jobs:
           popd >/dev/null
 
       - name: Close GitHub issue after recovery
-        if: steps.cycle.outputs.exit_code == '0' && steps.cycle.outputs.quality_gate_passed == 'true'
+        if: steps.cycle_status.outputs.exit_code == '0' && steps.cycle_status.outputs.quality_gate_passed == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_API_URL: ${{ github.api_url }}
@@ -281,7 +345,7 @@ jobs:
           PY
 
       - name: Update failure state
-        if: steps.cycle.outputs.hold_reason == '' && (steps.cycle.outputs.exit_code != '0' || steps.cycle.outputs.quality_gate_passed != 'true')
+        if: steps.cycle_status.outputs.hold_reason == '' && (steps.cycle_status.outputs.exit_code != '0' || steps.cycle_status.outputs.quality_gate_passed != 'true')
         id: failure_state
         env:
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -339,14 +403,14 @@ jobs:
             jobs_market_v2/runtime/source_registry.csv
 
       - name: Notify Slack on repeated failures
-        if: steps.cycle.outputs.hold_reason == '' && (steps.cycle.outputs.exit_code != '0' || steps.cycle.outputs.quality_gate_passed != 'true') && fromJSON(steps.failure_state.outputs.failure_streak) >= 3
+        if: steps.cycle_status.outputs.hold_reason == '' && (steps.cycle_status.outputs.exit_code != '0' || steps.cycle_status.outputs.quality_gate_passed != 'true') && fromJSON(steps.failure_state.outputs.failure_streak) >= 3
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           FAILURE_STREAK: ${{ steps.failure_state.outputs.failure_streak }}
         run: |
           set -euo pipefail
-          if [[ -z "${SLACK_WEBHOOK_URL:-}" ]]; then
+          if [[ -z "${SLACK_WEBHOOK_URM:-}" ]]; then
             exit 0
           fi
           python - <<'PY'
@@ -372,7 +436,7 @@ jobs:
           PY
 
       - name: Create or update GitHub issue on failure
-        if: steps.cycle.outputs.hold_reason == '' && (steps.cycle.outputs.exit_code != '0' || steps.cycle.outputs.quality_gate_passed != 'true')
+        if: steps.cycle_status.outputs.hold_reason == '' && (steps.cycle_status.outputs.exit_code != '0' || steps.cycle_status.outputs.quality_gate_passed != 'true')
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_API_URL: ${{ github.api_url }}
@@ -450,5 +514,5 @@ jobs:
           PY
 
       - name: Fail workflow if production cycle failed
-        if: steps.cycle.outputs.hold_reason == '' && (steps.cycle.outputs.exit_code != '0' || steps.cycle.outputs.quality_gate_passed != 'true')
+        if: steps.cycle_status.outputs.hold_reason == '' && (steps.cycle_status.outputs.exit_code != '0' || steps.cycle_status.outputs.quality_gate_passed != 'true')
         run: exit 1
