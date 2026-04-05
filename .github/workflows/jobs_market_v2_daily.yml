@@ -151,6 +151,7 @@ jobs:
           collection_ready = bool(published_state.get("collection_ready", True))
           collection_ready_reason = str(published_state.get("collection_ready_reason", "") or "")
           completed_full_source_scan = bool(collection_summary.get("completed_full_source_scan", True))
+          quality_gate_passed = bool(collection_summary.get("quality_gate_passed", True))
           hold_reason = ""
           if run_mode in {"bootstrap", "bootstrap_resume"}:
               if not collection_ready:
@@ -162,6 +163,7 @@ jobs:
           with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
               output.write(f"automation_ready={str(bool(summary.get('automation_ready', False))).lower()}\n")
               output.write(f"promotion_block_reason={promotion_block_reason}\n")
+              output.write(f"quality_gate_passed={str(quality_gate_passed).lower()}\n")
               output.write(f"hold_reason={hold_reason}\n")
           PY
           exit 0
@@ -171,6 +173,7 @@ jobs:
         env:
           CYCLE_EXIT_CODE: ${{ steps.cycle.outputs.exit_code }}
           CYCLE_HOLD_REASON: ${{ steps.cycle.outputs.hold_reason }}
+          CYCLE_QUALITY_GATE_PASSED: ${{ steps.cycle.outputs.quality_gate_passed }}
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           STATE_WORKTREE: ${{ runner.temp }}/jobs-market-v2-state
         run: |
@@ -189,11 +192,19 @@ jobs:
           state_path = Path(os.environ["STATE_WORKTREE"]) / os.environ["STATE_DIR"] / "workflow_state.json"
           runtime_status_path = Path("jobs_market_v2/runtime/automation_status.json")
           state_path.parent.mkdir(parents=True, exist_ok=True)
+          hold_reason = os.environ.get("CYCLE_HOLD_REASON", "")
+          quality_gate_passed = os.environ.get("CYCLE_QUALITY_GATE_PASSED", "true") == "true"
+          if hold_reason:
+              last_result = "hold"
+          elif quality_gate_passed:
+              last_result = "success"
+          else:
+              last_result = "failure"
           payload = {
               "updated_at": datetime.now(timezone.utc).isoformat(),
-              "consecutive_failures": 0,
-              "last_result": "success" if os.environ["CYCLE_EXIT_CODE"] == "0" else "hold",
-              "hold_reason": os.environ.get("CYCLE_HOLD_REASON", ""),
+              "consecutive_failures": 0 if quality_gate_passed or hold_reason else 1,
+              "last_result": last_result,
+              "hold_reason": hold_reason,
               "run_url": os.environ["GITHUB_RUN_URL"],
           }
           if runtime_status_path.exists():
@@ -209,7 +220,7 @@ jobs:
           popd >/dev/null
 
       - name: Close GitHub issue after recovery
-        if: steps.cycle.outputs.exit_code == '0'
+        if: steps.cycle.outputs.exit_code == '0' && steps.cycle.outputs.quality_gate_passed == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_API_URL: ${{ github.api_url }}
@@ -264,7 +275,7 @@ jobs:
           PY
 
       - name: Update failure state
-        if: steps.cycle.outputs.exit_code != '0' && steps.cycle.outputs.hold_reason == ''
+        if: steps.cycle.outputs.hold_reason == '' && (steps.cycle.outputs.exit_code != '0' || steps.cycle.outputs.quality_gate_passed != 'true')
         id: failure_state
         env:
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -322,7 +333,7 @@ jobs:
             jobs_market_v2/runtime/source_registry.csv
 
       - name: Notify Slack on repeated failures
-        if: steps.cycle.outputs.exit_code != '0' && steps.cycle.outputs.hold_reason == '' && fromJSON(steps.failure_state.outputs.failure_streak) >= 3
+        if: steps.cycle.outputs.hold_reason == '' && (steps.cycle.outputs.exit_code != '0' || steps.cycle.outputs.quality_gate_passed != 'true') && fromJSON(steps.failure_state.outputs.failure_streak) >= 3
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -355,7 +366,7 @@ jobs:
           PY
 
       - name: Create or update GitHub issue on failure
-        if: steps.cycle.outputs.exit_code != '0' && steps.cycle.outputs.hold_reason == ''
+        if: steps.cycle.outputs.hold_reason == '' && (steps.cycle.outputs.exit_code != '0' || steps.cycle.outputs.quality_gate_passed != 'true')
         env:
           GITHUB_TOKEN: ${{ github.token }}
           GITHUB_API_URL: ${{ github.api_url }}
@@ -433,5 +444,5 @@ jobs:
           PY
 
       - name: Fail workflow if production cycle failed
-        if: steps.cycle.outputs.exit_code != '0' && steps.cycle.outputs.hold_reason == ''
+        if: steps.cycle.outputs.hold_reason == '' && (steps.cycle.outputs.exit_code != '0' || steps.cycle.outputs.quality_gate_passed != 'true')
         run: exit 1
