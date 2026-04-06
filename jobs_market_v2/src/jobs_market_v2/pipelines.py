@@ -31,6 +31,7 @@ from .screening import screen_sources
 from .settings import get_paths, get_settings
 from .sheets import build_sheet_tabs, export_tabs_locally, sync_tabs_to_google_sheets
 from .storage import append_error_record, append_run_record, coerce_bool, read_csv_or_empty, write_csv, write_jsonl, write_parquet
+from .utils import normalize_whitespace
 
 
 def _run_id(command: str) -> str:
@@ -205,6 +206,52 @@ def _processed_verified_source_urls(source_registry: pd.DataFrame, collected_at:
         .tolist()
     )
     return {url for url in urls if url}
+
+
+def _active_source_urls(frame: pd.DataFrame) -> set[str]:
+    if frame.empty or "source_url" not in frame.columns:
+        return set()
+    if "is_active" in frame.columns:
+        active_mask = frame["is_active"].map(coerce_bool)
+    else:
+        active_mask = pd.Series(True, index=frame.index)
+    urls = frame.loc[active_mask, "source_url"].fillna("").astype(str).map(normalize_whitespace)
+    return {url for url in urls.tolist() if url}
+
+
+def _processed_source_outcomes(
+    previous_registry: pd.DataFrame,
+    updated_registry: pd.DataFrame,
+    collected_at: str,
+) -> dict[str, str]:
+    if updated_registry.empty or "source_url" not in updated_registry.columns:
+        return {}
+
+    previous_by_url: dict[str, dict[str, object]] = {}
+    if not previous_registry.empty and "source_url" in previous_registry.columns:
+        for row in previous_registry.fillna("").to_dict(orient="records"):
+            source_url = normalize_whitespace(row.get("source_url"))
+            if source_url:
+                previous_by_url[source_url] = row
+
+    outcomes: dict[str, str] = {}
+    collected_at_text = str(collected_at)
+    for row in updated_registry.fillna("").to_dict(orient="records"):
+        source_url = normalize_whitespace(row.get("source_url"))
+        if not source_url:
+            continue
+        verification_status = normalize_whitespace(row.get("verification_status"))
+        last_success_at = normalize_whitespace(row.get("last_success_at"))
+        if verification_status == "성공" and last_success_at == collected_at_text:
+            outcomes[source_url] = "success"
+            continue
+
+        previous = previous_by_url.get(source_url, {})
+        current_failure_count = int(row.get("failure_count") or 0)
+        previous_failure_count = int(previous.get("failure_count") or 0)
+        if verification_status == "실패" and current_failure_count > previous_failure_count:
+            outcomes[source_url] = "failure"
+    return outcomes
 
 
 def _summarize_incremental_growth(baseline: pd.DataFrame, current: pd.DataFrame) -> dict[str, int]:
@@ -693,8 +740,14 @@ def update_incremental_pipeline(
             return summary
         collected_at = _now()
         snapshot_date = _today()
+        prioritized_registry = registry.copy()
+        active_source_urls = _active_source_urls(baseline)
+        if active_source_urls and "source_url" in prioritized_registry.columns:
+            prioritized_registry["_always_refresh_source"] = (
+                prioritized_registry["source_url"].fillna("").astype(str).map(normalize_whitespace).isin(active_source_urls)
+            )
         new_jobs, raw_records, updated_registry, summary = collect_jobs_from_sources(
-            registry,
+            prioritized_registry,
             paths,
             settings,
             run_id=run_id,
@@ -703,8 +756,8 @@ def update_incremental_pipeline(
             enable_source_scan_progress=enable_source_scan_progress,
             enable_recruiter_ocr_recovery=True,
         )
-        verified_urls = _processed_verified_source_urls(updated_registry, collected_at)
-        merged = merge_incremental(baseline, new_jobs, verified_urls, run_id, snapshot_date, collected_at)
+        source_outcomes = _processed_source_outcomes(registry, updated_registry, collected_at)
+        merged = merge_incremental(baseline, new_jobs, source_outcomes, run_id, snapshot_date, collected_at)
         registry_to_write = updated_registry
         if registry_frame is not None and (registry_output_path is None or registry_output_path == paths.source_registry_path):
             existing_registry = read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)

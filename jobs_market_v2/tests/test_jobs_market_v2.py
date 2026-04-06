@@ -19,6 +19,7 @@ import jobs_market_v2.company_screening as company_screening_module
 import jobs_market_v2.company_seed_sources as company_seed_module
 import jobs_market_v2.discovery as discovery_module
 import jobs_market_v2.gemini as gemini_module
+import jobs_market_v2.github_actions_runtime as github_actions_runtime_module
 import jobs_market_v2.pipelines as pipelines_module
 import jobs_market_v2.quality as quality_module
 import jobs_market_v2.runtime_state as runtime_state_module
@@ -4883,6 +4884,59 @@ def test_recruiter_image_only_detail_uses_ocr_recovery(monkeypatch: pytest.Monke
     assert dropped.empty
 
 
+def test_recruiter_ocr_recovery_drops_admin_tail_noise(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    payload = {
+        "list": [
+            {
+                "jobnoticeName": "[테스트기업] AI 리서처 채용",
+                "jobnoticeSn": 654321,
+                "systemKindCode": "MRS2",
+            }
+        ]
+    }
+    detail_html = """
+    <table>
+      <tbody>
+        <tr><th>공고명</th><td><span class="view-bbs-title">[테스트기업] AI 리서처 채용</span></td></tr>
+        <tr><th>첨부파일</th><td><a class="fileWrapperView" href="/mrs2/attachFile/downloadFile?fileUid=notice.pdf">(공고문) notice.pdf</a></td></tr>
+      </tbody>
+    </table>
+    <textarea id="jobnoticeContents">&lt;div&gt;&lt;img src=&quot;/upload/notice.png&quot; /&gt;&lt;/div&gt;</textarea>
+    """
+
+    def fake_ocr(_: list[str], **__: object) -> str:
+        return "\n".join(
+            [
+                "수행 직무",
+                "1) 의료 인공지능 알고리즘 개발 및 데이터 기반 모델링",
+                "2) 디지털 치료기기 임상 및 비임상 데이터 분석",
+                "우대사항",
+                "1) 의료 데이터 분석 논문 또는 특허 실적 보유자",
+                "• 지원 시 참고사항",
+                "- 수탁연구사업 종료일: 2026. 12. 31.",
+                "채용인원 2명",
+            ]
+        )
+
+    monkeypatch.setattr(collection_module, "extract_text_from_asset_urls", fake_ocr)
+    paths = ProjectPaths.from_root(tmp_path)
+    paths.ensure_directories()
+    jobs = _build_recruiter_jobs_from_payload(
+        payload,
+        "https://example.recruiter.co.kr",
+        lambda _: detail_html,
+        paths=paths,
+        settings=AppSettings(),
+        enable_ocr_recovery=True,
+    )
+
+    description_html = jobs[0]["description_html"]
+    assert "지원 시 참고사항" not in description_html
+    assert "수탁연구사업 종료일" not in description_html
+    assert "채용인원" not in description_html
+    assert "의료 인공지능 알고리즘 개발" in description_html
+
+
 def test_fetch_recruiter_source_falls_back_without_state_code(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     class FakeResponse:
         def __init__(self, payload: dict):
@@ -7054,15 +7108,15 @@ def test_incremental_update_pipeline_marks_changed_and_missing(sandbox_project: 
     paths = ProjectPaths.from_root(sandbox_project)
     staging = read_csv_or_empty(paths.staging_jobs_path)
     assert summary["staging_job_count"] >= 6
-    assert "검증실패보류" in staging["record_status"].tolist()
+    assert "미발견" in staging["record_status"].tolist()
     assert summary["dropped_low_quality_job_count"] >= 0
     assert summary["incremental_baseline_mode"] in {"master", "staging"}
     assert summary["completed_full_source_scan"] is True
     assert summary["processed_collectable_source_count"] == summary["selected_collectable_source_count"]
-    assert summary["held_job_count"] >= 1
+    assert summary["held_job_count"] == 0
     assert summary["carried_forward_job_count"] >= 1
     assert summary["merged_job_count"] == summary["staging_job_count"]
-    assert set(staging["record_status"]) & {"유지", "검증실패보류"}
+    assert set(staging["record_status"]) & {"유지", "미발견"}
 
 
 def test_update_incremental_pipeline_with_subset_registry_preserves_full_source_registry(sandbox_project: Path) -> None:
@@ -7129,6 +7183,134 @@ def test_processed_verified_source_urls_only_include_current_run_successes() -> 
     verified_urls = pipelines_module._processed_verified_source_urls(registry, "2026-04-01T06:00:03+09:00")
 
     assert verified_urls == {"https://processed.example/jobs"}
+
+
+def test_processed_source_outcomes_distinguish_success_failure_and_unattempted() -> None:
+    previous_registry = pd.DataFrame(
+        [
+            {
+                "source_url": "https://success.example/jobs",
+                "verification_status": "성공",
+                "failure_count": 0,
+                "last_success_at": "2026-03-31T06:00:03+09:00",
+                "last_active_job_count": 3,
+            },
+            {
+                "source_url": "https://failure.example/jobs",
+                "verification_status": "실패",
+                "failure_count": 1,
+                "last_success_at": "",
+                "last_active_job_count": 0,
+            },
+            {
+                "source_url": "https://unattempted.example/jobs",
+                "verification_status": "성공",
+                "failure_count": 0,
+                "last_success_at": "2026-03-31T06:00:03+09:00",
+                "last_active_job_count": 2,
+            },
+        ]
+    )
+    updated_registry = pd.DataFrame(
+        [
+            {
+                "source_url": "https://success.example/jobs",
+                "verification_status": "성공",
+                "failure_count": 0,
+                "last_success_at": "2026-04-01T06:00:03+09:00",
+                "last_active_job_count": 0,
+            },
+            {
+                "source_url": "https://failure.example/jobs",
+                "verification_status": "실패",
+                "failure_count": 2,
+                "last_success_at": "",
+                "last_active_job_count": 0,
+            },
+            {
+                "source_url": "https://unattempted.example/jobs",
+                "verification_status": "성공",
+                "failure_count": 0,
+                "last_success_at": "2026-03-31T06:00:03+09:00",
+                "last_active_job_count": 2,
+            },
+        ]
+    )
+
+    outcomes = pipelines_module._processed_source_outcomes(
+        previous_registry,
+        updated_registry,
+        "2026-04-01T06:00:03+09:00",
+    )
+
+    assert outcomes == {
+        "https://success.example/jobs": "success",
+        "https://failure.example/jobs": "failure",
+    }
+
+
+def test_processed_source_outcomes_distinguish_success_failure_and_unattempted() -> None:
+    previous_registry = pd.DataFrame(
+        [
+            {
+                "source_url": "https://success.example/jobs",
+                "verification_status": "성공",
+                "failure_count": 0,
+                "last_success_at": "2026-03-31T06:00:03+09:00",
+                "last_active_job_count": 3,
+            },
+            {
+                "source_url": "https://failure.example/jobs",
+                "verification_status": "실패",
+                "failure_count": 1,
+                "last_success_at": "",
+                "last_active_job_count": 0,
+            },
+            {
+                "source_url": "https://unattempted.example/jobs",
+                "verification_status": "성공",
+                "failure_count": 0,
+                "last_success_at": "2026-03-31T06:00:03+09:00",
+                "last_active_job_count": 2,
+            },
+        ]
+    )
+    updated_registry = pd.DataFrame(
+        [
+            {
+                "source_url": "https://success.example/jobs",
+                "verification_status": "성공",
+                "failure_count": 0,
+                "last_success_at": "2026-04-01T06:00:03+09:00",
+                "last_active_job_count": 0,
+            },
+            {
+                "source_url": "https://failure.example/jobs",
+                "verification_status": "실패",
+                "failure_count": 2,
+                "last_success_at": "",
+                "last_active_job_count": 0,
+            },
+            {
+                "source_url": "https://unattempted.example/jobs",
+                "verification_status": "성공",
+                "failure_count": 0,
+                "last_success_at": "2026-03-31T06:00:03+09:00",
+                "last_active_job_count": 2,
+            },
+        ]
+    )
+
+    outcomes = pipelines_module._processed_source_outcomes(
+        previous_registry,
+        updated_registry,
+        "2026-04-01T06:00:03+09:00",
+    )
+
+    assert outcomes == {
+        "https://success.example/jobs": "success",
+        "https://failure.example/jobs": "failure",
+    }
 
 
 def test_collect_jobs_from_sources_prioritizes_ats_before_html_pages(
@@ -8242,6 +8424,113 @@ def test_quality_gate_fails_when_active_rows_are_only_verification_holdovers() -
     assert "이번 staging은 검증실패보류 상태만 포함합니다." in result.reasons
 
 
+def test_quality_gate_fails_when_carry_forward_hold_ratio_is_too_high() -> None:
+    staging = pd.DataFrame(
+        [
+            {
+                "job_key": "hold-1",
+                "change_hash": "a",
+                "first_seen_at": "2026-04-01T00:00:00+09:00",
+                "last_seen_at": "2026-04-01T00:00:00+09:00",
+                "is_active": True,
+                "missing_count": 0,
+                "snapshot_date": "2026-04-01",
+                "run_id": "r1",
+                "source_url": "https://hold.example/jobs",
+                "source_bucket": "approved",
+                "source_name": "홀드 테스트",
+                "company_name": "회사A",
+                "company_tier": "중견/중소",
+                "job_title_raw": "AI Engineer",
+                "experience_level_raw": "경력",
+                "job_role": "인공지능 엔지니어",
+                "job_url": "https://hold.example/jobs/1",
+                "record_status": "검증실패보류",
+                "주요업무_분석용": "모델을 개발합니다.",
+                "자격요건_분석용": "파이썬 경험",
+                "우대사항_분석용": "서비스 경험",
+                "핵심기술_분석용": "파이썬",
+                "상세본문_분석용": "모델을 개발합니다.\n파이썬 경험\n서비스 경험",
+                "회사명_표시": "회사A",
+                "소스명_표시": "홀드 테스트",
+                "공고제목_표시": "AI Engineer",
+                "경력수준_표시": "경력",
+                "경력근거_표시": "구조화 메타데이터",
+                "채용트랙_표시": "일반채용",
+                "채용트랙근거_표시": "기본추론",
+                "직무초점_표시": "서비스개발",
+                "직무초점근거_표시": "공고제목",
+                "구분요약_표시": "경력",
+                "직무명_표시": "인공지능 엔지니어",
+                "주요업무_표시": "모델을 개발합니다.",
+                "자격요건_표시": "파이썬 경험",
+                "우대사항_표시": "서비스 경험",
+                "핵심기술_표시": "파이썬",
+            },
+            {
+                "job_key": "keep-1",
+                "change_hash": "b",
+                "first_seen_at": "2026-04-01T00:00:00+09:00",
+                "last_seen_at": "2026-04-01T00:00:00+09:00",
+                "is_active": True,
+                "missing_count": 0,
+                "snapshot_date": "2026-04-01",
+                "run_id": "r1",
+                "source_url": "https://keep.example/jobs",
+                "source_bucket": "approved",
+                "source_name": "유지 테스트",
+                "company_name": "회사B",
+                "company_tier": "중견/중소",
+                "job_title_raw": "Data Scientist",
+                "experience_level_raw": "경력",
+                "job_role": "데이터 사이언티스트",
+                "job_url": "https://keep.example/jobs/1",
+                "record_status": "유지",
+                "주요업무_분석용": "모델을 개발합니다.",
+                "자격요건_분석용": "파이썬 경험",
+                "우대사항_분석용": "서비스 경험",
+                "핵심기술_분석용": "파이썬",
+                "상세본문_분석용": "모델을 개발합니다.\n파이썬 경험\n서비스 경험",
+                "회사명_표시": "회사B",
+                "소스명_표시": "유지 테스트",
+                "공고제목_표시": "Data Scientist",
+                "경력수준_표시": "경력",
+                "경력근거_표시": "구조화 메타데이터",
+                "채용트랙_표시": "일반채용",
+                "채용트랙근거_표시": "기본추론",
+                "직무초점_표시": "서비스개발",
+                "직무초점근거_표시": "공고제목",
+                "구분요약_표시": "경력",
+                "직무명_표시": "데이터 사이언티스트",
+                "주요업무_표시": "모델을 개발합니다.",
+                "자격요건_표시": "파이썬 경험",
+                "우대사항_표시": "서비스 경험",
+                "핵심기술_표시": "파이썬",
+            },
+        ],
+        columns=list(JOB_COLUMNS),
+    )
+    source_registry = pd.DataFrame(
+        [
+            {
+                "source_url": "https://hold.example/jobs",
+                "source_bucket": "approved",
+                "verification_status": "성공",
+            },
+            {
+                "source_url": "https://keep.example/jobs",
+                "source_bucket": "approved",
+                "verification_status": "성공",
+            },
+        ]
+    )
+
+    result = evaluate_quality_gate(staging, source_registry, already_filtered=True)
+
+    assert result.passed is False
+    assert "검증실패보류 carry-forward 비율이 너무 높습니다." in result.reasons
+
+
 def test_resume_source_scan_offset_uses_surviving_remaining_cursor_when_registry_set_changes() -> None:
     progress = {
         "next_source_offset": 1,
@@ -8437,6 +8726,40 @@ def test_collect_jobs_from_sources_resets_progress_when_scan_policy_changes(
     assert summary["source_scan_resume_strategy"] == "policy_reset"
 
 
+def test_select_incremental_collectable_positions_always_include_forced_refresh_sources() -> None:
+    rows = [
+        {
+            "source_url": "https://first.example/jobs",
+            "source_bucket": "approved",
+            "source_type": "html_page",
+            "_always_refresh_source": False,
+        },
+        {
+            "source_url": "https://forced.example/jobs",
+            "source_bucket": "approved",
+            "source_type": "greetinghr",
+            "_always_refresh_source": True,
+        },
+        {
+            "source_url": "https://third.example/jobs",
+            "source_bucket": "approved",
+            "source_type": "html_page",
+            "_always_refresh_source": False,
+        },
+    ]
+
+    selected_positions, cursor_positions, pinned_positions = collection_module._select_incremental_collectable_positions(
+        [0, 1, 2],
+        rows,
+        start_offset=2,
+        process_limit=1,
+    )
+
+    assert selected_positions == [1]
+    assert cursor_positions == []
+    assert pinned_positions == [1]
+
+
 def _no_search_refresh_summary() -> dict[str, int | list]:
     return {
         "search_query_count": 0,
@@ -8485,14 +8808,269 @@ def test_run_collection_cycle_pipeline_bootstrap_and_incremental(
     assert incremental_summary["collection"]["staging_job_count"] >= 1
     assert incremental_summary["checklist"]["시트동기화"] is False
     assert incremental_summary["automation_ready"] is False
-    assert "검증실패보류" in staging["record_status"].tolist()
-    assert incremental_summary["collection"]["held_job_count"] >= 1
+    assert "미발견" in staging["record_status"].tolist()
+    assert incremental_summary["collection"]["held_job_count"] == 0
     assert incremental_summary["collection"]["dropped_low_quality_job_count"] >= 0
 
 
 def test_run_collection_cycle_summary_exit_code_ignores_automation_ready() -> None:
     assert cli_module._summary_exit_code("run-collection-cycle", {"automation_ready": False}) == 0
     assert cli_module._summary_exit_code("run-collection-cycle", {"automation_ready": True}) == 0
+
+
+def test_github_actions_runtime_derives_bootstrap_hold_status() -> None:
+    status = github_actions_runtime_module.derive_cycle_status(
+        {
+            "run_mode": "bootstrap_resume",
+            "automation_ready": False,
+            "published_state": {
+                "promotion_block_reason": "bootstrap_source_scan_incomplete",
+                "collection_ready": True,
+                "collection_ready_reason": "",
+            },
+            "collection": {
+                "quality_gate_passed": True,
+                "completed_full_source_scan": False,
+            },
+        },
+        exit_code=0,
+    )
+
+    assert status.hold_reason == "bootstrap_source_scan_incomplete"
+    assert status.should_save_state is True
+    assert status.is_failure is False
+    assert status.is_recovered is False
+
+
+def test_github_actions_runtime_capture_and_resolve_status_from_runtime_files(tmp_path: Path) -> None:
+    project_root = tmp_path / "jobs_market_v2"
+    runtime_dir = project_root / "runtime"
+    runtime_dir.mkdir(parents=True)
+    summary_path = runtime_dir / "github_workflow_cycle_summary.json"
+    status_path = runtime_dir / "github_workflow_cycle_status.json"
+
+    summary_path.write_text(
+        json.dumps(
+            {
+                "run_mode": "incremental",
+                "automation_ready": True,
+                "published_state": {
+                    "promotion_block_reason": "",
+                    "collection_ready": True,
+                    "collection_ready_reason": "",
+                },
+                "collection": {
+                    "quality_gate_passed": True,
+                    "completed_full_source_scan": True,
+                },
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    captured = github_actions_runtime_module.capture_cycle_status(project_root, summary_path, status_path, exit_code=0)
+    resolved = github_actions_runtime_module.resolve_cycle_status(project_root, status_path)
+
+    assert captured.exit_code == 0
+    assert captured.quality_gate_passed is True
+    assert captured.hold_reason == ""
+    assert resolved.github_output_values()["should_save_state"] == "true"
+    assert resolved.github_output_values()["is_failure"] == "false"
+
+
+def test_github_actions_runtime_build_workflow_state_payload_preserves_metadata() -> None:
+    status = github_actions_runtime_module.WorkflowCycleStatus(exit_code=0, quality_gate_passed=True)
+    payload = github_actions_runtime_module.build_workflow_state_payload(
+        {"consecutive_failures": 9, "seeded_from": "local_validated_runtime_minimal"},
+        status,
+        run_url="https://example.com/runs/1",
+        runtime_status={"ok": True},
+    )
+
+    assert payload["consecutive_failures"] == 0
+    assert payload["last_result"] == "success"
+    assert payload["run_url"] == "https://example.com/runs/1"
+    assert payload["seeded_from"] == "local_validated_runtime_minimal"
+    assert payload["automation_status"] == {"ok": True}
+
+
+def test_github_actions_runtime_write_actions_env_file_materializes_multiline_service_account(
+    tmp_path: Path,
+) -> None:
+    env_path = tmp_path / ".env"
+    raw_json = json.dumps(
+        {"type": "service_account", "project_id": "demo", "private_key": "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n"},
+        ensure_ascii=False,
+        indent=2,
+    )
+
+    lines = github_actions_runtime_module.write_actions_env_file(
+        env_path,
+        spreadsheet_id="sheet-id",
+        service_account_json=raw_json,
+        gemini_api_key="gem-key",
+    )
+
+    env_text = env_path.read_text(encoding="utf-8")
+    service_account_path = tmp_path / ".ci" / "google_service_account.json"
+
+    assert service_account_path.exists()
+    assert json.loads(service_account_path.read_text(encoding="utf-8"))["project_id"] == "demo"
+    assert f"GOOGLE_SERVICE_ACCOUNT_JSON='{service_account_path}'" in env_text
+    assert any(line.startswith("GOOGLE_SERVICE_ACCOUNT_JSON=") for line in lines)
+
+
+def test_github_actions_runtime_write_actions_env_file_handles_long_raw_service_account_json(
+    tmp_path: Path,
+) -> None:
+    env_path = tmp_path / ".env"
+    raw_json = json.dumps(
+        {
+            "type": "service_account",
+            "project_id": "demo",
+            "private_key": "-----BEGIN PRIVATE KEY-----\n" + ("A" * 5000) + "\n-----END PRIVATE KEY-----\n",
+            "client_email": "robot@example.com",
+        },
+        ensure_ascii=False,
+        indent=2,
+    )
+
+    github_actions_runtime_module.write_actions_env_file(
+        env_path,
+        spreadsheet_id="sheet-id",
+        service_account_json=raw_json,
+        gemini_api_key="gem-key",
+    )
+
+    service_account_path = tmp_path / ".ci" / "google_service_account.json"
+    assert service_account_path.exists()
+    assert json.loads(service_account_path.read_text(encoding="utf-8"))["client_email"] == "robot@example.com"
+
+
+def test_github_actions_runtime_build_failure_state_payload_increments_failure_streak() -> None:
+    payload = github_actions_runtime_module.build_failure_state_payload(
+        {"consecutive_failures": 2, "seeded_from": "local_validated_runtime_minimal", "hold_reason": "old"},
+        run_url="https://example.com/runs/2",
+    )
+
+    assert payload["consecutive_failures"] == 3
+    assert payload["last_result"] == "failure"
+    assert payload["hold_reason"] == ""
+    assert payload["seeded_from"] == "local_validated_runtime_minimal"
+
+
+def test_github_actions_runtime_finalize_cycle_records_success_without_step_outputs(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    project_root = tmp_path / "jobs_market_v2"
+    runtime_dir = project_root / "runtime"
+    runtime_dir.mkdir(parents=True)
+    status_path = runtime_dir / "github_workflow_cycle_status.json"
+    state_path = tmp_path / "automation-state" / "workflow_state.json"
+
+    status_path.write_text(
+        json.dumps(
+            {
+                "exit_code": 0,
+                "quality_gate_passed": True,
+                "hold_reason": "",
+                "promotion_block_reason": "",
+                "automation_ready": True,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    closed_calls: list[tuple[str, str, str]] = []
+
+    def _close_issue(api_url: str, repo: str, token: str) -> bool:
+        closed_calls.append((api_url, repo, token))
+        return True
+
+    monkeypatch.setattr(github_actions_runtime_module, "close_incident_issue", _close_issue)
+
+    result = github_actions_runtime_module.finalize_cycle(
+        project_root=project_root,
+        status_path=status_path,
+        state_path=state_path,
+        run_url="https://example.com/runs/3",
+        runtime_status_path=runtime_dir / "automation_status.json",
+        api_url="https://api.github.com",
+        repo="owner/repo",
+        token="token",
+    )
+
+    assert result["is_failure"] is False
+    assert result["should_save_state"] is True
+    assert result["last_result"] == "success"
+    assert result["issue_closed"] is True
+    assert state_path.exists()
+    assert closed_calls == [("https://api.github.com", "owner/repo", "token")]
+
+
+def test_github_actions_runtime_finalize_cycle_records_failure_and_notifies(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    project_root = tmp_path / "jobs_market_v2"
+    runtime_dir = project_root / "runtime"
+    runtime_dir.mkdir(parents=True)
+    status_path = runtime_dir / "github_workflow_cycle_status.json"
+    state_path = tmp_path / "automation-state" / "workflow_state.json"
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_text(
+        json.dumps({"consecutive_failures": 2, "last_result": "failure"}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    status_path.write_text(
+        json.dumps(
+            {
+                "exit_code": 1,
+                "quality_gate_passed": False,
+                "hold_reason": "",
+                "promotion_block_reason": "",
+                "automation_ready": False,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    opened: list[tuple[str, str, str, str, int]] = []
+    slack_calls: list[tuple[str, str, int]] = []
+
+    def _open_issue(api_url: str, repo: str, token: str, run_url: str, failure_streak: int) -> int:
+        opened.append((api_url, repo, token, run_url, failure_streak))
+        return 7
+
+    def _notify(webhook_url: str, run_url: str, failure_streak: int) -> None:
+        slack_calls.append((webhook_url, run_url, failure_streak))
+
+    monkeypatch.setattr(github_actions_runtime_module, "open_or_update_incident_issue", _open_issue)
+    monkeypatch.setattr(github_actions_runtime_module, "send_slack_notification", _notify)
+
+    result = github_actions_runtime_module.finalize_cycle(
+        project_root=project_root,
+        status_path=status_path,
+        state_path=state_path,
+        run_url="https://example.com/runs/4",
+        runtime_status_path=runtime_dir / "automation_status.json",
+        api_url="https://api.github.com",
+        repo="owner/repo",
+        token="token",
+        slack_webhook_url="https://hooks.slack.com/services/test",
+    )
+
+    assert result["is_failure"] is True
+    assert result["should_save_state"] is False
+    assert result["failure_streak"] == 3
+    assert result["issue_number"] == 7
+    assert result["slack_notified"] is True
+    assert opened == [("https://api.github.com", "owner/repo", "token", "https://example.com/runs/4", 3)]
+    assert slack_calls == [("https://hooks.slack.com/services/test", "https://example.com/runs/4", 3)]
 
 
 def test_run_collection_cycle_pipeline_bootstrap_resume_until_full_scan(
@@ -8943,6 +9521,104 @@ def test_two_consecutive_missing_deactivates_job() -> None:
     assert bool(merged.iloc[0]["is_active"]) is False
 
 
+def test_merge_incremental_preserves_unattempted_active_rows_without_hold_downgrade() -> None:
+    baseline = pd.DataFrame(
+        [
+            {
+                "job_key": "a",
+                "change_hash": "1",
+                "first_seen_at": "2026-03-29T00:00:00+09:00",
+                "last_seen_at": "2026-03-29T00:00:00+09:00",
+                "is_active": True,
+                "missing_count": 0,
+                "snapshot_date": "2026-03-29",
+                "run_id": "r1",
+                "source_url": "https://a.example/jobs",
+                "source_bucket": "approved",
+                "source_name": "테스트",
+                "company_name": "테스트",
+                "company_tier": "지역기업",
+                "job_title_raw": "인공지능 엔지니어",
+                "experience_level_raw": "경력",
+                "job_role": "인공지능 엔지니어",
+                "job_url": "",
+                "record_status": "검증실패보류",
+                "회사명_표시": "테스트",
+                "소스명_표시": "테스트",
+                "공고제목_표시": "인공지능 엔지니어",
+                "경력수준_표시": "경력",
+                "직무명_표시": "인공지능 엔지니어",
+                "주요업무_표시": "개발",
+                "자격요건_표시": "파이썬",
+                "우대사항_표시": "",
+                "핵심기술_표시": "파이썬",
+            }
+        ]
+    )
+
+    merged = merge_incremental(
+        baseline,
+        pd.DataFrame(columns=baseline.columns),
+        {},
+        "r2",
+        "2026-03-30",
+        "2026-03-30T00:00:00+09:00",
+    )
+
+    assert merged.iloc[0]["record_status"] == "유지"
+    assert int(merged.iloc[0]["missing_count"]) == 0
+    assert bool(merged.iloc[0]["is_active"]) is True
+
+
+def test_merge_incremental_preserves_unattempted_active_rows_without_hold_downgrade() -> None:
+    baseline = pd.DataFrame(
+        [
+            {
+                "job_key": "a",
+                "change_hash": "1",
+                "first_seen_at": "2026-03-29T00:00:00+09:00",
+                "last_seen_at": "2026-03-29T00:00:00+09:00",
+                "is_active": True,
+                "missing_count": 0,
+                "snapshot_date": "2026-03-29",
+                "run_id": "r1",
+                "source_url": "https://a.example/jobs",
+                "source_bucket": "approved",
+                "source_name": "테스트",
+                "company_name": "테스트",
+                "company_tier": "지역기업",
+                "job_title_raw": "인공지능 엔지니어",
+                "experience_level_raw": "경력",
+                "job_role": "인공지능 엔지니어",
+                "job_url": "",
+                "record_status": "검증실패보류",
+                "회사명_표시": "테스트",
+                "소스명_표시": "테스트",
+                "공고제목_표시": "인공지능 엔지니어",
+                "경력수준_표시": "경력",
+                "직무명_표시": "인공지능 엔지니어",
+                "주요업무_표시": "개발",
+                "자격요건_표시": "파이썬",
+                "우대사항_표시": "",
+                "핵심기술_표시": "파이썬",
+            }
+        ]
+    )
+
+    merged = merge_incremental(
+        baseline,
+        pd.DataFrame(columns=baseline.columns),
+        {},
+        "r2",
+        "2026-03-30",
+        "2026-03-30T00:00:00+09:00",
+    )
+
+    assert merged.iloc[0]["record_status"] == "유지"
+    assert int(merged.iloc[0]["missing_count"]) == 0
+    assert bool(merged.iloc[0]["is_active"]) is True
+
+
 def test_quality_gate_for_staging_and_master() -> None:
     staging = pd.DataFrame(
         [
@@ -9097,6 +9773,55 @@ def test_filter_low_quality_jobs_collapses_practical_duplicates_with_identical_c
     assert len(filtered) == 1
     assert len(dropped) == 1
     assert filtered.iloc[0]["job_url"] == "https://kbri-ai.recruiter.co.kr/app/jobnotice/view?systemKindCode=MRS2&jobnoticeSn=229578"
+
+
+def test_normalize_job_analysis_fields_replaces_noisy_recruiter_hold_detail_with_structured_fallback() -> None:
+    staging = pd.DataFrame(
+        [
+            {
+                "is_active": True,
+                "record_status": "검증실패보류",
+                "company_name": "한국뇌연구원 AI 실증지원사업단",
+                "company_tier": "공공·연구기관",
+                "job_role": "인공지능 리서처",
+                "job_title_raw": "[AI실증지원사업단] [A-21](연구직) 2025년 제4차 사업단 직원(계약직) 채용",
+                "job_title_ko": "",
+                "job_url": "https://kbri-ai.recruiter.co.kr/app/jobnotice/view?systemKindCode=MRS2&jobnoticeSn=229578",
+                "회사명_표시": "한국뇌연구원 AI 실증지원사업단",
+                "소스명_표시": "KBRI",
+                "공고제목_표시": "[AI실증지원사업단] [A-21](연구직) 2025년 제4차 사업단 직원(계약직) 채용",
+                "주요업무_분석용": "인공지능 기반 뇌 발달 질환 디지털 치료기기 실증 지원 연구를 수행합니다.\n디지털 치료기기 제품 고도화 및 기술 검증을 지원합니다.",
+                "자격요건_분석용": "학사 이상의 학위를 소지해야 합니다.",
+                "우대사항_분석용": "의료 데이터 분석 관련 논문 또는 특허 실적 보유자를 우대합니다.",
+                "핵심기술_분석용": "데이터 분석\n모델링",
+                "상세본문_분석용": "\n".join(
+                    [
+                        "학위: 학사이상 소지자 • 수행 직무",
+                        "1) 기반 뇌발달질환 디지털 치료기기 실증 지원 관련 연구 업무",
+                        "2) 디지털 치료기기 제품 고도화 및 기술 검증 지원",
+                        "1) 의료 데이터 분석 논문 특허 실적 보유자",
+                        "• 지원 시 참고사항",
+                        "- 수탁연구사업 종료일: 2026. 12. 31.",
+                        "채용인원2명",
+                    ]
+                ),
+            }
+        ]
+    )
+
+    normalized = normalize_job_analysis_fields(staging)
+
+    detail = normalized.iloc[0]["상세본문_분석용"]
+    assert "지원 시 참고사항" not in detail
+    assert "채용인원" not in detail
+    assert detail == "\n".join(
+        [
+            "인공지능 기반 뇌 발달 질환 디지털 치료기기 실증 지원 연구를 수행합니다.",
+            "디지털 치료기기 제품 고도화 및 기술 검증을 지원합니다.",
+            "학사 이상의 학위를 소지해야 합니다.",
+            "의료 데이터 분석 관련 논문 또는 특허 실적 보유자를 우대합니다.",
+        ]
+    )
 
 
 def test_filter_low_quality_jobs_collapses_same_content_duplicates_with_same_variant_key() -> None:

@@ -133,6 +133,7 @@ _POSITION_SUMMARY_BLANK_THRESHOLD = 0.12
 _DROPPED_LOW_QUALITY_RATIO_THRESHOLD = 0.03
 _DUPLICATE_JOB_URL_RATIO_THRESHOLD = 0.01
 _IMPOSSIBLE_EXPERIENCE_RATIO_THRESHOLD = 0.01
+_CARRY_FORWARD_HOLD_RATIO_THRESHOLD = 0.2
 
 
 def _normalized_cell(value: object) -> str:
@@ -1024,6 +1025,7 @@ def _quality_score_breakdown(
     duplicate_job_url_count: int,
     filtered_job_count: int,
     impossible_experience_count: int,
+    carry_forward_hold_ratio: float,
     main_task_blank_ratio: float,
     requirement_blank_ratio: float,
     preferred_blank_ratio: float,
@@ -1053,6 +1055,11 @@ def _quality_score_breakdown(
             impossible_experience_count / filtered_jobs,
             _IMPOSSIBLE_EXPERIENCE_RATIO_THRESHOLD,
             20.0,
+        ),
+        "carry_forward_hold": _ratio_penalty(
+            carry_forward_hold_ratio,
+            _CARRY_FORWARD_HOLD_RATIO_THRESHOLD,
+            18.0,
         ),
         "main_task_blank": _ratio_penalty(main_task_blank_ratio, _MAIN_TASK_BLANK_THRESHOLD, 2.0),
         "requirement_blank": _ratio_penalty(requirement_blank_ratio, _REQUIREMENT_BLANK_THRESHOLD, 2.0),
@@ -1280,10 +1287,14 @@ def evaluate_quality_gate(staging_jobs: pd.DataFrame, source_registry: pd.DataFr
         reasons.append("경력수준 추출값에 비정상 연차가 포함되어 있습니다.")
 
     carry_forward_hold_only_count = 0
+    carry_forward_hold_ratio = 0.0
     if not active_jobs.empty and "record_status" in active_jobs.columns:
         carry_forward_hold_only_count = int(active_jobs["record_status"].fillna("").astype(str).eq("검증실패보류").sum())
+        carry_forward_hold_ratio = carry_forward_hold_only_count / max(int(len(active_jobs)), 1)
         if carry_forward_hold_only_count == int(len(active_jobs)):
             reasons.append("이번 staging은 검증실패보류 상태만 포함합니다.")
+        elif carry_forward_hold_ratio > _CARRY_FORWARD_HOLD_RATIO_THRESHOLD:
+            reasons.append("검증실패보류 carry-forward 비율이 너무 높습니다.")
 
     main_task_blank_ratio = _blank_ratio(filtered_jobs, "주요업무_표시")
     requirement_blank_ratio = _blank_ratio(filtered_jobs, "자격요건_표시")
@@ -1338,6 +1349,7 @@ def evaluate_quality_gate(staging_jobs: pd.DataFrame, source_registry: pd.DataFr
         duplicate_job_url_count=duplicate_job_url_count,
         filtered_job_count=int(len(filtered_jobs)),
         impossible_experience_count=impossible_experience_count,
+        carry_forward_hold_ratio=carry_forward_hold_ratio,
         main_task_blank_ratio=main_task_blank_ratio,
         requirement_blank_ratio=requirement_blank_ratio,
         preferred_blank_ratio=preferred_blank_ratio,
@@ -1362,6 +1374,7 @@ def evaluate_quality_gate(staging_jobs: pd.DataFrame, source_registry: pd.DataFr
         "duplicate_job_url_count": duplicate_job_url_count,
         "impossible_experience_count": impossible_experience_count,
         "carry_forward_hold_only_count": carry_forward_hold_only_count,
+        "carry_forward_hold_ratio": carry_forward_hold_ratio,
         "main_task_blank_ratio": main_task_blank_ratio,
         "requirement_blank_ratio": requirement_blank_ratio,
         "preferred_blank_ratio": preferred_blank_ratio,

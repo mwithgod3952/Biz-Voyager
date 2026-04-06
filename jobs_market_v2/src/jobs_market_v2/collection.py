@@ -509,13 +509,26 @@ def _select_incremental_collectable_positions(
         cursor_positions = collectable_positions[start_offset:]
         return cursor_positions, cursor_positions, []
 
+    forced_limit = min(max(process_limit // 10, 1), _SOURCE_COLLECTION_ACTIVE_PIN_LIMIT)
+    forced_positions: list[int] = []
+    forced_seen: set[int] = set()
+    for position in collectable_positions:
+        if len(forced_positions) >= forced_limit:
+            break
+        if not coerce_bool(rows[position].get("_always_refresh_source")):
+            continue
+        if position in forced_seen:
+            continue
+        forced_seen.add(position)
+        forced_positions.append(position)
+
     cursor_positions = collectable_positions[start_offset : start_offset + process_limit]
-    if not cursor_positions:
-        return cursor_positions, cursor_positions, []
+    if not cursor_positions and not forced_positions:
+        return cursor_positions, cursor_positions, forced_positions
 
     pinned_limit = min(process_limit // 5, _SOURCE_COLLECTION_ACTIVE_PIN_LIMIT)
     pinned_positions: list[int] = []
-    pinned_seen: set[int] = set()
+    pinned_seen: set[int] = set(forced_seen)
     if pinned_limit > 0 and start_offset > 0:
         for position in collectable_positions[:start_offset]:
             if _source_last_active_job_count(rows[position]) <= 0:
@@ -541,16 +554,17 @@ def _select_incremental_collectable_positions(
             if len(scout_positions) >= scout_limit:
                 break
 
-    remaining_capacity = max(process_limit - len(pinned_positions) - len(scout_positions), 0)
+    remaining_capacity = max(process_limit - len(forced_positions) - len(pinned_positions) - len(scout_positions), 0)
     trimmed_cursor_positions: list[int] = []
     for position in cursor_positions:
+        if len(trimmed_cursor_positions) >= remaining_capacity:
+            break
         if position in scout_seen:
             continue
         trimmed_cursor_positions.append(position)
-        if len(trimmed_cursor_positions) >= remaining_capacity:
-            break
     cursor_selected_positions = scout_positions + trimmed_cursor_positions
-    return pinned_positions + cursor_selected_positions, cursor_selected_positions, pinned_positions
+    pinned_selected_positions = forced_positions + pinned_positions
+    return pinned_selected_positions + cursor_selected_positions, cursor_selected_positions, pinned_selected_positions
 
 
 def _normalize_role_text(value: str | None) -> str:
@@ -3819,7 +3833,33 @@ def collect_jobs_from_sources(
     return jobs_frame, raw_records, updated_source_frame[list(SOURCE_REGISTRY_COLUMNS)], summary
 
 
-def merge_incremental(master_frame: pd.DataFrame, new_frame: pd.DataFrame, verified_source_urls: set[str], run_id: str, snapshot_date: str, collected_at: str) -> pd.DataFrame:
+def _normalize_source_outcomes(source_statuses: set[str] | dict[str, str] | None) -> dict[str, str]:
+    if not source_statuses:
+        return {}
+    if isinstance(source_statuses, set):
+        return {
+            normalize_whitespace(source_url): "success"
+            for source_url in source_statuses
+            if normalize_whitespace(source_url)
+        }
+    normalized: dict[str, str] = {}
+    for source_url, outcome in source_statuses.items():
+        normalized_url = normalize_whitespace(source_url)
+        normalized_outcome = normalize_whitespace(outcome).lower()
+        if not normalized_url or normalized_outcome not in {"success", "failure"}:
+            continue
+        normalized[normalized_url] = normalized_outcome
+    return normalized
+
+
+def merge_incremental(
+    master_frame: pd.DataFrame,
+    new_frame: pd.DataFrame,
+    source_statuses: set[str] | dict[str, str] | None,
+    run_id: str,
+    snapshot_date: str,
+    collected_at: str,
+) -> pd.DataFrame:
     if master_frame.empty:
         bootstrap = new_frame.copy()
         if not bootstrap.empty:
@@ -3829,6 +3869,8 @@ def merge_incremental(master_frame: pd.DataFrame, new_frame: pd.DataFrame, verif
         bootstrap["snapshot_date"] = snapshot_date
         bootstrap["run_id"] = run_id
         return bootstrap[list(JOB_COLUMNS)]
+
+    source_outcomes = _normalize_source_outcomes(source_statuses)
 
     current_by_key = {}
     for row in master_frame.fillna("").to_dict(orient="records"):
@@ -3862,12 +3904,15 @@ def merge_incremental(master_frame: pd.DataFrame, new_frame: pd.DataFrame, verif
         carry = previous.copy()
         carry["run_id"] = run_id
         carry["snapshot_date"] = snapshot_date
-        if carry.get("source_url") in verified_source_urls:
+        source_outcome = source_outcomes.get(normalize_whitespace(carry.get("source_url")))
+        if source_outcome == "success":
             carry["missing_count"] = int(carry.get("missing_count") or 0) + 1
             carry["is_active"] = int(carry["missing_count"]) < 2
             carry["record_status"] = "미발견"
-        else:
+        elif source_outcome == "failure":
             carry["record_status"] = "검증실패보류"
+        elif coerce_bool(carry.get("is_active")):
+            carry["record_status"] = "유지"
         merged_rows.append({column: carry.get(column, "") for column in JOB_COLUMNS})
 
     merged = pd.DataFrame(merged_rows, columns=list(JOB_COLUMNS))
