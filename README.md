@@ -151,6 +151,51 @@ sequenceDiagram
 - [`jobs_market_v2/docs/HANDOFF.md`](./jobs_market_v2/docs/HANDOFF.md)  
   Latest working state and handoff notes
 
+## Fork Setup
+
+If you fork this repository, you should assume that none of the original runtime configuration is safe to reuse. A fork needs its own sheet target, its own service account, and its own API secrets.
+
+### 1. Local runs use `jobs_market_v2/.env`
+
+Start from:
+
+- [`jobs_market_v2/.env.example`](./jobs_market_v2/.env.example)
+
+Then create:
+
+```bash
+cd jobs_market_v2
+cp .env.example .env
+```
+
+At minimum, replace these values with your own:
+
+- `GOOGLE_SHEETS_SPREADSHEET_ID`
+- `GOOGLE_SERVICE_ACCOUNT_JSON`
+- `GEMINI_API_KEY` if you want Gemini fallback enabled
+
+### 2. GitHub Actions runs use repository secrets
+
+In your fork, go to:
+
+- `Settings -> Secrets and variables -> Actions`
+
+Add these secrets with your own values:
+
+- `GOOGLE_SHEETS_SPREADSHEET_ID`
+- `GOOGLE_SERVICE_ACCOUNT_JSON`
+- `GEMINI_API_KEY`
+- `SLACK_WEBHOOK_URL` if you want Slack notifications
+
+### 3. If you create a new Google Sheet
+
+You must also share that spreadsheet with the email address from your own Google service account. Without editor access, the workflows can collect data but will fail when they try to sync Sheets.
+
+### 4. Short version
+
+- local manual runs: `jobs_market_v2/.env`
+- GitHub-hosted automation: `Actions Secrets`
+
 ## Quick Start
 
 ```bash

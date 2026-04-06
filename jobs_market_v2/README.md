@@ -128,6 +128,57 @@ python -m jobs_market_v2.cli promote-staging
 
 GitHub Actions의 `.github/workflows/jobs_market_v2_daily.yml`이 일일 상태복원 실행용이다. 이 워크플로는 GitHub-hosted runner의 휘발성 파일시스템을 그대로 믿지 않고, `automation-state` branch에 runtime state bundle을 저장/복원한 뒤 Python CLI를 실행한다.
 
+## 포크해서 쓸 때 가장 먼저 바꿔야 하는 것
+
+포크한 저장소는 원본 저장소의 시트와 비밀값을 그대로 쓰면 안 된다. 아래 두 군데를 자기 값으로 반드시 바꿔야 한다.
+
+### 1. 로컬 실행용 `.env`
+
+기준 파일:
+
+- `.env.example`
+
+아래처럼 자신의 `.env`를 만든다.
+
+```bash
+cd jobs_market_v2
+cp .env.example .env
+```
+
+그 다음 최소한 아래 값을 자기 값으로 바꾼다.
+
+- `GOOGLE_SHEETS_SPREADSHEET_ID`
+- `GOOGLE_SERVICE_ACCOUNT_JSON`
+- `GEMINI_API_KEY` 사용 시 자신의 키
+
+설명:
+
+- `GOOGLE_SHEETS_SPREADSHEET_ID`: 자신의 Google Sheet ID
+- `GOOGLE_SERVICE_ACCOUNT_JSON`: 자신의 서비스 계정 JSON 본문 또는 경로
+- `GEMINI_API_KEY`: Gemini fallback을 쓸 경우만 필요
+
+### 2. GitHub Actions 자동 실행용 Secrets
+
+포크한 GitHub repo에서 아래 경로로 들어간다.
+
+- `Settings > Secrets and variables > Actions`
+
+여기서 아래 값을 자기 값으로 넣어야 한다.
+
+- `GOOGLE_SHEETS_SPREADSHEET_ID`
+- `GOOGLE_SERVICE_ACCOUNT_JSON`
+- `GEMINI_API_KEY`
+- `SLACK_WEBHOOK_URL` 선택
+
+### 3. 새 Google Sheet를 쓰는 경우 추가로 할 일
+
+새 시트를 만들었다면 서비스 계정 이메일에 편집 권한을 줘야 한다. 이 권한이 없으면 수집은 돌아도 시트 반영은 실패한다.
+
+### 4. 어디를 바꾸면 되는지 한 줄 요약
+
+- 로컬 수동 실행: `jobs_market_v2/.env`
+- GitHub Actions 자동 실행: GitHub repo `Actions Secrets`
+
 필수 secret:
 
 - `GOOGLE_SHEETS_SPREADSHEET_ID`
