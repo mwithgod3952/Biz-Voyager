@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>국내 AI 채용시장을 넓게 탐색하고, 품질 게이트를 통과한 공고만 시트에 반영하는 자동 수집 운영 저장소</strong>
+  <strong>A production-oriented intelligence pipeline for Korean AI hiring, from source discovery to quality-gated Google Sheets delivery.</strong>
 </p>
 
 <p align="center">
@@ -20,77 +20,136 @@
   </a>
 </p>
 
-## What This Repo Does
+## Overview
 
-Biz Voyager는 국내 AI 채용시장 데이터를 운영 가능한 형태로 모으기 위한 저장소입니다.  
-공식 채용 페이지, 공개 ATS, JSON-LD, RSS, sitemap만 사용하고, 애매한 source는 바로 버리지 않고 검증과 품질 게이트를 거쳐 `staging -> master -> Google Sheets` 경로로 반영합니다.
+Biz Voyager is the operating repository behind `jobs_market_v2`, a live collection system for Korean AI hiring data. It expands the reachable company and source universe, tracks changes over time, and publishes only quality-gated outputs to Google Sheets.
 
-핵심 목적은 두 가지입니다.
+The system is built around a few strict rules:
 
-- 이미 확보한 source를 2시간마다 추적해서 신규, 유지, 변경, 미발견을 반영
-- 주 1회 더 넓은 회사/source 모집단을 다시 훑어 모집단 자체를 확장
+- Use only official public career pages and public ATS endpoints
+- Prefer recall early, then narrow with verification and quality gates
+- Keep state between GitHub Actions runs even on ephemeral runners
+- Treat publishing as a controlled promotion step, not a side effect of collection
 
-## How It Runs
+## What The Repository Runs
+
+| Loop | Purpose | Cadence | Output |
+| --- | --- | --- | --- |
+| `daily` | Revisit already-known sources and track new, changed, and missing jobs | Every 2 hours | `staging -> master -> Google Sheets` |
+| `weekly` | Expand the company and source universe, then refresh coverage | Once per week | Expanded `staging` coverage |
+
+## System Architecture
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables': {
+  'primaryColor':'#12243d',
+  'primaryTextColor':'#f5fbff',
+  'primaryBorderColor':'#4cc9f0',
+  'lineColor':'#7cc4ff',
+  'secondaryColor':'#17355a',
+  'secondaryTextColor':'#eef7ff',
+  'tertiaryColor':'#0c1625',
+  'fontFamily':'Inter, Segoe UI, sans-serif'
+}}}%%
 flowchart LR
-    A["Company / Source Discovery"] --> B["Verify Sources"]
-    B --> C["Collect Jobs"]
-    C --> D["Quality Gate"]
-    D --> E["Promote to Master"]
-    E --> F["Sync to Google Sheets"]
-    C --> G["Runtime State Bundle"]
-    G --> H["automation-state branch"]
-    H --> C
+    subgraph Discovery["Discovery Layer"]
+        A["Company seeds"]
+        B["Company evidence"]
+        C["Source candidates"]
+        D["Verified sources"]
+    end
+
+    subgraph Collection["Collection Layer"]
+        E["Job collection"]
+        F["Structured extraction"]
+        G["State tracking<br/>new / changed / missing"]
+    end
+
+    subgraph Governance["Quality & Promotion"]
+        H["Coverage report"]
+        I["Quality gate"]
+        J["Master promotion"]
+    end
+
+    subgraph Delivery["Delivery Surfaces"]
+        K["Google Sheets"]
+        L["Runtime artifacts"]
+        M["Issues / incident trail"]
+    end
+
+    A --> B --> C --> D
+    D --> E --> F --> G
+    G --> H --> I --> J --> K
+    G --> L
+    I --> M
 ```
 
-- `daily`: 2시간마다 운영 추적
-- `weekly`: 주 1회 모집단 확장
-- `automation-state` branch: GitHub runner가 휘발성이어도 runtime state를 복원하도록 유지
-- 실패가 반복되면 issue를 남기고, 성공하면 자동으로 닫도록 설계
+## Execution Model
 
-## What Makes It Different
+```mermaid
+%%{init: {'theme':'base','themeVariables': {
+  'primaryColor':'#12243d',
+  'primaryTextColor':'#f5fbff',
+  'primaryBorderColor':'#80ed99',
+  'lineColor':'#9ad8ff',
+  'secondaryColor':'#17355a',
+  'secondaryTextColor':'#eef7ff',
+  'tertiaryColor':'#0c1625',
+  'fontFamily':'Inter, Segoe UI, sans-serif'
+}}}%%
+sequenceDiagram
+    participant Scheduler as GitHub Actions
+    participant State as automation-state branch
+    participant Runtime as jobs_market_v2 runtime
+    participant Gate as Quality gate
+    participant Sheets as Google Sheets
+    participant Issues as GitHub Issues
 
-- **Recall-first sourcing**: 초기에 source를 과하게 버리지 않고 `candidate`까지 관리합니다.
-- **Quality-gated publishing**: low-quality row는 그대로 `master`에 올리지 않습니다.
-- **Stateful GitHub Actions**: ephemeral runner 위에서도 runtime state를 보존합니다.
-- **Google Sheets delivery**: 운영 결과가 사람이 보기 쉬운 시트로 이어집니다.
+    Scheduler->>State: Restore runtime bundle
+    Scheduler->>Runtime: Run collection pipeline
+    Runtime->>Gate: Build quality summary
+
+    alt Passed
+        Gate->>Runtime: Approve promotion
+        Runtime->>Sheets: Sync staging / master
+        Runtime->>State: Save latest runtime bundle
+        Gate->>Issues: Close incident if open
+    else Hold or fail
+        Gate->>State: Preserve latest safe state
+        Gate->>Issues: Open or update incident
+    end
+```
+
+## Why It Is Built This Way
+
+- **Stateful automation on ephemeral runners**  
+  GitHub-hosted runners do not preserve local state, so this repo keeps runtime bundles on the `automation-state` branch and restores them on the next run.
+
+- **Recall-first source expansion**  
+  Early stages avoid dropping ambiguous sources too aggressively. The system separates discovery from verification so that coverage can grow without publishing low-confidence rows.
+
+- **Promotion instead of blind overwrite**  
+  Collection does not automatically become production output. `staging` is evaluated, then promoted to `master` only after the quality gate passes.
+
+- **Operations visibility**  
+  Runtime artifacts, workflow runs, and incident issues provide a visible audit trail when the pipeline fails or degrades.
 
 ## Repository Map
 
-- [`jobs_market_v2/README.md`](./jobs_market_v2/README.md)
-  - 프로젝트 상세 사용법과 CLI/노트북 실행 가이드
-- [`.github/workflows/jobs_market_v2_daily.yml`](./.github/workflows/jobs_market_v2_daily.yml)
-  - 운영 추적용 자동화
-- [`.github/workflows/jobs_market_v2_weekly.yml`](./.github/workflows/jobs_market_v2_weekly.yml)
-  - 모집단 확장용 자동화
-- [`jobs_market_v2/docs/PRODUCTION_DEPLOY.md`](./jobs_market_v2/docs/PRODUCTION_DEPLOY.md)
-  - 운영 배포 절차
-- [`jobs_market_v2/docs/HANDOFF.md`](./jobs_market_v2/docs/HANDOFF.md)
-  - 최신 운영 상태와 handoff 기록
+- [`jobs_market_v2/README.md`](./jobs_market_v2/README.md)  
+  Full project guide, CLI usage, notebook flow, and operating conventions
 
-## Current Operating Model
+- [`.github/workflows/jobs_market_v2_daily.yml`](./.github/workflows/jobs_market_v2_daily.yml)  
+  The main operational loop for tracking already-known sources
 
-### Daily
+- [`.github/workflows/jobs_market_v2_weekly.yml`](./.github/workflows/jobs_market_v2_weekly.yml)  
+  The expansion loop for refreshing the company and source universe
 
-- 2시간마다 실행
-- 기존 verified source 재방문
-- 신규, 변경, 미발견 추적
-- 품질 통과 시 `master`와 Google Sheets 반영
+- [`jobs_market_v2/docs/PRODUCTION_DEPLOY.md`](./jobs_market_v2/docs/PRODUCTION_DEPLOY.md)  
+  Production deployment notes and runtime expectations
 
-### Weekly
-
-- 주 1회 실행
-- 회사 / source 모집단 확장
-- coverage 점검
-- 확장 결과를 `staging`에 반영
-
-## Data Principles
-
-- 공식 공개 source만 사용
-- 채용 포털 직접 수집 및 우회성 접근 금지
-- low-quality output은 승격보다 보류를 우선
-- 수집 성공보다 운영 안정성과 품질 보존을 우선
+- [`jobs_market_v2/docs/HANDOFF.md`](./jobs_market_v2/docs/HANDOFF.md)  
+  Latest working state and handoff notes
 
 ## Quick Start
 
@@ -101,16 +160,14 @@ cd jobs_market_v2
 ./.venv/bin/python -m jobs_market_v2.cli doctor
 ```
 
-Notebook이 필요하면:
+To open notebooks:
 
 ```bash
 cd jobs_market_v2
 ./scripts/run_jupyter.sh
 ```
 
-## Outputs
-
-주요 산출물은 아래 경로에 쌓입니다.
+## Key Outputs
 
 - `jobs_market_v2/runtime/staging_jobs.csv`
 - `jobs_market_v2/runtime/master_jobs.csv`
@@ -118,16 +175,18 @@ cd jobs_market_v2
 - `jobs_market_v2/runtime/quality_gate.json`
 - `jobs_market_v2/runtime/runs.csv`
 
-## Status Surfaces
+## Operating Surfaces
 
-- [Actions](https://github.com/mwithgod3952/Biz-Voyager/actions)
-- [Issues](https://github.com/mwithgod3952/Biz-Voyager/issues)
+- [GitHub Actions](https://github.com/mwithgod3952/Biz-Voyager/actions)
+- [GitHub Issues](https://github.com/mwithgod3952/Biz-Voyager/issues)
 
-실패는 Actions에서 보이고, 반복 실패나 incident는 Issues에 남도록 운영합니다.
+The normal path is simple:
+
+- successful runs keep the state bundle fresh
+- quality-approved runs publish to Sheets
+- repeated failures leave a visible incident trail in Issues
 
 ## Learn More
-
-실제 수집 코드와 상세 운영 문서는 여기서 이어집니다.
 
 - [`jobs_market_v2/README.md`](./jobs_market_v2/README.md)
 - [`jobs_market_v2/docs/PRODUCTION_DEPLOY.md`](./jobs_market_v2/docs/PRODUCTION_DEPLOY.md)
