@@ -1,0 +1,82 @@
+<svg width="1280" height="640" viewBox="0 0 1280 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="96" y1="64" x2="1184" y2="576" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#09111F"/>
+      <stop offset="0.55" stop-color="#13233F"/>
+      <stop offset="1" stop-color="#1D3C63"/>
+    </linearGradient>
+    <linearGradient id="card" x1="823" y1="132" x2="1070" y2="500" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7FBFF" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#F7FBFF" stop-opacity="0.08"/>
+    </linearGradient>
+    <linearGradient id="accentA" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#4CC9F0"/>
+      <stop offset="1" stop-color="#80ED99"/>
+    </linearGradient>
+    <linearGradient id="accentB" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#FFD166"/>
+      <stop offset="1" stop-color="#F76E6E"/>
+    </linearGradient>
+    <filter id="blurGlow" x="690" y="70" width="450" height="490" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="28"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="640" rx="28" fill="url(#bg)"/>
+  <circle cx="1072" cy="118" r="138" fill="#4CC9F0" fill-opacity="0.14"/>
+  <circle cx="175" cy="88" r="112" fill="#80ED99" fill-opacity="0.10"/>
+  <circle cx="1172" cy="542" r="176" fill="#FFD166" fill-opacity="0.08"/>
+
+  <path d="M0 475C157 431 281 430 427 458C594 490 736 567 934 566C1078 565 1178 526 1280 476V640H0V475Z" fill="#F7FBFF" fill-opacity="0.03"/>
+
+  <g filter="url(#blurGlow)">
+    <rect x="780" y="160" width="280" height="310" rx="30" fill="#7FDBFF" fill-opacity="0.16"/>
+  </g>
+
+  <rect x="742" y="124" width="358" height="372" rx="30" fill="url(#card)" stroke="#F7FBFF" stroke-opacity="0.14"/>
+  <rect x="776" y="166" width="290" height="58" rx="16" fill="#0A1425" fill-opacity="0.46"/>
+  <rect x="776" y="248" width="132" height="112" rx="20" fill="#0A1425" fill-opacity="0.40"/>
+  <rect x="934" y="248" width="132" height="112" rx="20" fill="#0A1425" fill-opacity="0.40"/>
+  <rect x="776" y="386" width="290" height="76" rx="20" fill="#0A1425" fill-opacity="0.34"/>
+
+  <path d="M804 205H1038" stroke="url(#accentA)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M804 287C826 275 847 275 867 287C887 299 909 299 931 287" stroke="url(#accentA)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M803 328H875" stroke="#D8F3FF" stroke-opacity="0.72" stroke-width="8" stroke-linecap="round"/>
+  <path d="M961 287C979 274 997 274 1015 287C1033 300 1046 300 1061 292" stroke="url(#accentB)" stroke-width="8" stroke-linecap="round"/>
+  <path d="M962 328H1035" stroke="#FFE7B0" stroke-opacity="0.78" stroke-width="8" stroke-linecap="round"/>
+  <path d="M805 424H1037" stroke="#F7FBFF" stroke-opacity="0.72" stroke-width="8" stroke-linecap="round"/>
+
+  <text x="96" y="170" fill="#F7FBFF" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="64" font-weight="700" letter-spacing="-1.5">
+    Biz Voyager
+  </text>
+  <text x="96" y="234" fill="#BFD8F2" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="24" font-weight="500">
+    Korean AI hiring intelligence, from source discovery to quality-gated delivery.
+  </text>
+
+  <rect x="96" y="280" width="176" height="38" rx="19" fill="#F7FBFF" fill-opacity="0.10" stroke="#F7FBFF" stroke-opacity="0.18"/>
+  <text x="126" y="305" fill="#D9F7FF" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="16" font-weight="700">
+    STATEFUL ACTIONS
+  </text>
+
+  <rect x="286" y="280" width="164" height="38" rx="19" fill="#F7FBFF" fill-opacity="0.10" stroke="#F7FBFF" stroke-opacity="0.18"/>
+  <text x="317" y="305" fill="#EAF6D5" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="16" font-weight="700">
+    QUALITY GATE
+  </text>
+
+  <rect x="96" y="360" width="530" height="136" rx="24" fill="#08111E" fill-opacity="0.32" stroke="#F7FBFF" stroke-opacity="0.08"/>
+  <text x="124" y="408" fill="#F7FBFF" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="22" font-weight="700">
+    What runs inside
+  </text>
+  <text x="124" y="445" fill="#C3D6E8" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="19">
+    Discover companies and sources
+  </text>
+  <text x="124" y="475" fill="#C3D6E8" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="19">
+    Track new, changed, and missing job postings
+  </text>
+  <text x="124" y="505" fill="#C3D6E8" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="19">
+    Publish only quality-gated rows to Google Sheets
+  </text>
+
+  <path d="M655 172C680 194 703 219 724 247" stroke="#7FDBFF" stroke-opacity="0.54" stroke-width="3" stroke-dasharray="8 8"/>
+  <path d="M626 436C669 434 709 427 742 409" stroke="#FFE08A" stroke-opacity="0.45" stroke-width="3" stroke-dasharray="8 8"/>
+</svg>
