@@ -5,7 +5,8 @@
 </p>
 
 <p align="center">
-  <strong>A production-oriented intelligence pipeline for Korean AI hiring, from source discovery to quality-gated Google Sheets delivery.</strong>
+  <strong>An operational intelligence system for Korean AI hiring.</strong><br/>
+  Discover companies, verify official hiring sources, track job changes over time, and publish quality-gated outputs to Google Sheets.
 </p>
 
 <p align="center">
@@ -20,183 +21,177 @@
   </a>
 </p>
 
-## Overview
+## Why This Exists
 
-Biz Voyager is the operating repository behind `jobs_market_v2`, a live collection system for Korean AI hiring data. It expands the reachable company and source universe, tracks changes over time, and publishes only quality-gated outputs to Google Sheets.
+Most hiring dashboards fail in one of two ways:
 
-The system is built around a few strict rules:
+- they track too few companies, so growth stalls early
+- they scrape too aggressively, so data quality and operational trust collapse
 
-- Use only official public career pages and public ATS endpoints
-- Prefer recall early, then narrow with verification and quality gates
-- Keep state between GitHub Actions runs even on ephemeral runners
-- Treat publishing as a controlled promotion step, not a side effect of collection
+Biz Voyager is built to avoid both failures.
 
-## What The Repository Runs
+It expands the reachable hiring universe, keeps a persistent operating state across GitHub-hosted runners, and publishes only after quality checks pass. The goal is not to collect the noisiest possible job feed. The goal is to maintain a broad, dependable, inspectable hiring intelligence surface.
 
-| Loop | Purpose | Cadence | Output |
-| --- | --- | --- | --- |
-| `daily` | Revisit already-known sources and track new, changed, and missing jobs | Every 2 hours | `staging -> master -> Google Sheets` |
-| `weekly` | Expand the company and source universe, then refresh coverage | Once per week | Expanded `staging` coverage |
+## What Biz Voyager Actually Does
 
-## System Architecture
+Biz Voyager runs the full loop behind `jobs_market_v2`:
+
+1. discover companies worth tracking
+2. find official careers pages and public ATS endpoints
+3. verify which sources are suitable for repeat automation
+4. collect and normalize jobs
+5. track `new`, `changed`, `missing`, and temporary hold states
+6. gate quality before promotion
+7. deliver results to Google Sheets
+
+This means the repository is not just “a scraper.”
+It is a stateful operations system for job-market monitoring.
+
+## The Core Operating Idea
 
 ```mermaid
 %%{init: {'theme':'base','themeVariables': {
-  'primaryColor':'#12243d',
-  'primaryTextColor':'#f5fbff',
-  'primaryBorderColor':'#4cc9f0',
-  'lineColor':'#7cc4ff',
-  'secondaryColor':'#17355a',
+  'primaryColor':'#10243d',
+  'primaryTextColor':'#f7fbff',
+  'primaryBorderColor':'#54c6eb',
+  'secondaryColor':'#17365e',
   'secondaryTextColor':'#eef7ff',
-  'tertiaryColor':'#0c1625',
-  'fontFamily':'Inter, Segoe UI, sans-serif'
+  'tertiaryColor':'#0d1728',
+  'lineColor':'#89d2ff',
+  'fontFamily':'Avenir Next, Segoe UI, sans-serif'
 }}}%%
 flowchart LR
-    subgraph Discovery["Discovery Layer"]
+    subgraph Universe["Universe Expansion"]
         A["Company seeds"]
-        B["Company evidence"]
-        C["Source candidates"]
-        D["Verified sources"]
+        B["Evidence collection"]
+        C["Company screening"]
+        D["Source discovery"]
+        E["Source verification"]
     end
 
-    subgraph Collection["Collection Layer"]
-        E["Job collection"]
-        F["Structured extraction"]
-        G["State tracking<br/>new / changed / missing"]
+    subgraph Tracking["Live Tracking"]
+        F["Incremental collection"]
+        G["Merge with prior state"]
+        H["new / changed / missing / hold"]
     end
 
-    subgraph Governance["Quality & Promotion"]
-        H["Coverage report"]
-        I["Quality gate"]
-        J["Master promotion"]
+    subgraph Governance["Governance"]
+        I["Coverage report"]
+        J["Quality gate"]
+        K["Promotion to master"]
     end
 
-    subgraph Delivery["Delivery Surfaces"]
-        K["Google Sheets"]
-        L["Runtime artifacts"]
-        M["Issues / incident trail"]
+    subgraph Delivery["Delivery"]
+        L["Google Sheets"]
+        M["Runtime artifacts"]
+        N["GitHub Issues"]
     end
 
-    A --> B --> C --> D
-    D --> E --> F --> G
-    G --> H --> I --> J --> K
-    G --> L
-    I --> M
+    A --> B --> C --> D --> E
+    E --> F --> G --> H --> I --> J --> K --> L
+    G --> M
+    J --> N
 ```
 
-## Execution Model
+## What Makes It Different
+
+- **Recall-first, not prematurely narrow**  
+  Ambiguous sources are not instantly discarded. Discovery and verification are separated so coverage can grow without forcing low-confidence rows into production.
+
+- **Promotion-based publishing**  
+  Collection alone is never treated as “production ready.” Output lands in `staging`, goes through a quality gate, and only then reaches `master`.
+
+- **Stateful automation on ephemeral runners**  
+  GitHub-hosted runners are disposable. Biz Voyager restores and persists runtime state so the system can still behave like a continuous collector.
+
+- **Operationally visible**  
+  Runtime artifacts, workflow runs, and incident issues make failure modes visible instead of silent.
+
+## Two Loops, Two Jobs
+
+| Loop | Role | Typical Question It Answers | Cadence |
+| --- | --- | --- | --- |
+| `daily` | freshness loop | “What changed in the known hiring universe?” | every 2 hours |
+| `weekly` | expansion loop | “What companies and sources should enter the universe next?” | weekly |
+
+This split is important.
+
+The `daily` loop protects freshness.
+The `weekly` loop prevents the universe from stagnating.
+
+## Control Plane vs Data Plane
 
 ```mermaid
 %%{init: {'theme':'base','themeVariables': {
-  'primaryColor':'#12243d',
-  'primaryTextColor':'#f5fbff',
-  'primaryBorderColor':'#80ed99',
-  'lineColor':'#9ad8ff',
-  'secondaryColor':'#17355a',
-  'secondaryTextColor':'#eef7ff',
-  'tertiaryColor':'#0c1625',
-  'fontFamily':'Inter, Segoe UI, sans-serif'
+  'primaryColor':'#14273f',
+  'primaryTextColor':'#f7fbff',
+  'primaryBorderColor':'#8adf8c',
+  'secondaryColor':'#1d3e63',
+  'secondaryTextColor':'#edf7ff',
+  'tertiaryColor':'#0c1522',
+  'lineColor':'#9ed3ff',
+  'fontFamily':'Avenir Next, Segoe UI, sans-serif'
 }}}%%
-sequenceDiagram
-    participant Scheduler as GitHub Actions
-    participant State as automation-state branch
-    participant Runtime as jobs_market_v2 runtime
-    participant Gate as Quality gate
-    participant Sheets as Google Sheets
-    participant Issues as GitHub Issues
-
-    Scheduler->>State: Restore runtime bundle
-    Scheduler->>Runtime: Run collection pipeline
-    Runtime->>Gate: Build quality summary
-
-    alt Passed
-        Gate->>Runtime: Approve promotion
-        Runtime->>Sheets: Sync staging / master
-        Runtime->>State: Save latest runtime bundle
-        Gate->>Issues: Close incident if open
-    else Hold or fail
-        Gate->>State: Preserve latest safe state
-        Gate->>Issues: Open or update incident
+flowchart TB
+    subgraph Control["Control Plane"]
+        A["GitHub Actions schedules"]
+        B["Workflow orchestration"]
+        C["automation-state branch"]
+        D["Incident issue lifecycle"]
     end
+
+    subgraph Data["Data Plane"]
+        E["Source registry"]
+        F["Incremental collection"]
+        G["staging jobs"]
+        H["quality gate"]
+        I["master jobs"]
+        J["Google Sheets"]
+    end
+
+    A --> B --> C
+    B --> F
+    D --> B
+    E --> F --> G --> H --> I --> J
+    C --> F
+    H --> D
 ```
 
-## Why It Is Built This Way
+## Who This Repository Is For
 
-- **Stateful automation on ephemeral runners**  
-  GitHub-hosted runners do not preserve local state, so this repo keeps runtime bundles on the `automation-state` branch and restores them on the next run.
+Biz Voyager is a good fit if you are:
 
-- **Recall-first source expansion**  
-  Early stages avoid dropping ambiguous sources too aggressively. The system separates discovery from verification so that coverage can grow without publishing low-confidence rows.
+- operating a hiring intelligence workflow
+- tracking Korean AI, startup, SMB, or growth-company hiring
+- reviewing hiring trends from Sheets rather than raw HTML
+- forking a working system and adapting it to your own sheet and source universe
 
-- **Promotion instead of blind overwrite**  
-  Collection does not automatically become production output. `staging` is evaluated, then promoted to `master` only after the quality gate passes.
-
-- **Operations visibility**  
-  Runtime artifacts, workflow runs, and incident issues provide a visible audit trail when the pipeline fails or degrades.
+It is not aimed at casual one-off scraping.
+It is for people who want a repeatable pipeline.
 
 ## Repository Map
 
 - [`jobs_market_v2/README.md`](./jobs_market_v2/README.md)  
-  Full project guide, CLI usage, notebook flow, and operating conventions
+  Full beginner-friendly project guide for the actual collector
 
 - [`.github/workflows/jobs_market_v2_daily.yml`](./.github/workflows/jobs_market_v2_daily.yml)  
-  The main operational loop for tracking already-known sources
+  The freshness loop for already-known sources
 
 - [`.github/workflows/jobs_market_v2_weekly.yml`](./.github/workflows/jobs_market_v2_weekly.yml)  
-  The expansion loop for refreshing the company and source universe
+  The expansion loop for companies and sources
 
 - [`jobs_market_v2/docs/PRODUCTION_DEPLOY.md`](./jobs_market_v2/docs/PRODUCTION_DEPLOY.md)  
-  Production deployment notes and runtime expectations
+  Deployment and runtime expectations
 
 - [`jobs_market_v2/docs/HANDOFF.md`](./jobs_market_v2/docs/HANDOFF.md)  
-  Latest working state and handoff notes
+  Latest operating notes and current state
 
-## Fork Setup
+- [`jobs_market_v2/runtime/`](./jobs_market_v2/runtime/)  
+  Generated outputs, state snapshots, quality summaries, and run logs
 
-If you fork this repository, you should assume that none of the original runtime configuration is safe to reuse. A fork needs its own sheet target, its own service account, and its own API secrets.
+## If You Want To Use It Quickly
 
-### 1. Local runs use `jobs_market_v2/.env`
-
-Start from:
-
-- [`jobs_market_v2/.env.example`](./jobs_market_v2/.env.example)
-
-Then create:
-
-```bash
-cd jobs_market_v2
-cp .env.example .env
-```
-
-At minimum, replace these values with your own:
-
-- `GOOGLE_SHEETS_SPREADSHEET_ID`
-- `GOOGLE_SERVICE_ACCOUNT_JSON`
-- `GEMINI_API_KEY` if you want Gemini fallback enabled
-
-### 2. GitHub Actions runs use repository secrets
-
-In your fork, go to:
-
-- `Settings -> Secrets and variables -> Actions`
-
-Add these secrets with your own values:
-
-- `GOOGLE_SHEETS_SPREADSHEET_ID`
-- `GOOGLE_SERVICE_ACCOUNT_JSON`
-- `GEMINI_API_KEY`
-- `SLACK_WEBHOOK_URL` if you want Slack notifications
-
-### 3. If you create a new Google Sheet
-
-You must also share that spreadsheet with the email address from your own Google service account. Without editor access, the workflows can collect data but will fail when they try to sync Sheets.
-
-### 4. Short version
-
-- local manual runs: `jobs_market_v2/.env`
-- GitHub-hosted automation: `Actions Secrets`
-
-## Quick Start
+Start here:
 
 ```bash
 cd jobs_market_v2
@@ -205,34 +200,77 @@ cd jobs_market_v2
 ./.venv/bin/python -m jobs_market_v2.cli doctor
 ```
 
-To open notebooks:
+Then read:
+
+- [`jobs_market_v2/README.md`](./jobs_market_v2/README.md)
+
+That README is the practical operator guide.
+This root page is the system-level overview.
+
+## Fork Setup
+
+If you fork Biz Voyager, do not reuse the original operational targets.
+A fork should have its own credentials and its own output destinations.
+
+### Local manual runs
+
+Use:
+
+- [`jobs_market_v2/.env.example`](./jobs_market_v2/.env.example)
+
+Create your own local file:
 
 ```bash
 cd jobs_market_v2
-./scripts/run_jupyter.sh
+cp .env.example .env
 ```
 
-## Key Outputs
+Replace at least:
 
-- `jobs_market_v2/runtime/staging_jobs.csv`
-- `jobs_market_v2/runtime/master_jobs.csv`
-- `jobs_market_v2/runtime/source_registry.csv`
-- `jobs_market_v2/runtime/quality_gate.json`
-- `jobs_market_v2/runtime/runs.csv`
+- `GOOGLE_SHEETS_SPREADSHEET_ID`
+- `GOOGLE_SERVICE_ACCOUNT_JSON`
+- `GEMINI_API_KEY`
+
+### GitHub-hosted automation
+
+In your fork, add repository secrets at:
+
+- `Settings -> Secrets and variables -> Actions`
+
+Add:
+
+- `GOOGLE_SHEETS_SPREADSHEET_ID`
+- `GOOGLE_SERVICE_ACCOUNT_JSON`
+- `GEMINI_API_KEY`
+- `SLACK_WEBHOOK_URL` if you want Slack alerts
+
+### New Google Sheet
+
+If you create a new target spreadsheet, also share it with your service account email as an editor.
+Without that access, collection may succeed but sheet sync will fail.
+
+## What Success Looks Like
+
+When Biz Voyager is healthy:
+
+- the `daily` run keeps known sources fresh
+- the `weekly` run keeps the universe expanding
+- `staging` changes are visible
+- `master` reflects only quality-approved output
+- Google Sheets mirrors the promoted result
+- repeated failures leave a visible incident trail
 
 ## Operating Surfaces
 
 - [GitHub Actions](https://github.com/mwithgod3952/Biz-Voyager/actions)
 - [GitHub Issues](https://github.com/mwithgod3952/Biz-Voyager/issues)
 
-The normal path is simple:
+## Final Orientation
 
-- successful runs keep the state bundle fresh
-- quality-approved runs publish to Sheets
-- repeated failures leave a visible incident trail in Issues
+Use this repository if you want a living hiring intelligence system.
 
-## Learn More
+Use [`jobs_market_v2/README.md`](./jobs_market_v2/README.md) if you want to run or modify the collector.
 
-- [`jobs_market_v2/README.md`](./jobs_market_v2/README.md)
-- [`jobs_market_v2/docs/PRODUCTION_DEPLOY.md`](./jobs_market_v2/docs/PRODUCTION_DEPLOY.md)
-- [`jobs_market_v2/docs/WORK_UNITS.md`](./jobs_market_v2/docs/WORK_UNITS.md)
+Use the workflow files if you want to understand how automation is scheduled.
+
+Use the docs under [`jobs_market_v2/docs/`](./jobs_market_v2/docs/) if you want the current operating state and deployment details.
