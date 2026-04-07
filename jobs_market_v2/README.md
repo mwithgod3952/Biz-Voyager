@@ -1,242 +1,276 @@
 # jobs_market_v2
 
-`jobs_market_v2`는 국내 채용시장 전체 모집단을 넓게 확보하기 위한 리콜 우선형 수집 코드베이스다. 공식 채용 페이지, 공개 ATS, JSON-LD, RSS, sitemap만 사용하며, 채용 포털 직접 수집과 우회성 접근은 금지한다.
+`jobs_market_v2` is a recall-first job collection system for the Korean hiring market.
 
-운영 수집은 기본적으로 실웹(`live`) 기준이다. 테스트 fixture 기반 mock 수집은 테스트나 개발 검증에서만 `JOBS_MARKET_V2_USE_MOCK_SOURCES=true`로 명시적으로 켠다.
+It is designed to:
 
-## 핵심 설계
+- collect jobs from official careers pages and public ATS endpoints
+- preserve a broad candidate universe before narrowing too aggressively
+- track `new`, `changed`, `missing`, and temporary hold states over time
+- publish only quality-gated results to `master`
+- sync the final output to Google Sheets for operational review
 
-- 0단계: 소스 적격성 판정 후 `approved_sources.csv`, `candidate_sources.csv`, `rejected_sources.csv` 생성
-- 1단계: `approved + candidate` 소스로 첫 공고 스냅샷을 수집해 `staging`에 적재
-- 2단계: 증분 갱신으로 신규, 유지, 변경, 미발견을 추적하고 품질 게이트 통과 시에만 `master` 반영
-- 리콜 우선: 애매한 소스는 초반에 버리지 않고 `candidate`로 분리해 재검토 가능하게 유지
+This repository is for people who want a practical, inspectable pipeline, not a black box.
+If you are new to the project, start with the **Quick Start** section below.
 
-## 가상환경 생성 명령
+## What This Project Does
+
+This project discovers companies, finds official hiring sources, verifies those sources, collects jobs, and then separates the result into two layers:
+
+- `staging`: the latest collected output before final promotion
+- `master`: the promoted output after quality checks
+
+The system only uses sources that are acceptable for long-term automated operation:
+
+- official careers pages
+- public ATS pages
+- JSON or RSS feeds
+- sitemap-discoverable public job pages
+
+It does **not** rely on direct scraping of closed job portals or workaround-style access.
+
+## Who This Is For
+
+This repository is useful if you are:
+
+- running a structured job collection workflow
+- expanding a startup / SMB / growth-company hiring universe
+- reviewing hiring activity through Google Sheets
+- maintaining a repeatable pipeline instead of manually copying jobs
+
+You do **not** need to understand the whole codebase before using it.
+You can run it with a small set of commands if your environment is configured correctly.
+
+## System Overview
+
+```mermaid
+flowchart LR
+    A["Company seeds"] --> B["Company discovery"]
+    B --> C["Company evidence collection"]
+    C --> D["Company screening"]
+    D --> E["Source discovery"]
+    E --> F["Source verification"]
+    F --> G["Job collection"]
+    G --> H["Quality filtering"]
+    H --> I["staging"]
+    I --> J["Quality gate"]
+    J --> K["master"]
+    K --> L["Google Sheets"]
+```
+
+## Runtime Model
+
+```mermaid
+flowchart TD
+    A["approved + candidate sources"] --> B["incremental source scan"]
+    B --> C["fresh jobs from attempted sources"]
+    C --> D["incremental merge"]
+    D --> E["new / changed / unchanged / missing"]
+    B --> F["unattempted sources"]
+    F --> G["preserve previous active rows"]
+    B --> H["attempted failures"]
+    H --> I["verification hold rows"]
+    E --> J["low-quality filter"]
+    G --> J
+    I --> J
+    J --> K["quality gate"]
+    K --> L["promote to master"]
+```
+
+## Project Layout
+
+- `src/jobs_market_v2/`: core application code
+- `tests/`: regression and pipeline tests
+- `notebooks/`: interactive analysis notebooks
+- `runtime/`: generated runtime outputs
+- `output_samples/`: sample exports
+- `config/`: seed inputs and configuration data
+- `scripts/`: setup, execution, and utility scripts
+
+## Quick Start
+
+If you want the shortest path to a working local run, do this:
 
 ```bash
 cd jobs_market_v2
 python3 -m venv .venv
 source .venv/bin/activate
+./scripts/setup_env.sh
+./scripts/register_kernel.sh
 ```
 
-Windows PowerShell:
+Then create your `.env` file:
+
+```bash
+cp .env.example .env
+```
+
+Fill in at least:
+
+- `GOOGLE_SHEETS_SPREADSHEET_ID`
+- `GOOGLE_SERVICE_ACCOUNT_JSON`
+- `GEMINI_API_KEY` if you want Gemini fallback/refinement
+
+Then run:
+
+```bash
+./.venv/bin/python -m jobs_market_v2.cli doctor
+./.venv/bin/python -m jobs_market_v2.cli run-collection-cycle
+```
+
+If the quality gate passes, sync the result:
+
+```bash
+./.venv/bin/python -m jobs_market_v2.cli sync-sheets --target master
+./.venv/bin/python -m jobs_market_v2.cli sync-sheets --target staging
+```
+
+## Installation
+
+### macOS / Linux
+
+```bash
+cd jobs_market_v2
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -e .
+```
+
+### Windows PowerShell
 
 ```powershell
 cd jobs_market_v2
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-```
-
-## 라이브러리 설치 명령
-
-```bash
 pip install --upgrade pip
 pip install -e .
 ```
 
-## kernel 등록 명령
+### Recommended Shortcuts
+
+Use the project scripts instead of doing everything by hand:
 
 ```bash
+./scripts/setup_env.sh
 ./scripts/register_kernel.sh
+./scripts/run_jupyter.sh
 ```
 
-## Jupyter Lab 실행 명령
+## Environment Variables
+
+The project reads its local settings from:
+
+- `.env`
+- `.env.example` as the template
+
+The two most important values are:
+
+### `GOOGLE_SHEETS_SPREADSHEET_ID`
+
+This is the spreadsheet ID from your Google Sheets URL.
+
+Example:
+
+```text
+https://docs.google.com/spreadsheets/d/<SPREADSHEET_ID>/edit
+```
+
+### `GOOGLE_SERVICE_ACCOUNT_JSON`
+
+This can be:
+
+- a full JSON string, or
+- a path to a local service-account JSON file
+
+Most users find the **file path** option easier.
+
+Example:
+
+```text
+GOOGLE_SERVICE_ACCOUNT_JSON=/absolute/path/to/service-account.json
+```
+
+### `GEMINI_API_KEY`
+
+Optional, but recommended if you want:
+
+- refinement on weak HTML pages
+- fallback assistance for harder role extraction cases
+
+## Google Sheets Setup for Beginners
+
+If Google Sheets is new to you, this is the minimum you need to know.
+
+### Step 1. Create a spreadsheet
+
+Create a Google Sheet that will receive:
+
+- `master 탭`
+- `staging 탭`
+- coverage / source / run logs
+
+### Step 2. Find the spreadsheet ID
+
+Open the sheet in your browser and copy the ID from the URL.
+
+### Step 3. Create or obtain a service account JSON
+
+This is a Google Cloud service account key file.
+The pipeline uses it to write to your spreadsheet.
+
+### Step 4. Share the sheet with the service account email
+
+This is the step people miss most often.
+
+Open your Google Sheet, click **Share**, and add the service account email as an **Editor**.
+
+If you skip this, collection may still run locally, but sheet sync will fail.
+
+## First-Time Notebook Usage
+
+This project includes two core notebooks.
+
+### Notebook 1: Source Screening
+
+Open:
+
+- `notebooks/00_source_screening.ipynb`
+
+This notebook helps you understand:
+
+- which companies and sources were found
+- which sources were approved, candidate, or rejected
+- whether the discovery funnel is behaving correctly
+
+### Notebook 2: Bootstrap Population
+
+Open:
+
+- `notebooks/01_bootstrap_population.ipynb`
+
+This notebook helps you inspect:
+
+- the first collected job population
+- initial `staging`
+- raw detail extraction
+- coverage before promotion
+
+### Running Jupyter
 
 ```bash
 ./scripts/run_jupyter.sh
 ```
 
-노트북에서 선택할 kernel 이름은 `jobs-market-v2`다.
+Select the kernel:
 
-## 0단계 노트북 실행법
+- `jobs-market-v2`
 
-1. 가상환경 활성화 후 `./scripts/run_jupyter.sh` 실행
-2. `notebooks/00_source_screening.ipynb` 열기
-3. 셀을 위에서 아래로 실행
+## Core CLI Commands
 
-주요 출력 파일:
+If you do not want to use notebooks, these are the main commands to know.
 
-- `output_samples/approved_sources.csv`
-- `output_samples/candidate_sources.csv`
-- `output_samples/rejected_sources.csv`
-
-## 1단계 노트북 실행법
-
-1. 0단계 노트북을 먼저 실행
-2. `notebooks/01_bootstrap_population.ipynb` 열기
-3. 셀을 위에서 아래로 실행
-
-주요 출력 파일:
-
-- `output_samples/first_snapshot_jobs.parquet`
-- `runtime/staging_jobs.csv`
-- `runtime/raw_detail.jsonl`
-
-## 수동 기업/소스 입력법
-
-기업 수동 입력:
-
-```bash
-python -m jobs_market_v2.cli import-companies config/manual_companies_seed.csv
-```
-
-소스 수동 입력:
-
-```bash
-python -m jobs_market_v2.cli import-sources config/manual_sources_seed.yaml
-```
-
-지원 형식은 `csv`, `yaml`, `yml`, `xlsx`다.
-
-## verify-sources 사용법
-
-```bash
-python -m jobs_market_v2.cli discover-sources
-python -m jobs_market_v2.cli verify-sources
-```
-
-## collect-jobs --dry-run 사용법
-
-```bash
-python -m jobs_market_v2.cli collect-jobs --dry-run
-```
-
-## update-incremental 사용법
-
-```bash
-python -m jobs_market_v2.cli update-incremental
-```
-
-## staging 확인법
-
-```bash
-python -m jobs_market_v2.cli build-coverage-report
-python -m jobs_market_v2.cli sync-sheets --target staging
-```
-
-`runtime/staging_jobs.csv`와 `runtime/coverage_report.json`도 함께 확인하면 된다.
-
-## master 승격법
-
-```bash
-python -m jobs_market_v2.cli promote-staging
-```
-
-품질 게이트를 통과하지 못하면 `master`는 갱신되지 않고 `staging`만 유지된다.
-
-## daily 실행법
-
-GitHub Actions의 `.github/workflows/jobs_market_v2_daily.yml`이 일일 상태복원 실행용이다. 이 워크플로는 GitHub-hosted runner의 휘발성 파일시스템을 그대로 믿지 않고, `automation-state` branch에 runtime state bundle을 저장/복원한 뒤 Python CLI를 실행한다.
-
-## 포크해서 쓸 때 가장 먼저 바꿔야 하는 것
-
-포크한 저장소는 원본 저장소의 시트와 비밀값을 그대로 쓰면 안 된다. 아래 두 군데를 자기 값으로 반드시 바꿔야 한다.
-
-### 1. 로컬 실행용 `.env`
-
-기준 파일:
-
-- `.env.example`
-
-아래처럼 자신의 `.env`를 만든다.
-
-```bash
-cd jobs_market_v2
-cp .env.example .env
-```
-
-그 다음 최소한 아래 값을 자기 값으로 바꾼다.
-
-- `GOOGLE_SHEETS_SPREADSHEET_ID`
-- `GOOGLE_SERVICE_ACCOUNT_JSON`
-- `GEMINI_API_KEY` 사용 시 자신의 키
-
-설명:
-
-- `GOOGLE_SHEETS_SPREADSHEET_ID`: 자신의 Google Sheet ID
-- `GOOGLE_SERVICE_ACCOUNT_JSON`: 자신의 서비스 계정 JSON 본문 또는 경로
-- `GEMINI_API_KEY`: Gemini fallback을 쓸 경우만 필요
-
-### 2. GitHub Actions 자동 실행용 Secrets
-
-포크한 GitHub repo에서 아래 경로로 들어간다.
-
-- `Settings > Secrets and variables > Actions`
-
-여기서 아래 값을 자기 값으로 넣어야 한다.
-
-- `GOOGLE_SHEETS_SPREADSHEET_ID`
-- `GOOGLE_SERVICE_ACCOUNT_JSON`
-- `GEMINI_API_KEY`
-- `SLACK_WEBHOOK_URL` 선택
-
-### 3. 새 Google Sheet를 쓰는 경우 추가로 할 일
-
-새 시트를 만들었다면 서비스 계정 이메일에 편집 권한을 줘야 한다. 이 권한이 없으면 수집은 돌아도 시트 반영은 실패한다.
-
-### 4. 어디를 바꾸면 되는지 한 줄 요약
-
-- 로컬 수동 실행: `jobs_market_v2/.env`
-- GitHub Actions 자동 실행: GitHub repo `Actions Secrets`
-
-필수 secret:
-
-- `GOOGLE_SHEETS_SPREADSHEET_ID`
-- `GOOGLE_SERVICE_ACCOUNT_JSON`
-
-선택 secret:
-
-- `GEMINI_API_KEY`
-- `SLACK_WEBHOOK_URL`
-
-운영 원칙:
-
-- 워크플로는 하루 1회, 최대 60분만 실행된다.
-- 실패해도 마지막 성공 runtime bundle은 유지되고, 다음 런이 그 상태에서 자동 복구 시도한다.
-- Slack은 `3회 연속 실패`부터만 보낸다.
-- GitHub repo에는 `jobs_market_v2` 실제 코드 트리가 그대로 올라가며, runner는 checkout된 코드를 직접 실행한다.
-
-새 GitHub repo를 만든 뒤 최초 연결할 때는:
-
-```bash
-cd /Users/junheelee/Desktop/sctaper_p1/jobs_market_v2
-cp config/github_actions_secrets.env.example .env.github-actions.local
-./scripts/bootstrap_github_repo.sh https://github.com/<owner>/<repo>.git
-./scripts/bootstrap_automation_state_branch.sh
-```
-
-그 다음 GitHub repo의 `Settings > Secrets and variables > Actions`에 아래 값을 넣는다.
-
-- `GOOGLE_SHEETS_SPREADSHEET_ID`
-- `GOOGLE_SERVICE_ACCOUNT_JSON`
-- `GEMINI_API_KEY` 선택
-- `SLACK_WEBHOOK_URL` 선택
-
-## bounded production 배포
-
-새 Google Sheet를 만들어 현재 상태를 그대로 이어서 배포할 때는:
-
-1. 새 시트를 만든다.
-2. 서비스 계정에 편집 권한을 준다.
-3. `.env`의 `GOOGLE_SHEETS_SPREADSHEET_ID`를 새 시트 ID로 바꾼다.
-4. `runtime`은 지우지 않는다.
-5. 아래를 실행한다.
-
-```bash
-./scripts/run_production_cycle.sh
-```
-
-자세한 절차는 아래 문서를 본다.
-
-- `docs/PRODUCTION_DEPLOY.md`
-
-## doctor 실행 방법
-
-```bash
-python -m jobs_market_v2.cli doctor
-```
-
-## 권장 실행 순서
+### Discover and screen companies
 
 ```bash
 python -m jobs_market_v2.cli collect-company-seed-records
@@ -244,124 +278,261 @@ python -m jobs_market_v2.cli expand-company-candidates
 python -m jobs_market_v2.cli discover-companies
 python -m jobs_market_v2.cli collect-company-evidence
 python -m jobs_market_v2.cli screen-companies
-python -m jobs_market_v2.cli discover-sources
-python -m jobs_market_v2.cli verify-sources
-python -m jobs_market_v2.cli collect-jobs
-python -m jobs_market_v2.cli build-coverage-report
-python -m jobs_market_v2.cli promote-staging
-python -m jobs_market_v2.cli sync-sheets --target staging
 ```
 
-Google Sheets 확인 탭:
-
-- `기업선정 탭`: 후보 기업 전체와 `기업버킷(approved/candidate/rejected)`, `후보시드유형`, `후보시드URL` 확인
-- `기업근거 탭`: 기업별 `후보시드근거`, 공식도메인, 공식채용소스, 타깃직무공고 근거 확인
-- `staging 탭`: 최신 공고 적재 결과 확인
-- `master 탭`: 품질 게이트 통과 후 최종 반영본 확인
-
-기업 후보군 입력 파일:
-
-- `config/company_seed_sources.yaml`: 회사 목록 출처 레지스트리
-- `config/company_seed_records.csv`: 출처가 있는 후보 레코드의 주 입력
-- `runtime/company_seed_records_collected.csv`: company seed source 수집 결과
-- `config/manual_sources_seed.yaml`: 공식 공개 채용 소스 기반 후보 입력
-- `config/seed_company_inputs.yaml`: source-backed 후보 입력이 비어 있을 때만 쓰는 bootstrap fallback
-
-## continue 반복 절차
-
-`continue`는 무한 반복하지 않는다. 매 라운드는 아래 순서로 같은 기준으로 점검한다.
-
-1. `company_candidates`, `company_evidence`, `approved_companies`를 보고 비어 있는 기업층과 직무 적합 근거를 먼저 확인한다.
-2. 그 다음 `source_registry`와 `coverage_report`를 보고 비어 있는 기업층, 직무, 소스 유형을 확인한다.
-3. 부족한 층을 메우는 `live` 공식 소스만 추가하거나, 공통 추출 규칙만 수정한다.
-4. 아래 명령을 순서대로 실행한다.
+### Discover and verify sources
 
 ```bash
-python -m jobs_market_v2.cli collect-company-evidence
-python -m jobs_market_v2.cli screen-companies
+python -m jobs_market_v2.cli discover-sources
 python -m jobs_market_v2.cli verify-sources
+```
+
+### Collect jobs
+
+Bootstrap-style collection:
+
+```bash
 python -m jobs_market_v2.cli collect-jobs
-python -m jobs_market_v2.cli build-coverage-report
+```
+
+Dry run:
+
+```bash
+python -m jobs_market_v2.cli collect-jobs --dry-run
+```
+
+Incremental update:
+
+```bash
+python -m jobs_market_v2.cli update-incremental
+```
+
+### Promote and sync
+
+```bash
 python -m jobs_market_v2.cli promote-staging
 python -m jobs_market_v2.cli sync-sheets --target staging
 python -m jobs_market_v2.cli sync-sheets --target master
 ```
 
-5. 아래 항목을 숫자로 기록한다.
-
-- approved / candidate / rejected 기업 수
-- 기업층별 approved 기업 수
-- 기업별 evidence 수와 primary evidence 유형
-- 후보시드URL이 있는 기업 수와 없는 기업 수
-- verified approved source 수
-- 기업층별 verified source 수
-- 직무별 활성 공고 수
-- `주요업무_표시`, `자격요건_표시`, `우대사항_표시`, `핵심기술_표시` 채움 수
-- 회사 집중도와 층별 편중
-- `update-incremental` 1회 실행 결과
-
-6. 기준을 통과하지 못하면 다음 `continue`는 `새 회사별 예외`가 아니라 `기업 후보군 근거 계층`, `공통 계층`, `부족한 기업층 소스`를 보강하는 방식으로만 진행한다.
-
-## 모집단 수집 전환 기준
-
-아래 기준을 충족하면 `continue`를 멈추고 본격 모집단 수집으로 넘어간다.
-
-- `verified approved source`가 `15개 이상`
-- `대기업`, `스타트업`, `중견/중소`, `공공·연구기관`, `외국계 한국법인`, `지역기업` 6개 기업층이 모두 `실검증 성공 소스`를 1개 이상 보유
-- `데이터 분석가`, `데이터 사이언티스트`, `인공지능 리서처`, `인공지능 엔지니어` 4개 직무가 모두 `0건 아님`
-- `주요업무_표시` 채움률이 `85% 이상`
-- `자격요건_표시` 채움률이 `90% 이상`
-- `핵심기술_표시` 채움률이 `95% 이상`
-- `영문 누수`가 `0`
-- `update-incremental`을 `2회 연속` 실행했을 때 품질 게이트가 유지됨
-- 특정 1개 회사에 과도하게 편중되지 않아야 하며, 해석 가능한 수준의 분산이 확보되어야 함
-
-위 기준 중 하나라도 부족하면 `하드닝 계속`, 모두 충족하면 `본격 모집단 수집 시작`으로 판단한다.
-
-## 본격 모집단 수집 시작 절차
-
-전환 기준을 통과한 뒤에는 아래 절차로 운영한다.
-
-1. `manual_sources_seed.yaml`, `manual_companies_seed.csv`, `approved_companies.csv`, 공통 추출 규칙을 잠근다.
-2. `verify-sources`를 다시 실행해 당일 기준 verified source 집합을 확정한다.
-3. `collect-jobs`로 기준 스냅샷을 만든다.
-4. `build-coverage-report`와 Google Sheets `staging 탭`을 검토해 이상치를 마지막으로 확인한다.
-5. 이상이 없으면 `promote-staging` 후 `master 탭`을 동기화한다.
-6. 그 다음부터는 `update-incremental` 중심으로 운영하고, 새 소스 추가는 별도 검증 라운드로 분리한다.
-
-## 본격 수집 중 수정 원칙
-
-본격 모집단 수집에 들어간 뒤에는 비용과 회귀를 줄이기 위해 아래 원칙을 지킨다.
-
-- 수집 중간에 parser를 자주 바꾸지 않는다.
-- 새 회사 추가와 parser 수정은 같은 라운드에 무분별하게 섞지 않는다.
-- `master`가 흔들릴 수 있는 변경은 `staging`에서 먼저 검증한다.
-- Gemini는 공통 규칙으로 채우기 어려운 경우에만 보조적으로 사용한다.
-- 특정 회사 하나만 맞추는 예외 규칙은 지양하고, 가능한 한 `ATS family` 또는 `공통 heading 패턴`으로 흡수한다.
-
-## 작업 단위 적립
-
-반복 작업은 `작업 단위`로 닫는다. 각 단위는 코드, 테스트, 산출물을 함께 남기고 다음 단위의 입력으로 사용한다.
-
-- 작업 단위 1: `기업 후보군 / 근거 / 승인`
-- 산출물:
-  - `runtime/company_candidates.csv`
-  - `runtime/company_evidence.csv`
-  - `runtime/approved_companies.csv`
-  - `runtime/candidate_companies.csv`
-  - `runtime/rejected_companies.csv`
-- 실행 명령:
+### Full operational cycle
 
 ```bash
-python -m jobs_market_v2.cli discover-companies
-python -m jobs_market_v2.cli collect-company-evidence
-python -m jobs_market_v2.cli screen-companies
+python -m jobs_market_v2.cli run-collection-cycle
 ```
 
-- 테스트 범위:
-  - 기업 후보군 생성
-  - 근거 적재
-  - approved / candidate / rejected 분리
-  - approved 기업 우선 source discovery 연결
+This is the most useful single command for normal operation.
 
-세부 작업 기록은 [docs/WORK_UNITS.md](/Users/junheelee/Desktop/sctaper_p1/jobs_market_v2/docs/WORK_UNITS.md)에 누적한다.
+## What the Output Files Mean
+
+### Runtime job files
+
+- `runtime/staging_jobs.csv`
+  - the latest filtered collection result before or after promotion
+- `runtime/master_jobs.csv`
+  - the promoted dataset used for final review and sheet publishing
+- `runtime/raw_detail.jsonl`
+  - raw detail payloads collected during job normalization
+
+### Source files
+
+- `runtime/source_registry.csv`
+  - the main runtime source registry
+- `output_samples/approved_sources.csv`
+  - sources allowed for collection
+- `output_samples/candidate_sources.csv`
+  - sources worth watching but not fully approved yet
+- `output_samples/rejected_sources.csv`
+  - sources rejected by the screening logic
+
+### Quality / reporting files
+
+- `runtime/quality_gate.json`
+  - why promotion passed or failed
+- `runtime/coverage_report.json`
+  - role / company / source coverage summary
+- `runtime/runs.csv`
+  - operational history of major pipeline commands
+
+## Understanding Record Status
+
+Each job can move through different states over time.
+
+- `신규`
+  - a newly seen job
+- `유지`
+  - a previously known job with no meaningful change
+- `변경`
+  - a known job whose content changed
+- `미발견`
+  - a job that should still belong to a successfully refreshed source but was not found this run
+- `검증실패보류`
+  - a hold state used when the source attempt itself failed
+
+The important operational rule is:
+
+- jobs should not become `검증실패보류` just because a source was **not attempted** in a partial scan
+
+That distinction is critical for keeping `master` clean and for preserving real incremental growth.
+
+## Recommended Local Workflow
+
+If you are a beginner, follow this order:
+
+1. Run `doctor`
+2. Run `discover-sources`
+3. Run `verify-sources`
+4. Run `update-incremental`
+5. Check `runtime/quality_gate.json`
+6. Run `promote-staging`
+7. Run `sync-sheets --target master`
+
+In practice:
+
+```bash
+python -m jobs_market_v2.cli doctor
+python -m jobs_market_v2.cli discover-sources
+python -m jobs_market_v2.cli verify-sources
+python -m jobs_market_v2.cli update-incremental
+python -m jobs_market_v2.cli promote-staging
+python -m jobs_market_v2.cli sync-sheets --target master
+```
+
+## Fork Setup
+
+If you fork this repository, you must replace the original credentials with your own.
+
+### Local manual runs
+
+Edit:
+
+- `jobs_market_v2/.env`
+
+At minimum replace:
+
+- `GOOGLE_SHEETS_SPREADSHEET_ID`
+- `GOOGLE_SERVICE_ACCOUNT_JSON`
+- `GEMINI_API_KEY` if you use Gemini
+
+### GitHub Actions runs
+
+In your forked repo, open:
+
+- `Settings > Secrets and variables > Actions`
+
+Add:
+
+- `GOOGLE_SHEETS_SPREADSHEET_ID`
+- `GOOGLE_SERVICE_ACCOUNT_JSON`
+- `GEMINI_API_KEY`
+- optional `SLACK_WEBHOOK_URL`
+
+### Important reminder
+
+If you point the project at a new Google Sheet, you must share that sheet with your service-account email as an editor.
+
+## GitHub Actions: Daily vs Weekly
+
+This project supports two different automation roles.
+
+### Daily workflow
+
+Purpose:
+
+- frequent incremental refresh
+- track new / changed / missing jobs
+- keep `staging` and `master` current
+
+### Weekly workflow
+
+Purpose:
+
+- expand the company and source universe
+- refresh source discovery
+- widen long-term coverage
+
+In short:
+
+- `daily` keeps the current universe fresh
+- `weekly` tries to widen the universe itself
+
+## Troubleshooting
+
+### “The run succeeded locally but nothing changed in Sheets”
+
+Check:
+
+- `runtime/master_jobs.csv`
+- `runtime/sheets_exports/master/master_탭.csv`
+- the actual Google Sheet row count
+
+If local export is newer than the actual sheet, the issue is usually in the sheet sync step, not in job collection.
+
+### “I see many hold rows”
+
+Check:
+
+- `runtime/quality_gate.json`
+- `carry_forward_hold_only_count`
+- `carry_forward_hold_ratio`
+
+Large hold counts usually mean one of two things:
+
+- too many source attempts failed
+- partial scans are not revisiting the right active sources often enough
+
+### “Google Sheets sync fails”
+
+Usually one of these:
+
+- wrong spreadsheet ID
+- service account file path is wrong
+- the service account email does not have editor access to the sheet
+
+### “I changed `.env` but nothing happened”
+
+Restart the process you are using.
+If you are in a shell with an old environment loaded, the old values may still be active.
+
+## Safety and Data Policy
+
+This project is intentionally conservative about source eligibility.
+
+It is built to be:
+
+- inspectable
+- repeatable
+- operationally stable
+
+It is **not** designed to maximize raw scraping volume at any cost.
+
+## Validation Commands
+
+Before treating a change as complete, the standard validation sequence is:
+
+```bash
+./scripts/setup_env.sh
+./scripts/register_kernel.sh
+./.venv/bin/pytest -q tests/test_jobs_market_v2.py
+./.venv/bin/python -m jobs_market_v2.cli doctor
+./.venv/bin/jupyter nbconvert --to notebook --execute runtime/notebook_smoke/00_source_screening.smoke.ipynb --output 00_source_screening.smoke.executed.ipynb --output-dir runtime/notebook_smoke/executed
+./.venv/bin/jupyter nbconvert --to notebook --execute runtime/notebook_smoke/01_bootstrap_population.smoke.ipynb --output 01_bootstrap_population.smoke.executed.ipynb --output-dir runtime/notebook_smoke/executed
+```
+
+## Where to Go Next
+
+If you are new, use this order:
+
+1. Read this README once
+2. Set `.env`
+3. Run `doctor`
+4. Run `run-collection-cycle`
+5. Inspect `runtime/quality_gate.json`
+6. Open the Google Sheet
+
+If you are maintaining the pipeline:
+
+1. Watch `runtime/runs.csv`
+2. Watch `runtime/source_registry.csv`
+3. Watch `runtime/quality_gate.json`
+4. Treat stale carry-forward growth pollution as a structural issue, not a one-row issue
