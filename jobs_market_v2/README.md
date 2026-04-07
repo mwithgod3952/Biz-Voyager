@@ -206,8 +206,8 @@ If Google Sheets is new to you, this is the minimum you need to know.
 
 Create a Google Sheet that will receive:
 
-- `master 탭`
-- `staging 탭`
+- `master tab`
+- `staging tab`
 - coverage / source / run logs
 
 ### Step 2. Find the spreadsheet ID
