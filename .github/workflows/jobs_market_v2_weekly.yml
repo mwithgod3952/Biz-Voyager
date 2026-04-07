@@ -5,18 +5,75 @@ on:
   schedule:
     - cron: "0 21 * * 0"
 
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: jobs-market-v2-production
+  cancel-in-progress: false
+
+env:
+  PROJECT_DIR: jobs_market_v2
+  STATE_BRANCH: automation-state
+  STATE_DIR: jobs_market_v2/.ci_state
+
 jobs:
-  weekly:
+  weekly-expansion:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     defaults:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
+      - name: Prepare state branch worktree
+        run: |
+          set -euo pipefail
+          STATE_WORKTREE="${RUNNER_TEMP}/jobs-market-v2-state"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -rf "$STATE_WORKTREE"
+          if git ls-remote --exit-code origin "refs/heads/$STATE_BRANCH" >/dev/null 2>&1; then
+            git fetch origin "$STATE_BRANCH:$STATE_BRANCH"
+            git worktree add "$STATE_WORKTREE" "$STATE_BRANCH"
+          else
+            git worktree add -b "$STATE_BRANCH" "$STATE_WORKTREE" HEAD
+            pushd "$STATE_WORKTREE" >/dev/null
+            find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+            mkdir -p "$STATE_DIR"
+            printf '%s\n' '{"consecutive_failures": 0, "last_result": "bootstrap"}' > "$STATE_DIR/workflow_state.json"
+            git add -A
+            git commit -m "Initialize automation state branch"
+            git push origin "HEAD:$STATE_BRANCH"
+            popd >/dev/null
+          fi
+
+      - name: Restore runtime state
+        run: |
+          set -euo pipefail
+          STATE_WORKTREE="${RUNNER_TEMP}/jobs-market-v2-state"
+          mkdir -p "$PROJECT_DIR/runtime"
+          BUNDLE_PATH="$STATE_WORKTREE/$STATE_DIR/runtime_state.tar.gz"
+          if [[ -f "$BUNDLE_PATH" ]]; then
+            python "$PROJECT_DIR/scripts/runtime_state_bundle.py" extract \
+              --project-root "$PROJECT_DIR" \
+              --bundle-path "$BUNDLE_PATH"
+          fi
+          STATE_JSON="$STATE_WORKTREE/$STATE_DIR/workflow_state.json"
+          if [[ -f "$STATE_JSON" ]]; then
+            cp "$STATE_JSON" "$PROJECT_DIR/runtime/github_workflow_state.json"
+          fi
+
       - name: Configure .env
         env:
           GOOGLE_SHEETS_SPREADSHEET_ID: ${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}
@@ -24,18 +81,65 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set -euo pipefail
-          python jobs_market_v2/scripts/github_actions_runtime.py configure-env \
-            --env-path jobs_market_v2/.env
-      - name: 환경 설치
+          python "$PROJECT_DIR/scripts/github_actions_runtime.py" configure-env \
+            --env-path "$PROJECT_DIR/.env"
+
+      - name: Install environment
         run: ./jobs_market_v2/scripts/setup_env.sh
-      - name: 주간 수집 실행
+
+      - name: Run weekly expansion
         run: |
           set -euo pipefail
-          cd jobs_market_v2
-          ./.venv/bin/python -m jobs_market_v2.cli discover-companies
-          ./.venv/bin/python -m jobs_market_v2.cli discover-sources
-          ./.venv/bin/python -m jobs_market_v2.cli verify-sources
-          ./.venv/bin/python -m jobs_market_v2.cli collect-jobs
-          ./.venv/bin/python -m jobs_market_v2.cli build-coverage-report
-          ./.venv/bin/python -m jobs_market_v2.cli promote-staging
-          ./.venv/bin/python -m jobs_market_v2.cli sync-sheets --target staging
+          cd "$PROJECT_DIR"
+          SUMMARY_PATH="$PWD/runtime/github_workflow_cycle_summary.json"
+          ./.venv/bin/python -m jobs_market_v2.cli run-weekly-expansion | tee "$SUMMARY_PATH"
+
+      - name: Persist weekly expansion state
+        if: success()
+        env:
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          STATE_WORKTREE: ${{ runner.temp }}/jobs-market-v2-state
+        run: |
+          set -euo pipefail
+          STATUS_PATH="$PROJECT_DIR/runtime/github_workflow_cycle_status.json"
+          python "$PROJECT_DIR/scripts/github_actions_runtime.py" write-cycle-status \
+            --status-path "$STATUS_PATH" \
+            --exit-code 0 \
+            --quality-gate-passed \
+            --automation-ready
+          python "$PROJECT_DIR/scripts/github_actions_runtime.py" write-workflow-state \
+            --project-root "$PROJECT_DIR" \
+            --status-path "$STATUS_PATH" \
+            --state-path "$STATE_WORKTREE/$STATE_DIR/workflow_state.json" \
+            --run-url "$GITHUB_RUN_URL"
+          python "$PROJECT_DIR/scripts/runtime_state_bundle.py" create \
+            --project-root "$PROJECT_DIR" \
+            --bundle-path "$STATE_WORKTREE/$STATE_DIR/runtime_state.tar.gz" \
+            --manifest-path "$PROJECT_DIR/config/runtime_state_manifest.txt"
+          pushd "$STATE_WORKTREE" >/dev/null
+          git add "$STATE_DIR"
+          if ! git diff --cached --quiet; then
+            git commit -m "Update automation state for weekly run $GITHUB_RUN_ID"
+            git push origin "HEAD:$STATE_BRANCH"
+          fi
+          popd >/dev/null
+
+      - name: Upload runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jobs-market-v2-weekly-runtime-${{ github.run_id }}
+          if-no-files-found: ignore
+          path: |
+            jobs_market_v2/runtime/coverage_report.json
+            jobs_market_v2/runtime/company_candidates.csv
+            jobs_market_v2/runtime/company_candidates_in_progress.csv
+            jobs_market_v2/runtime/company_evidence.csv
+            jobs_market_v2/runtime/company_evidence_in_progress.csv
+            jobs_market_v2/runtime/company_evidence_progress.json
+            jobs_market_v2/runtime/source_registry.csv
+            jobs_market_v2/runtime/source_registry_in_progress.csv
+            jobs_market_v2/runtime/source_verification_report.csv
+            jobs_market_v2/runtime/runs.csv
+            jobs_market_v2/runtime/errors.csv
+            jobs_market_v2/runtime/github_workflow_cycle_summary.json

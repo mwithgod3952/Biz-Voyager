@@ -98,14 +98,14 @@ jobs:
       - name: Install environment
         run: ./jobs_market_v2/scripts/setup_env.sh
 
-      - name: Run production cycle
+      - name: Run daily tracking
         id: cycle
         run: |
           set +e
           cd "$PROJECT_DIR"
           SUMMARY_PATH="$PWD/runtime/github_workflow_cycle_summary.json"
           STATUS_PATH="$PWD/runtime/github_workflow_cycle_status.json"
-          ./.venv/bin/python -m jobs_market_v2.cli run-collection-cycle | tee "$SUMMARY_PATH"
+          ./.venv/bin/python -m jobs_market_v2.cli run-daily-tracking | tee "$SUMMARY_PATH"
           EXIT_CODE=${PIPESTATUS[0]}
           ./.venv/bin/python scripts/github_actions_runtime.py capture-cycle-status \
             --project-root "$PWD" \
