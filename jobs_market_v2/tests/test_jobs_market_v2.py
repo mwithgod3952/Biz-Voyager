@@ -73,7 +73,9 @@ from jobs_market_v2.pipelines import (
     discover_companies_pipeline,
     discover_sources_pipeline,
     promote_staging_pipeline,
+    run_daily_tracking_pipeline,
     run_collection_cycle_pipeline,
+    run_weekly_expansion_pipeline,
     screen_companies_pipeline,
     expand_company_candidates_pipeline,
     update_incremental_pipeline,
@@ -7145,6 +7147,253 @@ def test_update_incremental_pipeline_with_subset_registry_preserves_full_source_
     assert summary["verified_source_success_count"] >= 1
 
 
+def test_run_daily_tracking_pipeline_uses_published_registry_for_incremental_only(
+    monkeypatch: pytest.MonkeyPatch,
+    sandbox_project: Path,
+) -> None:
+    paths = ProjectPaths.from_root(sandbox_project)
+    registry = pd.DataFrame(
+        [
+            {
+                "company_name": "테스트회사",
+                "company_tier": "스타트업",
+                "source_name": "테스트 공식 채용",
+                "source_url": "https://example.com/jobs",
+                "source_type": "html_page",
+                "source_bucket": "approved",
+                "verification_status": "성공",
+            }
+        ]
+    )
+    for column in SOURCE_REGISTRY_COLUMNS:
+        if column not in registry.columns:
+            registry[column] = ""
+    write_csv(registry[list(SOURCE_REGISTRY_COLUMNS)], paths.source_registry_path)
+
+    called: dict[str, object] = {}
+
+    def fake_update_incremental_pipeline(project_root=None, **kwargs):
+        called["update_kwargs"] = kwargs
+        return {
+            "collection_mode": "live",
+            "collected_job_count": 4,
+            "verified_source_success_count": 2,
+            "verified_source_failure_count": 0,
+            "staging_job_count": 5,
+            "quality_gate_passed": True,
+            "quality_gate_reasons": [],
+        }
+
+    def fake_build_coverage_report_pipeline(project_root=None):
+        called["coverage"] = True
+        return {"활성 공고 수": 5}
+
+    def fake_promote_staging_pipeline(project_root=None):
+        called["promote"] = True
+        return {
+            "quality_gate_passed": True,
+            "quality_gate_reasons": [],
+            "promoted_job_count": 5,
+        }
+
+    def fake_sync_sheets_pipeline(target, project_root=None):
+        called.setdefault("sync_targets", []).append(target)
+        return {"target": target, "google_sheets_synced": True}
+
+    monkeypatch.setattr(pipelines_module, "update_incremental_pipeline", fake_update_incremental_pipeline)
+    monkeypatch.setattr(pipelines_module, "build_coverage_report_pipeline", fake_build_coverage_report_pipeline)
+    monkeypatch.setattr(pipelines_module, "promote_staging_pipeline", fake_promote_staging_pipeline)
+    monkeypatch.setattr(pipelines_module, "sync_sheets_pipeline", fake_sync_sheets_pipeline)
+
+    summary = run_daily_tracking_pipeline(project_root=sandbox_project)
+
+    assert called["update_kwargs"]["allow_source_discovery_fallback"] is False
+    assert summary["run_mode"] == "incremental"
+    assert summary["published_state"]["published_source_registry_ready"] is True
+    assert summary["published_state"]["allow_source_discovery_fallback"] is False
+    assert summary["promotion"]["promoted_job_count"] == 5
+    assert called["sync_targets"] == ["staging", "master"]
+
+
+def test_run_daily_tracking_pipeline_skips_promotion_and_sync_when_quality_gate_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    sandbox_project: Path,
+) -> None:
+    paths = ProjectPaths.from_root(sandbox_project)
+    registry = pd.DataFrame(
+        [
+            {
+                "company_name": "테스트회사",
+                "company_tier": "스타트업",
+                "source_name": "테스트 공식 채용",
+                "source_url": "https://example.com/jobs",
+                "source_type": "html_page",
+                "source_bucket": "approved",
+                "verification_status": "성공",
+            }
+        ]
+    )
+    for column in SOURCE_REGISTRY_COLUMNS:
+        if column not in registry.columns:
+            registry[column] = ""
+    write_csv(registry[list(SOURCE_REGISTRY_COLUMNS)], paths.source_registry_path)
+
+    called = {"promote": 0, "sync": 0}
+
+    monkeypatch.setattr(
+        pipelines_module,
+        "update_incremental_pipeline",
+        lambda project_root=None, **kwargs: {
+            "collection_mode": "live",
+            "collected_job_count": 2,
+            "verified_source_success_count": 1,
+            "verified_source_failure_count": 0,
+            "staging_job_count": 4,
+            "quality_gate_passed": False,
+            "quality_gate_reasons": ["quality_gate_failed"],
+        },
+    )
+    monkeypatch.setattr(pipelines_module, "build_coverage_report_pipeline", lambda project_root=None: {"활성 공고 수": 4})
+
+    def fake_promote_staging_pipeline(project_root=None):
+        called["promote"] += 1
+        return {}
+
+    def fake_sync_sheets_pipeline(target, project_root=None):
+        called["sync"] += 1
+        return {"target": target, "google_sheets_synced": True}
+
+    monkeypatch.setattr(pipelines_module, "promote_staging_pipeline", fake_promote_staging_pipeline)
+    monkeypatch.setattr(pipelines_module, "sync_sheets_pipeline", fake_sync_sheets_pipeline)
+
+    summary = run_daily_tracking_pipeline(project_root=sandbox_project)
+
+    assert called["promote"] == 0
+    assert called["sync"] == 0
+    assert summary["published_state"]["promotion_allowed"] is False
+    assert summary["published_state"]["promotion_block_reason"] == "quality_gate_failed"
+    assert summary["promotion"]["promotion_skipped"] is True
+    assert summary["promotion"]["promotion_skipped_reason"] == "quality_gate_failed"
+
+
+def test_run_weekly_expansion_pipeline_progresses_state_without_collection_publish(
+    monkeypatch: pytest.MonkeyPatch,
+    sandbox_project: Path,
+) -> None:
+    paths = ProjectPaths.from_root(sandbox_project)
+    in_progress_candidates_path = paths.runtime_dir / "company_candidates_in_progress.csv"
+    in_progress_registry_path = paths.runtime_dir / "source_registry_in_progress.csv"
+
+    write_csv(
+        pd.DataFrame(
+            [
+                {
+                    "company_name": "알파",
+                    "company_tier": "중견/중소",
+                    "official_domain": "alpha.example",
+                    "company_name_en": "",
+                    "region": "",
+                    "aliases": "",
+                    "discovery_method": "seed",
+                    "candidate_seed_type": "html_table_url",
+                    "candidate_seed_url": "https://alpha.example/seed",
+                    "candidate_seed_title": "알파",
+                    "candidate_seed_reason": "테스트",
+                    "officiality_score": 4,
+                    "source_seed_count": 1,
+                    "verified_source_count": 0,
+                    "active_job_count": 0,
+                    "role_analyst_signal": 0,
+                    "role_ds_signal": 0,
+                    "role_researcher_signal": 0,
+                    "role_ai_engineer_signal": 1,
+                    "role_fit_score": 1,
+                    "hiring_signal_score": 1,
+                    "evidence_count": 1,
+                    "primary_evidence_type": "company_registry",
+                    "primary_evidence_url": "https://alpha.example",
+                    "primary_evidence_text": "알파",
+                    "company_bucket": "approved",
+                    "reject_reason": "",
+                    "last_verified_at": "2026-04-01T00:00:00+09:00",
+                }
+            ]
+        ),
+        in_progress_candidates_path,
+    )
+    registry = pd.DataFrame(
+        [
+            {
+                "company_name": "알파",
+                "company_tier": "중견/중소",
+                "source_name": "알파 공식 채용",
+                "source_url": "https://alpha.example/jobs",
+                "source_type": "html_page",
+                "official_domain": "alpha.example",
+                "is_official_hint": True,
+                "structure_hint": "html",
+                "discovery_method": "test",
+                "source_bucket": "approved",
+                "screening_reason": "",
+                "verification_status": "성공",
+                "verification_note": "",
+                "last_checked_at": "",
+                "last_success_at": "",
+                "failure_count": 0,
+                "last_active_job_count": 0,
+                "source_quality_score": 0,
+                "quarantine_reason": "",
+                "is_quarantined": False,
+            }
+        ]
+    )
+    for column in SOURCE_REGISTRY_COLUMNS:
+        if column not in registry.columns:
+            registry[column] = ""
+    write_csv(registry[list(SOURCE_REGISTRY_COLUMNS)], in_progress_registry_path)
+
+    called = {"screen": 0, "discover": 0, "verify": 0}
+
+    monkeypatch.setattr(pipelines_module, "expand_company_candidates_pipeline", lambda project_root=None: {"expanded_candidate_company_count": 12})
+    monkeypatch.setattr(
+        pipelines_module,
+        "collect_company_evidence_pipeline",
+        lambda project_root=None, **kwargs: {
+            "company_evidence_count": 5,
+            "approved_company_count": 1,
+            "candidate_bucket_count": 0,
+            "rejected_company_count": 0,
+            "published_company_state": False,
+        },
+    )
+    monkeypatch.setattr(pipelines_module, "build_coverage_report_pipeline", lambda project_root=None: {"활성 공고 수": 0})
+
+    def fake_screen_companies_pipeline(project_root=None):
+        called["screen"] += 1
+        return {}
+
+    def fake_discover_sources_pipeline(project_root=None):
+        called["discover"] += 1
+        return {}
+
+    def fake_verify_sources_pipeline(project_root=None):
+        called["verify"] += 1
+        return {}
+
+    monkeypatch.setattr(pipelines_module, "screen_companies_pipeline", fake_screen_companies_pipeline)
+    monkeypatch.setattr(pipelines_module, "discover_sources_pipeline", fake_discover_sources_pipeline)
+    monkeypatch.setattr(pipelines_module, "verify_sources_pipeline", fake_verify_sources_pipeline)
+
+    summary = run_weekly_expansion_pipeline(project_root=sandbox_project)
+
+    assert called == {"screen": 0, "discover": 0, "verify": 0}
+    assert summary["run_mode"] == "weekly_expansion"
+    assert summary["published_state"]["collection_ready"] is False
+    assert summary["published_state"]["promotion_block_reason"] == "weekly_expansion_only"
+    assert summary["source_discovery"]["screened_source_count"] == 1
+    assert summary["source_verification"]["verification_mode"] == "deferred_until_company_scan_complete"
+
+
 def test_processed_verified_source_urls_only_include_current_run_successes() -> None:
     registry = pd.DataFrame(
         [
@@ -8878,6 +9127,23 @@ def test_github_actions_runtime_capture_and_resolve_status_from_runtime_files(tm
     assert captured.hold_reason == ""
     assert resolved.github_output_values()["should_save_state"] == "true"
     assert resolved.github_output_values()["is_failure"] == "false"
+
+
+def test_github_actions_runtime_write_cycle_status_round_trip(tmp_path: Path) -> None:
+    status_path = tmp_path / "github_workflow_cycle_status.json"
+
+    written = github_actions_runtime_module.write_cycle_status(
+        status_path,
+        exit_code=0,
+        quality_gate_passed=True,
+        automation_ready=True,
+    )
+    resolved = github_actions_runtime_module.resolve_cycle_status(tmp_path, status_path)
+
+    assert written.exit_code == 0
+    assert written.quality_gate_passed is True
+    assert resolved.is_failure is False
+    assert resolved.github_output_values()["should_save_state"] == "true"
 
 
 def test_github_actions_runtime_build_workflow_state_payload_preserves_metadata() -> None:

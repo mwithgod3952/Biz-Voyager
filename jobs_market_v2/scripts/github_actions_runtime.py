@@ -24,6 +24,7 @@ from jobs_market_v2.github_actions_runtime import (
     open_or_update_incident_issue,
     resolve_cycle_status,
     send_slack_notification,
+    write_cycle_status,
     write_actions_env_file,
     write_failure_state,
     write_success_or_hold_state,
@@ -43,6 +44,15 @@ def _build_parser() -> argparse.ArgumentParser:
     capture_status.add_argument("--status-path", required=True)
     capture_status.add_argument("--exit-code", required=True, type=int)
     capture_status.add_argument("--github-output")
+
+    write_status = subparsers.add_parser("write-cycle-status")
+    write_status.add_argument("--status-path", required=True)
+    write_status.add_argument("--exit-code", required=True, type=int)
+    write_status.add_argument("--quality-gate-passed", action="store_true")
+    write_status.add_argument("--hold-reason", default="")
+    write_status.add_argument("--promotion-block-reason", default="")
+    write_status.add_argument("--automation-ready", action="store_true")
+    write_status.add_argument("--github-output")
 
     emit_status = subparsers.add_parser("emit-cycle-status")
     emit_status.add_argument("--project-root", required=True)
@@ -115,6 +125,20 @@ def main() -> int:
             summary_path=Path(args.summary_path),
             status_path=Path(args.status_path),
             exit_code=int(args.exit_code),
+        )
+        if args.github_output:
+            append_github_output(Path(args.github_output), status.github_output_values())
+        print(json.dumps(status.to_json(), ensure_ascii=False))
+        return 0
+
+    if args.command == "write-cycle-status":
+        status = write_cycle_status(
+            Path(args.status_path),
+            exit_code=int(args.exit_code),
+            quality_gate_passed=bool(args.quality_gate_passed),
+            hold_reason=args.hold_reason,
+            promotion_block_reason=args.promotion_block_reason,
+            automation_ready=bool(args.automation_ready),
         )
         if args.github_output:
             append_github_output(Path(args.github_output), status.github_output_values())

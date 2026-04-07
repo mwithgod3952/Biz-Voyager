@@ -26,7 +26,9 @@ from .pipelines import (
     promote_shadow_seed_sources_pipeline,
     promote_staging_pipeline,
     quarantine_bad_sources_pipeline,
+    run_daily_tracking_pipeline,
     run_collection_cycle_pipeline,
+    run_weekly_expansion_pipeline,
     screen_companies_pipeline,
     sync_sheets_pipeline,
     update_incremental_pipeline,
@@ -45,7 +47,9 @@ _LOCKED_COMMANDS = {
     "screen-companies",
     "discover-sources",
     "verify-sources",
+    "run-daily-tracking",
     "run-collection-cycle",
+    "run-weekly-expansion",
     "import-companies",
     "import-sources",
     "collect-jobs",
@@ -64,7 +68,7 @@ def _print(summary: dict) -> None:
 def _summary_exit_code(command: str, summary: dict) -> int:
     if command == "doctor":
         return 0 if summary.get("passed") else 1
-    if command == "run-collection-cycle":
+    if command in {"run-collection-cycle", "run-daily-tracking", "run-weekly-expansion"}:
         # run-collection-cycle can complete successfully while intentionally
         # holding promotion/sync, so automation policy should be decided by the
         # caller from the returned summary rather than by a generic shell code.
@@ -132,8 +136,11 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("screen-companies")
     subparsers.add_parser("discover-sources")
     subparsers.add_parser("verify-sources")
+    run_daily_tracking_parser = subparsers.add_parser("run-daily-tracking")
+    run_daily_tracking_parser.add_argument("--skip-sync", action="store_true")
     run_collection_cycle_parser = subparsers.add_parser("run-collection-cycle")
     run_collection_cycle_parser.add_argument("--skip-sync", action="store_true")
+    subparsers.add_parser("run-weekly-expansion")
     subparsers.add_parser("update-incremental")
     subparsers.add_parser("promote-staging")
     subparsers.add_parser("quarantine-bad-sources")
@@ -201,8 +208,16 @@ def main(argv: list[str] | None = None) -> int:
                 summary = verify_sources_pipeline()
                 _print(summary)
                 return _summary_exit_code(args.command, summary)
+            elif args.command == "run-daily-tracking":
+                summary = run_daily_tracking_pipeline(sync_sheets=not args.skip_sync)
+                _print(summary)
+                return _summary_exit_code(args.command, summary)
             elif args.command == "run-collection-cycle":
                 summary = run_collection_cycle_pipeline(sync_sheets=not args.skip_sync)
+                _print(summary)
+                return _summary_exit_code(args.command, summary)
+            elif args.command == "run-weekly-expansion":
+                summary = run_weekly_expansion_pipeline()
                 _print(summary)
                 return _summary_exit_code(args.command, summary)
             elif args.command == "import-companies":

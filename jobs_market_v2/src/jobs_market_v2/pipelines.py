@@ -95,7 +95,7 @@ def _latest_collection_summary(paths) -> dict:
     if runs.empty:
         return {}
 
-    collection_commands = {"run-collection-cycle", "update-incremental", "collect-jobs"}
+    collection_commands = {"run-collection-cycle", "run-daily-tracking", "update-incremental", "collect-jobs"}
     matched = runs[runs["command"].isin(collection_commands)]
     if matched.empty:
         return {}
@@ -105,7 +105,7 @@ def _latest_collection_summary(paths) -> dict:
         if not summary_json:
             continue
         summary = json.loads(summary_json)
-        if row["command"] == "run-collection-cycle":
+        if row["command"] in {"run-collection-cycle", "run-daily-tracking"}:
             nested = summary.get("collection")
             if isinstance(nested, dict):
                 return nested
@@ -438,6 +438,45 @@ def _promotion_hold_summary(
         "promotion_skipped": True,
         "promotion_skipped_reason": reason,
         "staging_job_count": int(staging_job_count),
+    }
+
+
+def _summarize_company_bucket_frame(frame: pd.DataFrame, *, mode: str) -> dict[str, object]:
+    if frame.empty:
+        return {
+            "approved_company_count": 0,
+            "candidate_company_count": 0,
+            "rejected_company_count": 0,
+            "screened_company_count": 0,
+            "company_state_mode": mode,
+        }
+    return {
+        "approved_company_count": int((frame["company_bucket"] == "approved").sum()),
+        "candidate_company_count": int((frame["company_bucket"] == "candidate").sum()),
+        "rejected_company_count": int((frame["company_bucket"] == "rejected").sum()),
+        "screened_company_count": int(len(frame)),
+        "company_state_mode": mode,
+    }
+
+
+def _summarize_source_bucket_frame(frame: pd.DataFrame, *, mode: str) -> dict[str, object]:
+    if frame.empty:
+        return {
+            "approved_source_count": 0,
+            "candidate_source_count": 0,
+            "rejected_source_count": 0,
+            "screened_source_count": 0,
+            "company_input_count": 0,
+            "company_input_mode": mode,
+        }
+    company_input_count = int(frame["company_name"].fillna("").astype(str).replace("", pd.NA).dropna().nunique()) if "company_name" in frame.columns else 0
+    return {
+        "approved_source_count": int((frame["source_bucket"] == "approved").sum()),
+        "candidate_source_count": int((frame["source_bucket"] == "candidate").sum()),
+        "rejected_source_count": int((frame["source_bucket"] == "rejected").sum()),
+        "screened_source_count": int(len(frame)),
+        "company_input_count": company_input_count,
+        "company_input_mode": mode,
     }
 
 
@@ -884,6 +923,75 @@ def update_incremental_pipeline(
         raise
 
 
+def run_weekly_expansion_pipeline(project_root: Path | None = None) -> dict:
+    paths = get_paths(project_root)
+    settings = get_settings(project_root)
+    started_at = _now()
+    run_id = _run_id("run-weekly-expansion")
+    try:
+        expansion_summary = expand_company_candidates_pipeline(project_root)
+        evidence_summary = collect_company_evidence_pipeline(
+            project_root,
+            batch_size=getattr(settings, "company_evidence_batch_size", None),
+            max_batches=getattr(settings, "company_evidence_max_batches_per_run", None),
+        )
+        published_company_state = bool(evidence_summary.get("published_company_state", False))
+        if published_company_state:
+            company_summary = screen_companies_pipeline(project_root)
+            source_summary = discover_sources_pipeline(project_root)
+            verify_summary = verify_sources_pipeline(project_root)
+            published_registry = read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
+        else:
+            partial_state = _load_partial_company_scan_state(paths)
+            published_candidates = partial_state["candidates"]
+            published_registry = partial_state["registry"]
+            company_summary = _summarize_company_bucket_frame(
+                published_candidates,
+                mode=str(partial_state["company_state_mode"]),
+            )
+            source_summary = _summarize_source_bucket_frame(
+                published_registry,
+                mode=str(partial_state["source_state_mode"]),
+            )
+            verify_summary = {
+                "collection_mode": "skipped",
+                "collected_job_count": 0,
+                "verified_source_success_count": int((published_registry["verification_status"] == "성공").sum())
+                if not published_registry.empty and "verification_status" in published_registry.columns
+                else 0,
+                "verified_source_failure_count": int((published_registry["verification_status"] == "실패").sum())
+                if not published_registry.empty and "verification_status" in published_registry.columns
+                else 0,
+                "verification_mode": "deferred_until_company_scan_complete",
+            }
+
+        coverage_summary = build_coverage_report_pipeline(project_root)
+        summary = {
+            "run_mode": "weekly_expansion",
+            "automation_ready": bool(not published_registry.empty),
+            "published_state": {
+                "published_company_state": published_company_state,
+                "published_source_registry_ready": bool(not published_registry.empty),
+                "collection_ready": False,
+                "collection_ready_reason": "weekly_expansion_only",
+                "allow_source_discovery_fallback": False,
+                "promotion_allowed": False,
+                "promotion_block_reason": "weekly_expansion_only",
+            },
+            "candidate_expansion": expansion_summary,
+            "company_evidence": evidence_summary,
+            "company_screening": company_summary,
+            "source_discovery": source_summary,
+            "source_verification": verify_summary,
+            "coverage": coverage_summary,
+        }
+        _record_run(paths, "run-weekly-expansion", run_id, started_at, summary)
+        return summary
+    except Exception as exc:  # noqa: BLE001
+        _record_error(paths, "run-weekly-expansion", run_id, exc)
+        raise
+
+
 def run_collection_cycle_pipeline(*, sync_sheets: bool = True, project_root: Path | None = None) -> dict:
     paths = get_paths(project_root)
     settings = get_settings(project_root)
@@ -1064,6 +1172,105 @@ def run_collection_cycle_pipeline(*, sync_sheets: bool = True, project_root: Pat
         return summary
     except Exception as exc:  # noqa: BLE001
         _record_error(paths, "run-collection-cycle", run_id, exc)
+        raise
+
+
+def run_daily_tracking_pipeline(*, sync_sheets: bool = True, project_root: Path | None = None) -> dict:
+    paths = get_paths(project_root)
+    started_at = _now()
+    run_id = _run_id("run-daily-tracking")
+    try:
+        published_registry = read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
+        collection_ready = not published_registry.empty
+        collection_ready_reason = "published_source_registry" if collection_ready else "published_source_registry_unavailable"
+
+        if collection_ready:
+            collection_summary = update_incremental_pipeline(
+                project_root,
+                allow_source_discovery_fallback=False,
+            )
+            coverage_summary = build_coverage_report_pipeline(project_root)
+        else:
+            collection_summary = _skipped_collection_summary(paths, collection_ready_reason)
+            coverage_summary = {"skipped": True, "reason": collection_ready_reason}
+
+        quality_gate_passed = bool(collection_summary.get("quality_gate_passed", False))
+        promotion_allowed = bool(collection_ready and quality_gate_passed)
+        promotion_block_reason = ""
+        if not collection_ready:
+            promotion_block_reason = collection_ready_reason
+            promote_summary = _promotion_hold_summary(
+                reason=promotion_block_reason,
+                staging_job_count=int(collection_summary.get("staging_job_count", 0)),
+            )
+        elif not quality_gate_passed:
+            promotion_block_reason = "quality_gate_failed"
+            promote_summary = _promotion_hold_summary(
+                reason=promotion_block_reason,
+                staging_job_count=int(collection_summary.get("staging_job_count", 0)),
+                quality_gate_passed=False,
+                quality_gate_reasons=list(collection_summary.get("quality_gate_reasons", [])),
+            )
+        else:
+            promote_summary = promote_staging_pipeline(project_root)
+            promotion_allowed = bool(promote_summary.get("quality_gate_passed", False)) and int(
+                promote_summary.get("promoted_job_count", 0)
+            ) > 0
+            if not promotion_allowed:
+                promotion_block_reason = str(
+                    (promote_summary.get("quality_gate_reasons") or ["promotion_quality_gate_failed"])[0]
+                )
+
+        sync_summary: dict[str, dict | None] = {"staging": None, "master": None}
+        if sync_sheets and promotion_allowed:
+            sync_summary["staging"] = sync_sheets_pipeline("staging", project_root)
+            sync_summary["master"] = sync_sheets_pipeline("master", project_root)
+
+        verify_summary = {
+            "collection_mode": collection_summary.get("collection_mode"),
+            "collected_job_count": int(collection_summary.get("collected_job_count", 0)),
+            "verified_source_success_count": int(collection_summary.get("verified_source_success_count", 0)),
+            "verified_source_failure_count": int(collection_summary.get("verified_source_failure_count", 0)),
+            "verification_mode": "reuse_collection_fetch",
+        }
+        checklist = {
+            "증분수집": (
+                collection_summary.get("staging_job_count", 0) > 0
+                or collection_summary.get("collected_job_count", 0) > 0
+            ),
+            "품질게이트_통과": quality_gate_passed,
+            "master_승격": promote_summary.get("promoted_job_count", 0) > 0,
+            "시트동기화": bool(
+                sync_sheets
+                and sync_summary["staging"]
+                and sync_summary["staging"].get("google_sheets_synced")
+                and sync_summary["master"]
+                and sync_summary["master"].get("google_sheets_synced")
+            ),
+        }
+        summary = {
+            "run_mode": "incremental",
+            "checklist": checklist,
+            "automation_ready": all(checklist.values()),
+            "published_state": {
+                "published_company_state": True,
+                "published_source_registry_ready": bool(collection_ready),
+                "collection_ready": bool(collection_ready),
+                "collection_ready_reason": collection_ready_reason,
+                "allow_source_discovery_fallback": False,
+                "promotion_allowed": bool(promotion_allowed),
+                "promotion_block_reason": promotion_block_reason,
+            },
+            "source_verification": verify_summary,
+            "collection": collection_summary,
+            "coverage": coverage_summary,
+            "promotion": promote_summary,
+            "sync": sync_summary,
+        }
+        _record_run(paths, "run-daily-tracking", run_id, started_at, summary)
+        return summary
+    except Exception as exc:  # noqa: BLE001
+        _record_error(paths, "run-daily-tracking", run_id, exc)
         raise
 
 

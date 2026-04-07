@@ -134,6 +134,26 @@ def capture_cycle_status(project_root: Path, summary_path: Path, status_path: Pa
     return status
 
 
+def write_cycle_status(
+    status_path: Path,
+    *,
+    exit_code: int,
+    quality_gate_passed: bool,
+    hold_reason: str = "",
+    promotion_block_reason: str = "",
+    automation_ready: bool = True,
+) -> WorkflowCycleStatus:
+    status = WorkflowCycleStatus(
+        exit_code=exit_code,
+        quality_gate_passed=quality_gate_passed,
+        hold_reason=hold_reason,
+        promotion_block_reason=promotion_block_reason,
+        automation_ready=automation_ready,
+    )
+    _write_json(status_path, status.to_json())
+    return status
+
+
 def resolve_cycle_status(project_root: Path, status_path: Path) -> WorkflowCycleStatus:
     project_root = project_root.resolve()
     payload = _load_json(status_path)
