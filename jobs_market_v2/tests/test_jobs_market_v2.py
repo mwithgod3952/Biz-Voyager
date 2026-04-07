@@ -63,6 +63,7 @@ from jobs_market_v2.discovery import (
 )
 from jobs_market_v2.gemini import needs_gemini_refinement
 from jobs_market_v2.html_utils import clean_html_text, extract_sections_from_description
+from jobs_market_v2.models import GateResult
 from jobs_market_v2.network import build_timeout
 from jobs_market_v2.pipelines import (
     collect_company_seed_records_pipeline,
@@ -9665,6 +9666,247 @@ def test_quality_gate_for_staging_and_master() -> None:
     result = evaluate_quality_gate(staging, source_registry)
     assert result.passed is False
     assert any("허용 직무 4개 중 2개 이상이 0건입니다." == reason for reason in result.reasons)
+
+
+def test_promote_staging_blocks_suspicious_partial_scan_shrink(
+    sandbox_project: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    paths = ProjectPaths.from_root(sandbox_project)
+
+    def _job_row(index: int, *, status: str = "유지") -> dict[str, object]:
+        role = "인공지능 엔지니어" if index % 2 == 0 else "데이터 분석가"
+        return {
+            "job_key": f"job-{index}",
+            "change_hash": f"hash-{index}",
+            "first_seen_at": "2026-04-01T00:00:00+09:00",
+            "last_seen_at": "2026-04-01T00:00:00+09:00",
+            "is_active": True,
+            "missing_count": 0,
+            "snapshot_date": "2026-04-07",
+            "run_id": "r1",
+            "source_url": f"https://example.com/source/{index}",
+            "source_bucket": "approved",
+            "source_name": f"소스{index}",
+            "company_name": f"회사{index}",
+            "company_tier": "중견/중소",
+            "job_title_raw": f"공고 {index}",
+            "experience_level_raw": "경력",
+            "job_role": role,
+            "job_url": f"https://example.com/jobs/{index}",
+            "record_status": status,
+            "주요업무_분석용": "모델을 개발합니다.",
+            "자격요건_분석용": "파이썬 경험",
+            "우대사항_분석용": "서비스 경험",
+            "핵심기술_분석용": "파이썬",
+            "상세본문_분석용": "모델을 개발합니다.\n파이썬 경험\n서비스 경험",
+            "회사명_표시": f"회사{index}",
+            "소스명_표시": f"소스{index}",
+            "공고제목_표시": f"공고 {index}",
+            "경력수준_표시": "경력",
+            "경력근거_표시": "구조화 메타데이터",
+            "채용트랙_표시": "일반채용",
+            "채용트랙근거_표시": "기본추론",
+            "직무초점_표시": "서비스개발",
+            "직무초점근거_표시": "공고제목",
+            "구분요약_표시": "경력",
+            "직무명_표시": role,
+            "주요업무_표시": "모델을 개발합니다.",
+            "자격요건_표시": "파이썬 경험",
+            "우대사항_표시": "서비스 경험",
+            "핵심기술_표시": "파이썬",
+        }
+
+    master = pd.DataFrame([_job_row(index) for index in range(10)], columns=list(JOB_COLUMNS))
+    staging = pd.DataFrame(
+        [_job_row(index, status="미발견" if index < 6 else "변경") for index in range(7)],
+        columns=list(JOB_COLUMNS),
+    )
+    registry = pd.DataFrame(
+        [
+            {
+                "source_url": f"https://example.com/source/{index}",
+                "source_bucket": "approved",
+                "verification_status": "성공",
+            }
+            for index in range(10)
+        ],
+        columns=list(SOURCE_REGISTRY_COLUMNS),
+    )
+    runs = pd.DataFrame(
+        [
+            {
+                "run_id": "update-incremental-1",
+                "command": "update-incremental",
+                "status": "성공",
+                "started_at": "2026-04-07T10:00:00+09:00",
+                "finished_at": "2026-04-07T10:01:00+09:00",
+                "summary_json": json.dumps(
+                    {
+                        "staging_job_count": 7,
+                        "completed_full_source_scan": False,
+                        "new_job_count": 0,
+                        "changed_job_count": 1,
+                        "missing_job_count": 6,
+                        "held_job_count": 0,
+                    },
+                    ensure_ascii=False,
+                ),
+            }
+        ]
+    )
+    write_csv(master, paths.master_jobs_path)
+    write_csv(staging, paths.staging_jobs_path)
+    write_csv(registry, paths.source_registry_path)
+    write_csv(runs, paths.runs_path)
+
+    monkeypatch.setattr(pipelines_module, "_PROMOTION_SHRINK_MIN_PREVIOUS_COUNT", 5)
+    monkeypatch.setattr(pipelines_module, "_PROMOTION_SHRINK_MIN_DROP_COUNT", 2)
+    monkeypatch.setattr(pipelines_module, "_PROMOTION_SHRINK_MIN_DROP_RATIO", 0.1)
+    monkeypatch.setattr(pipelines_module, "_PROMOTION_SHRINK_MIN_MISSING_COUNT", 3)
+    monkeypatch.setattr(
+        pipelines_module,
+        "filter_low_quality_jobs",
+        lambda staging_jobs, settings=None, paths=None: (staging_jobs.copy(), staging_jobs.iloc[0:0].copy()),
+    )
+    monkeypatch.setattr(
+        pipelines_module,
+        "evaluate_quality_gate",
+        lambda staging_jobs, registry_frame, settings=None, paths=None, already_filtered=False: GateResult(
+            passed=True,
+            reasons=[],
+            metrics={},
+        ),
+    )
+
+    summary = promote_staging_pipeline(project_root=sandbox_project)
+
+    assert summary["quality_gate_passed"] is False
+    assert summary["promoted_job_count"] == 0
+    assert summary["publish_shrink_guard_triggered"] is True
+    assert "비정상 감소가 감지되어 master 승격을 차단합니다." in summary["quality_gate_reasons"]
+    refreshed_master = read_csv_or_empty(paths.master_jobs_path, JOB_COLUMNS)
+    assert len(refreshed_master) == 10
+
+
+def test_promote_staging_allows_legitimate_shrink_after_full_scan(
+    sandbox_project: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    paths = ProjectPaths.from_root(sandbox_project)
+
+    def _job_row(index: int, *, status: str = "유지") -> dict[str, object]:
+        role = "인공지능 엔지니어" if index % 2 == 0 else "데이터 분석가"
+        return {
+            "job_key": f"job-{index}",
+            "change_hash": f"hash-{index}",
+            "first_seen_at": "2026-04-01T00:00:00+09:00",
+            "last_seen_at": "2026-04-01T00:00:00+09:00",
+            "is_active": True,
+            "missing_count": 0,
+            "snapshot_date": "2026-04-07",
+            "run_id": "r1",
+            "source_url": f"https://example.com/source/{index}",
+            "source_bucket": "approved",
+            "source_name": f"소스{index}",
+            "company_name": f"회사{index}",
+            "company_tier": "중견/중소",
+            "job_title_raw": f"공고 {index}",
+            "experience_level_raw": "경력",
+            "job_role": role,
+            "job_url": f"https://example.com/jobs/{index}",
+            "record_status": status,
+            "주요업무_분석용": "모델을 개발합니다.",
+            "자격요건_분석용": "파이썬 경험",
+            "우대사항_분석용": "서비스 경험",
+            "핵심기술_분석용": "파이썬",
+            "상세본문_분석용": "모델을 개발합니다.\n파이썬 경험\n서비스 경험",
+            "회사명_표시": f"회사{index}",
+            "소스명_표시": f"소스{index}",
+            "공고제목_표시": f"공고 {index}",
+            "경력수준_표시": "경력",
+            "경력근거_표시": "구조화 메타데이터",
+            "채용트랙_표시": "일반채용",
+            "채용트랙근거_표시": "기본추론",
+            "직무초점_표시": "서비스개발",
+            "직무초점근거_표시": "공고제목",
+            "구분요약_표시": "경력",
+            "직무명_표시": role,
+            "주요업무_표시": "모델을 개발합니다.",
+            "자격요건_표시": "파이썬 경험",
+            "우대사항_표시": "서비스 경험",
+            "핵심기술_표시": "파이썬",
+        }
+
+    master = pd.DataFrame([_job_row(index) for index in range(10)], columns=list(JOB_COLUMNS))
+    staging = pd.DataFrame(
+        [_job_row(index, status="미발견" if index < 3 else "변경") for index in range(7)],
+        columns=list(JOB_COLUMNS),
+    )
+    registry = pd.DataFrame(
+        [
+            {
+                "source_url": f"https://example.com/source/{index}",
+                "source_bucket": "approved",
+                "verification_status": "성공",
+            }
+            for index in range(10)
+        ],
+        columns=list(SOURCE_REGISTRY_COLUMNS),
+    )
+    runs = pd.DataFrame(
+        [
+            {
+                "run_id": "update-incremental-1",
+                "command": "update-incremental",
+                "status": "성공",
+                "started_at": "2026-04-07T10:00:00+09:00",
+                "finished_at": "2026-04-07T10:01:00+09:00",
+                "summary_json": json.dumps(
+                    {
+                        "staging_job_count": 7,
+                        "completed_full_source_scan": True,
+                        "new_job_count": 1,
+                        "changed_job_count": 3,
+                        "missing_job_count": 3,
+                        "held_job_count": 0,
+                    },
+                    ensure_ascii=False,
+                ),
+            }
+        ]
+    )
+    write_csv(master, paths.master_jobs_path)
+    write_csv(staging, paths.staging_jobs_path)
+    write_csv(registry, paths.source_registry_path)
+    write_csv(runs, paths.runs_path)
+
+    monkeypatch.setattr(pipelines_module, "_PROMOTION_SHRINK_MIN_PREVIOUS_COUNT", 5)
+    monkeypatch.setattr(pipelines_module, "_PROMOTION_SHRINK_MIN_DROP_COUNT", 2)
+    monkeypatch.setattr(pipelines_module, "_PROMOTION_SHRINK_MIN_DROP_RATIO", 0.1)
+    monkeypatch.setattr(pipelines_module, "_PROMOTION_SHRINK_MIN_MISSING_COUNT", 3)
+    monkeypatch.setattr(
+        pipelines_module,
+        "filter_low_quality_jobs",
+        lambda staging_jobs, settings=None, paths=None: (staging_jobs.copy(), staging_jobs.iloc[0:0].copy()),
+    )
+    monkeypatch.setattr(
+        pipelines_module,
+        "evaluate_quality_gate",
+        lambda staging_jobs, registry_frame, settings=None, paths=None, already_filtered=False: GateResult(
+            passed=True,
+            reasons=[],
+            metrics={},
+        ),
+    )
+
+    summary = promote_staging_pipeline(project_root=sandbox_project)
+
+    assert summary["quality_gate_passed"] is True
+    assert summary["promoted_job_count"] == 7
+    assert summary["publish_shrink_guard_triggered"] is False
+    refreshed_master = read_csv_or_empty(paths.master_jobs_path, JOB_COLUMNS)
+    assert len(refreshed_master) == 7
 
 
 def test_filter_low_quality_jobs_drops_empty_or_noisy_analysis_rows() -> None:

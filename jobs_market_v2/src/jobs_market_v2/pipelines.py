@@ -33,6 +33,11 @@ from .sheets import build_sheet_tabs, export_tabs_locally, sync_tabs_to_google_s
 from .storage import append_error_record, append_run_record, coerce_bool, read_csv_or_empty, write_csv, write_jsonl, write_parquet
 from .utils import normalize_whitespace
 
+_PROMOTION_SHRINK_MIN_PREVIOUS_COUNT = 50
+_PROMOTION_SHRINK_MIN_DROP_COUNT = 5
+_PROMOTION_SHRINK_MIN_DROP_RATIO = 0.03
+_PROMOTION_SHRINK_MIN_MISSING_COUNT = 10
+
 
 def _run_id(command: str) -> str:
     stamp = datetime.now(tz=ZoneInfo("Asia/Seoul")).strftime("%Y%m%d%H%M%S%f")
@@ -83,6 +88,30 @@ def _latest_run_summary(paths, command: str) -> dict:
         return {}
     summary_json = matched.iloc[-1]["summary_json"]
     return json.loads(summary_json) if summary_json else {}
+
+
+def _latest_collection_summary(paths) -> dict:
+    runs = read_csv_or_empty(paths.runs_path, RUN_COLUMNS)
+    if runs.empty:
+        return {}
+
+    collection_commands = {"run-collection-cycle", "update-incremental", "collect-jobs"}
+    matched = runs[runs["command"].isin(collection_commands)]
+    if matched.empty:
+        return {}
+
+    for _, row in matched.iloc[::-1].iterrows():
+        summary_json = row.get("summary_json", "")
+        if not summary_json:
+            continue
+        summary = json.loads(summary_json)
+        if row["command"] == "run-collection-cycle":
+            nested = summary.get("collection")
+            if isinstance(nested, dict):
+                return nested
+        if isinstance(summary, dict):
+            return summary
+    return {}
 
 
 def _has_nonempty_csv(path: Path) -> bool:
@@ -217,6 +246,72 @@ def _active_source_urls(frame: pd.DataFrame) -> set[str]:
         active_mask = pd.Series(True, index=frame.index)
     urls = frame.loc[active_mask, "source_url"].fillna("").astype(str).map(normalize_whitespace)
     return {url for url in urls.tolist() if url}
+
+
+def _active_job_count(frame: pd.DataFrame) -> int:
+    if frame.empty or "is_active" not in frame.columns:
+        return int(len(frame))
+    return int(frame["is_active"].map(coerce_bool).sum())
+
+
+def _evaluate_publish_shrink_guard(candidate_master: pd.DataFrame, paths) -> dict[str, object]:
+    previous_master = read_csv_or_empty(paths.master_jobs_path, JOB_COLUMNS)
+    previous_master_count = int(len(previous_master))
+    candidate_master_count = int(len(candidate_master))
+    drop_count = max(previous_master_count - candidate_master_count, 0)
+    drop_ratio = drop_count / max(previous_master_count, 1)
+    previous_active_count = _active_job_count(previous_master)
+    candidate_active_count = _active_job_count(candidate_master)
+    active_drop_count = max(previous_active_count - candidate_active_count, 0)
+    active_drop_ratio = active_drop_count / max(previous_active_count, 1)
+
+    collection_summary = _latest_collection_summary(paths)
+    summary_staging_count = int(collection_summary.get("staging_job_count", candidate_master_count) or 0)
+    completed_full_source_scan = bool(collection_summary.get("completed_full_source_scan", True))
+    new_job_count = int(collection_summary.get("new_job_count", 0) or 0)
+    changed_job_count = int(collection_summary.get("changed_job_count", 0) or 0)
+    missing_job_count = int(collection_summary.get("missing_job_count", 0) or 0)
+    held_job_count = int(collection_summary.get("held_job_count", 0) or 0)
+
+    metrics = {
+        "triggered": False,
+        "previous_master_count": previous_master_count,
+        "candidate_master_count": candidate_master_count,
+        "drop_count": drop_count,
+        "drop_ratio": drop_ratio,
+        "previous_active_count": previous_active_count,
+        "candidate_active_count": candidate_active_count,
+        "active_drop_count": active_drop_count,
+        "active_drop_ratio": active_drop_ratio,
+        "summary_staging_count": summary_staging_count,
+        "completed_full_source_scan": completed_full_source_scan,
+        "new_job_count": new_job_count,
+        "changed_job_count": changed_job_count,
+        "missing_job_count": missing_job_count,
+        "held_job_count": held_job_count,
+        "reason": "",
+    }
+
+    if previous_master_count < _PROMOTION_SHRINK_MIN_PREVIOUS_COUNT:
+        return metrics
+    if candidate_master_count >= previous_master_count:
+        return metrics
+    if summary_staging_count != candidate_master_count:
+        return metrics
+
+    suspicious_shrink = (
+        not completed_full_source_scan
+        and drop_count >= _PROMOTION_SHRINK_MIN_DROP_COUNT
+        and drop_ratio >= _PROMOTION_SHRINK_MIN_DROP_RATIO
+        and new_job_count == 0
+        and missing_job_count >= max(_PROMOTION_SHRINK_MIN_MISSING_COUNT, drop_count)
+    )
+    if not suspicious_shrink:
+        return metrics
+
+    metrics["triggered"] = True
+    metrics["reason"] = "비정상 감소가 감지되어 master 승격을 차단합니다."
+    return metrics
 
 
 def _processed_source_outcomes(
@@ -982,12 +1077,35 @@ def promote_staging_pipeline(project_root: Path | None = None) -> dict:
         filtered_staging, dropped_jobs = filter_low_quality_jobs(staging, settings=settings, paths=paths)
         registry = read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
         gate = evaluate_quality_gate(filtered_staging, registry, settings=settings, paths=paths, already_filtered=True)
-        write_quality_gate(gate, paths.quality_gate_path)
         write_csv(filtered_staging, paths.staging_jobs_path)
+        shrink_guard = _evaluate_publish_shrink_guard(filtered_staging, paths)
+        if shrink_guard["triggered"]:
+            gate = gate.model_copy(
+                update={
+                    "passed": False,
+                    "reasons": list(dict.fromkeys([*gate.reasons, str(shrink_guard["reason"])])),
+                    "metrics": {
+                        **gate.metrics,
+                        "publish_shrink_guard": shrink_guard,
+                    },
+                }
+            )
+        else:
+            gate = gate.model_copy(
+                update={
+                    "metrics": {
+                        **gate.metrics,
+                        "publish_shrink_guard": shrink_guard,
+                    },
+                }
+            )
+        write_quality_gate(gate, paths.quality_gate_path)
         summary = {
             "quality_gate_passed": gate.passed,
             "quality_gate_reasons": gate.reasons,
             "dropped_low_quality_job_count": int(len(dropped_jobs)),
+            "publish_shrink_guard_triggered": bool(shrink_guard["triggered"]),
+            "publish_shrink_guard_reason": str(shrink_guard["reason"]),
         }
         if gate.passed:
             write_csv(filtered_staging, paths.master_jobs_path)
