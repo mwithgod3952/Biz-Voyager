@@ -109,9 +109,9 @@ Fill in at least:
 
 - `GOOGLE_SHEETS_SPREADSHEET_ID`
 - `GOOGLE_SERVICE_ACCOUNT_JSON`
-- one LLM backend if you want fallback/refinement
-  - `GEMINI_API_KEY` for Gemini
-  - or `JOBS_MARKET_V2_LLM_PROVIDER`, `JOBS_MARKET_V2_LLM_BASE_URL`, `JOBS_MARKET_V2_LLM_API_KEY`, `JOBS_MARKET_V2_LLM_MODEL` for an OpenAI-compatible endpoint
+- `JOBS_MARKET_V2_LLM_API_KEY` if you want LLM-based fallback/refinement
+
+Most users do not need to change the provider settings. The checked-in deployment defaults already point to an LLM API backend that runs `gemma-4-31b`.
 
 Then run:
 
@@ -193,21 +193,24 @@ Example:
 GOOGLE_SERVICE_ACCOUNT_JSON=/absolute/path/to/service-account.json
 ```
 
-### `GEMINI_API_KEY`
+### `JOBS_MARKET_V2_LLM_API_KEY`
 
-Optional if you use Gemini as the fallback/refinement backend.
+Optional, but recommended. If present, the project can use an LLM API for fallback refinement and harder extraction cases.
 
-### OpenAI-compatible LLM backend
+By default, the checked-in deployment profile uses `gemma-4-31b`.
 
-You can also use an OpenAI-compatible `chat/completions` API instead of Gemini.
+### Advanced LLM backend overrides
 
-Example:
+Most users can leave the backend defaults alone and only provide the API key.
+If you need to point the project at a different endpoint or model, you can override:
 
 ```text
-JOBS_MARKET_V2_LLM_PROVIDER=openai_compatible
+JOBS_MARKET_V2_LLM_PROVIDER=
 JOBS_MARKET_V2_LLM_BASE_URL=https://api.example.com
 JOBS_MARKET_V2_LLM_API_KEY=...
 JOBS_MARKET_V2_LLM_MODEL=your-model-name
+JOBS_MARKET_V2_ENABLE_LLM_FALLBACK=true
+JOBS_MARKET_V2_LLM_TIMEOUT_SECONDS=15
 ```
 
 This backend is used for:
@@ -430,9 +433,13 @@ At minimum replace:
 
 - `GOOGLE_SHEETS_SPREADSHEET_ID`
 - `GOOGLE_SERVICE_ACCOUNT_JSON`
-- either:
-  - `GEMINI_API_KEY` if you use Gemini
-  - or `JOBS_MARKET_V2_LLM_PROVIDER`, `JOBS_MARKET_V2_LLM_BASE_URL`, `JOBS_MARKET_V2_LLM_API_KEY`, `JOBS_MARKET_V2_LLM_MODEL` if you use an OpenAI-compatible endpoint
+- `JOBS_MARKET_V2_LLM_API_KEY`
+
+Optional advanced overrides:
+
+- `JOBS_MARKET_V2_LLM_PROVIDER`
+- `JOBS_MARKET_V2_LLM_BASE_URL`
+- `JOBS_MARKET_V2_LLM_MODEL`
 
 ### GitHub Actions runs
 
@@ -444,8 +451,8 @@ Add:
 
 - `GOOGLE_SHEETS_SPREADSHEET_ID`
 - `GOOGLE_SERVICE_ACCOUNT_JSON`
-- `GEMINI_API_KEY` if you use Gemini
-- `JOBS_MARKET_V2_LLM_PROVIDER`, `JOBS_MARKET_V2_LLM_BASE_URL`, `JOBS_MARKET_V2_LLM_API_KEY`, `JOBS_MARKET_V2_LLM_MODEL` if you use an OpenAI-compatible endpoint
+- `JOBS_MARKET_V2_LLM_API_KEY`
+- optionally `JOBS_MARKET_V2_LLM_PROVIDER`, `JOBS_MARKET_V2_LLM_BASE_URL`, `JOBS_MARKET_V2_LLM_MODEL`
 - optional `SLACK_WEBHOOK_URL`
 
 ### Important reminder

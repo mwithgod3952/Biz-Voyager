@@ -229,7 +229,7 @@ Replace at least:
 
 - `GOOGLE_SHEETS_SPREADSHEET_ID`
 - `GOOGLE_SERVICE_ACCOUNT_JSON`
-- `GEMINI_API_KEY`
+- `JOBS_MARKET_V2_LLM_API_KEY`
 
 ### GitHub-hosted automation
 
@@ -241,7 +241,7 @@ Add:
 
 - `GOOGLE_SHEETS_SPREADSHEET_ID`
 - `GOOGLE_SERVICE_ACCOUNT_JSON`
-- `GEMINI_API_KEY`
+- `JOBS_MARKET_V2_LLM_API_KEY`
 - `SLACK_WEBHOOK_URL` if you want Slack alerts
 
 ### New Google Sheet

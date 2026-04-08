@@ -9383,6 +9383,52 @@ def test_get_settings_uses_published_llm_backend_defaults(
     assert settings.llm_model == "gemma-4-31b"
 
 
+def test_get_settings_auto_enables_llm_fallback_when_generic_api_key_present(
+    monkeypatch: pytest.MonkeyPatch,
+    sandbox_project: Path,
+) -> None:
+    (sandbox_project / ".env").write_text(
+        "JOBS_MARKET_V2_USE_MOCK_SOURCES=true\n"
+        "JOBS_MARKET_V2_ENABLE_FALLBACK_SOURCE_GUESS=false\n",
+        encoding="utf-8",
+    )
+    settings_module = sys.modules["jobs_market_v2.settings"]
+    settings_module.get_settings.cache_clear()
+    settings_module.get_paths.cache_clear()
+    monkeypatch.setenv("JOBS_MARKET_V2_LLM_API_KEY", "llm-key")
+    monkeypatch.delenv("JOBS_MARKET_V2_ENABLE_LLM_FALLBACK", raising=False)
+    monkeypatch.delenv("JOBS_MARKET_V2_ENABLE_GEMINI_FALLBACK", raising=False)
+
+    settings = settings_module.get_settings(sandbox_project)
+
+    assert settings.enable_gemini_fallback is True
+    assert settings.llm_api_key == "llm-key"
+
+
+def test_get_settings_prefers_generic_llm_aliases_for_flags_and_limits(
+    monkeypatch: pytest.MonkeyPatch,
+    sandbox_project: Path,
+) -> None:
+    settings_module = sys.modules["jobs_market_v2.settings"]
+    settings_module.get_settings.cache_clear()
+    settings_module.get_paths.cache_clear()
+    monkeypatch.setenv("JOBS_MARKET_V2_LLM_API_KEY", "llm-key")
+    monkeypatch.setenv("JOBS_MARKET_V2_ENABLE_LLM_FALLBACK", "true")
+    monkeypatch.setenv("JOBS_MARKET_V2_ENABLE_LLM_DUPLICATE_ADJUDICATION", "true")
+    monkeypatch.setenv("JOBS_MARKET_V2_LLM_MAX_CALLS_PER_RUN", "11")
+    monkeypatch.setenv("JOBS_MARKET_V2_LLM_TIMEOUT_SECONDS", "9")
+    monkeypatch.setenv("JOBS_MARKET_V2_ENABLE_GEMINI_FALLBACK", "false")
+    monkeypatch.setenv("JOBS_MARKET_V2_GEMINI_MAX_CALLS_PER_RUN", "3")
+    monkeypatch.setenv("JOBS_MARKET_V2_GEMINI_TIMEOUT_SECONDS", "4")
+
+    settings = settings_module.get_settings(sandbox_project)
+
+    assert settings.enable_gemini_fallback is True
+    assert settings.enable_gemini_duplicate_adjudication is True
+    assert settings.gemini_max_calls_per_run == 11
+    assert settings.gemini_timeout_seconds == 9.0
+
+
 def test_github_actions_runtime_finalize_cycle_records_failure_and_notifies(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
