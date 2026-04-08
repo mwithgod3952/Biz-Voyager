@@ -214,6 +214,9 @@ _LEGAL_NOTICE_PATTERNS = (
     re.compile(r"지원 시 고지"),
     re.compile(r"우대하오니"),
     re.compile(r"채용우대"),
+    re.compile(r"공고문"),
+    re.compile(r"연구실적목록"),
+    re.compile(r"연구계획서"),
 )
 
 _CTA_LINE_PATTERNS = (
@@ -236,6 +239,24 @@ _CTA_LINE_PATTERNS = (
     re.compile(r"소개해요$"),
 )
 
+_FAQ_OR_ADMIN_LINE_PATTERNS = (
+    re.compile(r"\bfaq\b", flags=re.IGNORECASE),
+    re.compile(r"자주\s*묻는"),
+    re.compile(r"안내\s*사항"),
+    re.compile(r"아래\s*안내"),
+    re.compile(r"근무\s*형태"),
+    re.compile(r"근무\s*시작일"),
+    re.compile(r"기술\s*스택"),
+    re.compile(r"직무\s*과제"),
+    re.compile(r"어떻게\s*되나요"),
+    re.compile(r"어떻게\s*진행되나요"),
+    re.compile(r"지원해드릴\s*예정"),
+    re.compile(r"자세한.*안내"),
+    re.compile(r"채용\s*faq", flags=re.IGNORECASE),
+    re.compile(r"공고명"),
+    re.compile(r"양식"),
+)
+
 _SECTION_TERMINATION_PATTERNS = (
     re.compile(r"^근무 조건$"),
     re.compile(r"^복지 및 혜택$"),
@@ -248,6 +269,13 @@ _SECTION_TERMINATION_PATTERNS = (
     re.compile(r"^이렇게 근무해요$"),
     re.compile(r"^꼭 확인해 주세요$"),
     re.compile(r"^제출 서류"),
+    re.compile(r"^\)?\s*FAQ", flags=re.IGNORECASE),
+    re.compile(r"^자주\s*묻는"),
+    re.compile(r"^\)?\s*근무\s*형태"),
+    re.compile(r"^\)?\s*근무\s*시작일"),
+    re.compile(r"^\)?\s*기술\s*스택"),
+    re.compile(r"^\)?\s*직무\s*과제"),
+    re.compile(r"^아래\s*안내"),
 )
 
 _DETAIL_FALLBACK_NOISE_PATTERNS = (
@@ -257,6 +285,17 @@ _DETAIL_FALLBACK_NOISE_PATTERNS = (
     re.compile(r"채용 관련 문의"),
     re.compile(r"접수기간"),
     re.compile(r"^\d+\s*제\d+차.*채용공고"),
+    re.compile(r"공고명"),
+    re.compile(r"공고문"),
+    re.compile(r"양식"),
+    re.compile(r"연구실적목록"),
+    re.compile(r"연구계획서"),
+    re.compile(r"\bfaq\b", flags=re.IGNORECASE),
+    re.compile(r"자주\s*묻는"),
+    re.compile(r"근무\s*형태"),
+    re.compile(r"근무\s*시작일"),
+    re.compile(r"기술\s*스택"),
+    re.compile(r"직무\s*과제"),
 )
 
 _MAIN_TASK_HEADING_PATTERNS = (
@@ -548,6 +587,17 @@ def _looks_like_cta_line(value: str | None) -> bool:
     if any(pattern.search(text) for pattern in _CTA_LINE_PATTERNS):
         return True
     return False
+
+
+def _looks_like_faq_or_admin_line(value: str | None) -> bool:
+    text = normalize_whitespace(value)
+    if not text:
+        return False
+    if any(pattern.search(text) for pattern in _FAQ_OR_ADMIN_LINE_PATTERNS):
+        return True
+    return text.endswith("?") and any(
+        token in text for token in ("되나요", "진행되나요", "가능한가요", "무엇인가요", "어떤")
+    )
 
 
 def _looks_like_connector_fragment_line(value: str | None) -> bool:
@@ -1127,6 +1177,7 @@ def sanitize_section_text(value: str | None) -> str:
         raw_lines = [line for line in raw_lines if has_hangul(line)]
 
     processed_lines: list[str] = []
+    seen_lines: set[str] = set()
 
     for raw_line in raw_lines:
         raw_line = _EMOJI_RE.sub(" ", raw_line).replace("™", " ")
@@ -1137,6 +1188,8 @@ def sanitize_section_text(value: str | None) -> str:
         if _looks_like_section_termination_line(raw_line):
             break
         if _looks_like_legal_notice_line(raw_line):
+            continue
+        if _looks_like_faq_or_admin_line(raw_line):
             continue
         if _looks_like_cta_line(raw_line):
             continue
@@ -1158,12 +1211,16 @@ def sanitize_section_text(value: str | None) -> str:
         if (
             _looks_like_legal_notice_line(replaced)
             or _looks_like_heading_artifact_line(replaced)
+            or _looks_like_faq_or_admin_line(replaced)
             or _looks_like_cta_line(replaced)
             or _looks_like_connector_fragment_line(replaced)
         ):
             continue
         if not has_hangul(replaced):
             continue
+        if replaced in seen_lines:
+            continue
+        seen_lines.add(replaced)
         processed_lines.append(replaced)
 
     return "\n".join(processed_lines)
@@ -1254,6 +1311,13 @@ def _extract_section_from_raw_detail(raw_text: str | None, patterns: tuple[re.Pa
                 continue
             break
         if collecting:
+            if (
+                _looks_like_section_termination_line(line)
+                or _looks_like_faq_or_admin_line(line)
+                or _looks_like_legal_notice_line(line)
+                or _looks_like_cta_line(line)
+            ):
+                break
             collected.append(line)
     return sanitize_section_text("\n".join(collected))
 
@@ -1264,6 +1328,7 @@ def _preserve_english_task_lines(raw_text: str | None) -> str:
         return ""
 
     preserved: list[str] = []
+    seen: set[str] = set()
     for raw_line in text.split("\n"):
         line = normalize_whitespace(raw_line)
         if not line:
@@ -1289,6 +1354,9 @@ def _preserve_english_task_lines(raw_text: str | None) -> str:
             continue
         if "영문토큰" in replaced or not has_hangul(replaced):
             continue
+        if replaced in seen:
+            continue
+        seen.add(replaced)
         preserved.append(replaced)
 
     joined = "\n".join(preserved)

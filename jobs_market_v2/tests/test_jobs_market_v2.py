@@ -6126,6 +6126,22 @@ def test_section_sanitizer_drops_cta_and_stops_before_benefits_tail() -> None:
     assert sanitized == "모델을 설계하고 배포합니다.\n파이프라인을 운영합니다."
 
 
+def test_section_sanitizer_drops_faq_lines_and_deduplicates_repeated_content() -> None:
+    text = """
+Senior Data Analyst 역할에서 핵심 의사결정을 지원합니다.
+Senior Data Analyst 역할에서 핵심 의사결정을 지원합니다.
+) 근무 형태는 어떻게 되나요?
+주 5일 대면 근무입니다.
+    ) 근무 시작일은 어떻게 되나요?
+    개인별 조율이 가능합니다.
+""".strip()
+    sanitized = sanitize_section_text(text)
+    assert "근무 형태" not in sanitized
+    assert "근무 시작일" not in sanitized
+    assert "개인별 조율" not in sanitized
+    assert sanitized.count("핵심 의사결정을 지원합니다.") == 1
+
+
 def test_core_skill_sanitizer_drops_experience_noise() -> None:
     text = """
 Python
@@ -10481,6 +10497,85 @@ def test_normalize_job_analysis_fields_replaces_noisy_recruiter_hold_detail_with
             "의료 데이터 분석 관련 논문 또는 특허 실적 보유자를 우대합니다.",
         ]
     )
+
+
+def test_normalize_job_analysis_fields_does_not_recover_main_tasks_from_admin_notice_lines() -> None:
+    staging = pd.DataFrame(
+        [
+            {
+                "company_name": "한국뇌연구원 AI 실증지원사업단",
+                "source_name": "KBRI",
+                "job_title_raw": "[AI실증지원사업단] [A-21](연구직) 2025년 제4차 사업단 직원(계약직) 채용",
+                "job_role": "인공지능 리서처",
+                "주요업무_분석용": "",
+                "자격요건_분석용": "",
+                "우대사항_분석용": "",
+                "핵심기술_분석용": "비전\n시계열",
+                "상세본문_분석용": "\n".join(
+                    [
+                        "공고명 [AI실증지원사업단] [A-21](연구직) 2025년 제4차 사업단 직원(계약직) 채용",
+                        "공고문 및 양식을 반드시 확인해 주세요.",
+                        "연구실적목록 및 연구계획서 제출이 필요합니다.",
+                        "양식은 첨부파일을 참조해 주세요.",
+                    ]
+                ),
+                "주요업무_표시": "",
+                "자격요건_표시": "",
+                "우대사항_표시": "",
+                "핵심기술_표시": "",
+            }
+        ]
+    )
+
+    normalized = normalize_job_analysis_fields(staging)
+
+    assert normalized.loc[0, "주요업무_분석용"] == ""
+    assert normalized.loc[0, "주요업무_표시"] == ""
+    assert normalized.loc[0, "자격요건_분석용"] == ""
+    assert normalized.loc[0, "자격요건_표시"] == ""
+    assert normalized.loc[0, "상세본문_분석용"] == ""
+
+
+def test_normalize_job_analysis_fields_stops_preferred_salvage_before_faq_tail() -> None:
+    staging = pd.DataFrame(
+        [
+            {
+                "company_name": "크래프톤",
+                "source_name": "크래프톤 채용",
+                "job_title_raw": "AI FDE 집중채용",
+                "job_role": "인공지능 엔지니어",
+                "주요업무_분석용": "AI 기반 서비스 성능을 개선합니다.",
+                "자격요건_분석용": "파이썬 기반 서비스 개발 경험이 필요합니다.",
+                "우대사항_분석용": "",
+                "핵심기술_분석용": "파이썬\n머신러닝",
+                "상세본문_분석용": "\n".join(
+                    [
+                        "우대사항",
+                        "대규모 실험 설계 및 분석 경험이 있는 분",
+                        "추천 시스템 또는 검색 품질 개선 경험이 있는 분",
+                        ") 근무 형태는 어떻게 되나요?",
+                        "주 5일 오피스 출근을 기본으로 합니다.",
+                        ") 근무 시작일은 어떻게 되나요?",
+                        "입사일은 개별 협의를 통해 조정됩니다.",
+                    ]
+                ),
+                "주요업무_표시": "",
+                "자격요건_표시": "",
+                "우대사항_표시": "",
+                "핵심기술_표시": "",
+            }
+        ]
+    )
+
+    normalized = normalize_job_analysis_fields(staging)
+
+    preferred_analysis = normalized.loc[0, "우대사항_분석용"]
+    preferred_display = normalized.loc[0, "우대사항_표시"]
+    assert "대규모 실험 설계 및 분석 경험이 있는 분" in preferred_analysis
+    assert "추천 시스템 또는 검색 품질 개선 경험이 있는 분" in preferred_display
+    assert "근무 형태" not in preferred_analysis
+    assert "근무 시작일" not in preferred_display
+    assert "입사일은 개별 협의를 통해 조정됩니다." not in preferred_display
 
 
 def test_filter_low_quality_jobs_collapses_same_content_duplicates_with_same_variant_key() -> None:

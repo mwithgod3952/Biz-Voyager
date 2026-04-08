@@ -52,10 +52,23 @@ _ADMIN_NOTICE_LINE_PATTERNS = (
     re.compile(r"민감 정보"),
     re.compile(r"근무환경"),
     re.compile(r"근무 형태"),
+    re.compile(r"근무 시작일"),
+    re.compile(r"기술 스택"),
+    re.compile(r"직무 과제"),
     re.compile(r"모집 절차"),
     re.compile(r"최종 결과 발표"),
     re.compile(r"절차는 상황에 따라"),
     re.compile(r"문의 부탁"),
+    re.compile(r"\bfaq\b", flags=re.IGNORECASE),
+    re.compile(r"자주\s*묻는"),
+    re.compile(r"아래\s*안내"),
+    re.compile(r"공고명"),
+    re.compile(r"공고문"),
+    re.compile(r"양식"),
+    re.compile(r"연구실적목록"),
+    re.compile(r"연구계획서"),
+    re.compile(r"지원해드릴\s*예정"),
+    re.compile(r"자세한.*안내"),
 )
 _MAIN_TASK_SIGNAL_PATTERNS = (
     re.compile(r"개발"),
@@ -1165,6 +1178,7 @@ def normalize_job_analysis_fields(staging_jobs: pd.DataFrame) -> pd.DataFrame:
     if "핵심기술_분석용" in normalized.columns:
         normalized["핵심기술_분석용"] = normalized["핵심기술_분석용"].fillna("").astype(str).map(sanitize_core_skill_text)
     if "상세본문_분석용" in normalized.columns:
+        normalized["_상세본문_원본raw"] = normalized["상세본문_분석용"].fillna("").astype(str)
         normalized["상세본문_분석용"] = normalized["상세본문_분석용"].fillna("").astype(str).map(sanitize_section_text)
         normalized["상세본문_분석용"] = normalized["상세본문_분석용"].map(
             lambda value: value if section_output_is_substantive(value) else ""
@@ -1194,7 +1208,7 @@ def normalize_job_analysis_fields(staging_jobs: pd.DataFrame) -> pd.DataFrame:
         normalized["우대사항_분석용"] = normalized.apply(
             lambda row: row.get("우대사항_분석용")
             or _extract_section_from_raw_detail(
-                row.get("_상세본문_원본정제") or row.get("상세본문_분석용"),
+                row.get("_상세본문_원본raw") or row.get("_상세본문_원본정제") or row.get("상세본문_분석용"),
                 _PREFERRED_HEADING_PATTERNS,
             ),
             axis=1,
@@ -1244,7 +1258,7 @@ def normalize_job_analysis_fields(staging_jobs: pd.DataFrame) -> pd.DataFrame:
         normalized["우대사항_표시"] = normalized["우대사항_표시"].fillna("").astype(str).map(normalize_whitespace)
         normalized["우대사항_표시"] = normalized["우대사항_표시"].replace("", _DEFAULT_PREFERRED_DISPLAY)
 
-    normalized = normalized.drop(columns=["_상세본문_원본정제"], errors="ignore")
+    normalized = normalized.drop(columns=["_상세본문_원본정제", "_상세본문_원본raw"], errors="ignore")
     return _disambiguate_duplicate_display_titles(normalized)
 
 
