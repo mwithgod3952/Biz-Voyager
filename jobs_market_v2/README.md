@@ -109,7 +109,9 @@ Fill in at least:
 
 - `GOOGLE_SHEETS_SPREADSHEET_ID`
 - `GOOGLE_SERVICE_ACCOUNT_JSON`
-- `GEMINI_API_KEY` if you want Gemini fallback/refinement
+- one LLM backend if you want fallback/refinement
+  - `GEMINI_API_KEY` for Gemini
+  - or `JOBS_MARKET_V2_LLM_PROVIDER`, `JOBS_MARKET_V2_LLM_BASE_URL`, `JOBS_MARKET_V2_LLM_API_KEY`, `JOBS_MARKET_V2_LLM_MODEL` for an OpenAI-compatible endpoint
 
 Then run:
 
@@ -193,10 +195,26 @@ GOOGLE_SERVICE_ACCOUNT_JSON=/absolute/path/to/service-account.json
 
 ### `GEMINI_API_KEY`
 
-Optional, but recommended if you want:
+Optional if you use Gemini as the fallback/refinement backend.
+
+### OpenAI-compatible LLM backend
+
+You can also use an OpenAI-compatible `chat/completions` API instead of Gemini.
+
+Example:
+
+```text
+JOBS_MARKET_V2_LLM_PROVIDER=openai_compatible
+JOBS_MARKET_V2_LLM_BASE_URL=https://api.example.com
+JOBS_MARKET_V2_LLM_API_KEY=...
+JOBS_MARKET_V2_LLM_MODEL=your-model-name
+```
+
+This backend is used for:
 
 - refinement on weak HTML pages
 - fallback assistance for harder role extraction cases
+- borderline duplicate adjudication
 
 ## Google Sheets Setup for Beginners
 
@@ -206,8 +224,8 @@ If Google Sheets is new to you, this is the minimum you need to know.
 
 Create a Google Sheet that will receive:
 
-- `master tab`
-- `staging tab`
+- `master 탭`
+- `staging 탭`
 - coverage / source / run logs
 
 ### Step 2. Find the spreadsheet ID
@@ -412,7 +430,9 @@ At minimum replace:
 
 - `GOOGLE_SHEETS_SPREADSHEET_ID`
 - `GOOGLE_SERVICE_ACCOUNT_JSON`
-- `GEMINI_API_KEY` if you use Gemini
+- either:
+  - `GEMINI_API_KEY` if you use Gemini
+  - or `JOBS_MARKET_V2_LLM_PROVIDER`, `JOBS_MARKET_V2_LLM_BASE_URL`, `JOBS_MARKET_V2_LLM_API_KEY`, `JOBS_MARKET_V2_LLM_MODEL` if you use an OpenAI-compatible endpoint
 
 ### GitHub Actions runs
 
@@ -424,7 +444,8 @@ Add:
 
 - `GOOGLE_SHEETS_SPREADSHEET_ID`
 - `GOOGLE_SERVICE_ACCOUNT_JSON`
-- `GEMINI_API_KEY`
+- `GEMINI_API_KEY` if you use Gemini
+- `JOBS_MARKET_V2_LLM_PROVIDER`, `JOBS_MARKET_V2_LLM_BASE_URL`, `JOBS_MARKET_V2_LLM_API_KEY`, `JOBS_MARKET_V2_LLM_MODEL` if you use an OpenAI-compatible endpoint
 - optional `SLACK_WEBHOOK_URL`
 
 ### Important reminder

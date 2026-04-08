@@ -1,0 +1,5 @@
+{
+  "provider": "openai_compatible",
+  "base_url": "https://api.vibemakers.kr",
+  "model": "gemma-4-31b"
+}

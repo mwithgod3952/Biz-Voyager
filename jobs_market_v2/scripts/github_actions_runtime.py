@@ -115,6 +115,10 @@ def main() -> int:
             spreadsheet_id=os.environ.get("GOOGLE_SHEETS_SPREADSHEET_ID", ""),
             service_account_json=os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", ""),
             gemini_api_key=os.environ.get("GEMINI_API_KEY", ""),
+            llm_provider=os.environ.get("JOBS_MARKET_V2_LLM_PROVIDER", ""),
+            llm_base_url=os.environ.get("JOBS_MARKET_V2_LLM_BASE_URL", ""),
+            llm_api_key=os.environ.get("JOBS_MARKET_V2_LLM_API_KEY", ""),
+            llm_model=os.environ.get("JOBS_MARKET_V2_LLM_MODEL", ""),
         )
         print(json.dumps({"line_count": len(lines)}, ensure_ascii=False))
         return 0

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import json
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -139,6 +140,10 @@ class AppSettings(BaseModel):
     google_service_account_json: str | None = None
     google_sheets_timeout_seconds: float = Field(default=20.0)
     google_sheets_connect_timeout_seconds: float = Field(default=5.0)
+    llm_provider: str | None = None
+    llm_base_url: str | None = None
+    llm_api_key: str | None = None
+    llm_model: str | None = None
     gemini_api_key: str | None = None
     gemini_model: str | None = None
     enable_gemini_fallback: bool = False
@@ -172,6 +177,19 @@ class AppSettings(BaseModel):
     company_seed_shadow_max_runtime_seconds: float = Field(default=30.0)
 
 
+def _load_published_llm_backend_config(paths: ProjectPaths) -> dict[str, str]:
+    config_path = paths.config_dir / "published_llm_backend.json"
+    if not config_path.exists():
+        return {}
+    try:
+        payload = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    return {str(key): str(value) for key, value in payload.items() if value is not None}
+
+
 @lru_cache(maxsize=1)
 def get_paths(project_root: Path | None = None) -> ProjectPaths:
     paths = ProjectPaths.from_root(project_root or default_project_root())
@@ -183,6 +201,7 @@ def get_paths(project_root: Path | None = None) -> ProjectPaths:
 def get_settings(project_root: Path | None = None) -> AppSettings:
     paths = get_paths(project_root)
     load_dotenv(paths.root / ".env", override=True)
+    llm_defaults = _load_published_llm_backend_config(paths)
     enable_gemini_fallback = os.getenv("JOBS_MARKET_V2_ENABLE_GEMINI_FALLBACK", "false").lower() in {"1", "true", "yes", "y"}
     duplicate_adjudication_raw = os.getenv("JOBS_MARKET_V2_ENABLE_GEMINI_DUPLICATE_ADJUDICATION")
     return AppSettings(
@@ -201,6 +220,10 @@ def get_settings(project_root: Path | None = None) -> AppSettings:
         google_service_account_json=os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON"),
         google_sheets_timeout_seconds=float(os.getenv("JOBS_MARKET_V2_GOOGLE_SHEETS_TIMEOUT_SECONDS", "20")),
         google_sheets_connect_timeout_seconds=float(os.getenv("JOBS_MARKET_V2_GOOGLE_SHEETS_CONNECT_TIMEOUT_SECONDS", "5")),
+        llm_provider=os.getenv("JOBS_MARKET_V2_LLM_PROVIDER") or llm_defaults.get("provider"),
+        llm_base_url=os.getenv("JOBS_MARKET_V2_LLM_BASE_URL") or llm_defaults.get("base_url"),
+        llm_api_key=os.getenv("JOBS_MARKET_V2_LLM_API_KEY"),
+        llm_model=os.getenv("JOBS_MARKET_V2_LLM_MODEL") or llm_defaults.get("model"),
         gemini_api_key=os.getenv("GEMINI_API_KEY"),
         gemini_model=os.getenv("JOBS_MARKET_V2_GEMINI_MODEL", "gemini-2.5-flash"),
         enable_gemini_fallback=enable_gemini_fallback,

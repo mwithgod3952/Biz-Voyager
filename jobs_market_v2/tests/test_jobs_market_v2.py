@@ -9215,6 +9215,29 @@ def test_github_actions_runtime_write_actions_env_file_handles_long_raw_service_
     assert json.loads(service_account_path.read_text(encoding="utf-8"))["client_email"] == "robot@example.com"
 
 
+def test_github_actions_runtime_write_actions_env_file_includes_generic_llm_config(
+    tmp_path: Path,
+) -> None:
+    env_path = tmp_path / ".env"
+    raw_json = json.dumps({"type": "service_account", "project_id": "demo"}, ensure_ascii=False)
+
+    github_actions_runtime_module.write_actions_env_file(
+        env_path,
+        spreadsheet_id="sheet-id",
+        service_account_json=raw_json,
+        llm_provider="openai_compatible",
+        llm_base_url="https://api.vibemakers.kr",
+        llm_api_key="vibe-key",
+        llm_model="gemma-4-31b",
+    )
+
+    env_text = env_path.read_text(encoding="utf-8")
+    assert "JOBS_MARKET_V2_LLM_PROVIDER='openai_compatible'" in env_text
+    assert "JOBS_MARKET_V2_LLM_BASE_URL='https://api.vibemakers.kr'" in env_text
+    assert "JOBS_MARKET_V2_LLM_API_KEY='vibe-key'" in env_text
+    assert "JOBS_MARKET_V2_LLM_MODEL='gemma-4-31b'" in env_text
+
+
 def test_github_actions_runtime_build_failure_state_payload_increments_failure_streak() -> None:
     payload = github_actions_runtime_module.build_failure_state_payload(
         {"consecutive_failures": 2, "seeded_from": "local_validated_runtime_minimal", "hold_reason": "old"},
@@ -9276,6 +9299,88 @@ def test_github_actions_runtime_finalize_cycle_records_success_without_step_outp
     assert result["issue_closed"] is True
     assert state_path.exists()
     assert closed_calls == [("https://api.github.com", "owner/repo", "token")]
+
+
+def test_call_gemini_supports_openai_compatible_chat_completions(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    class FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, object]:
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": '{"main_tasks":"데이터 파이프라인 구축","requirements":"Python 경험","preferred":"ML 경험","core_skills":"Python\\nSQL"}'
+                        }
+                    }
+                ]
+            }
+
+    def fake_post(url: str, **kwargs) -> FakeResponse:
+        captured["url"] = url
+        captured["kwargs"] = kwargs
+        return FakeResponse()
+
+    monkeypatch.setattr(gemini_module.httpx, "post", fake_post)
+
+    settings = AppSettings(
+        llm_provider="openai_compatible",
+        llm_base_url="https://api.vibemakers.kr",
+        llm_api_key="vibe-key",
+        llm_model="gemma-4-31b",
+        gemini_timeout_seconds=15.0,
+        connect_timeout_seconds=5.0,
+    )
+
+    result = gemini_module._call_gemini(
+        {
+            "main_tasks": "Build data pipelines",
+            "requirements": "Python",
+            "preferred": "ML",
+            "core_skills": "Python, SQL",
+            "description_text": "",
+        },
+        settings,
+    )
+
+    assert captured["url"] == "https://api.vibemakers.kr/v1/chat/completions"
+    request_kwargs = captured["kwargs"]
+    assert request_kwargs["headers"]["Authorization"] == "Bearer vibe-key"
+    assert request_kwargs["json"]["model"] == "gemma-4-31b"
+    assert request_kwargs["json"]["messages"][0]["role"] == "system"
+    assert result["main_tasks"] == "데이터 파이프라인 구축"
+
+
+def test_get_settings_uses_published_llm_backend_defaults(
+    monkeypatch: pytest.MonkeyPatch,
+    sandbox_project: Path,
+) -> None:
+    (sandbox_project / "config" / "published_llm_backend.json").write_text(
+        json.dumps(
+            {
+                "provider": "openai_compatible",
+                "base_url": "https://api.vibemakers.kr",
+                "model": "gemma-4-31b",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    settings_module = sys.modules["jobs_market_v2.settings"]
+    settings_module.get_settings.cache_clear()
+    settings_module.get_paths.cache_clear()
+    monkeypatch.delenv("JOBS_MARKET_V2_LLM_PROVIDER", raising=False)
+    monkeypatch.delenv("JOBS_MARKET_V2_LLM_BASE_URL", raising=False)
+    monkeypatch.delenv("JOBS_MARKET_V2_LLM_MODEL", raising=False)
+
+    settings = settings_module.get_settings(sandbox_project)
+
+    assert settings.llm_provider == "openai_compatible"
+    assert settings.llm_base_url == "https://api.vibemakers.kr"
+    assert settings.llm_model == "gemma-4-31b"
 
 
 def test_github_actions_runtime_finalize_cycle_records_failure_and_notifies(

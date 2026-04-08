@@ -96,6 +96,17 @@ JOBS_MARKET_V2_GEMINI_MAX_CALLS_PER_RUN=8
 JOBS_MARKET_V2_GEMINI_TIMEOUT_SECONDS=15
 ```
 
+또는 OpenAI 호환 백엔드:
+
+```dotenv
+JOBS_MARKET_V2_LLM_PROVIDER=openai_compatible
+JOBS_MARKET_V2_LLM_BASE_URL=https://api.example.com
+JOBS_MARKET_V2_LLM_API_KEY=...
+JOBS_MARKET_V2_LLM_MODEL=your-model-name
+JOBS_MARKET_V2_ENABLE_GEMINI_FALLBACK=false
+JOBS_MARKET_V2_GEMINI_TIMEOUT_SECONDS=15
+```
+
 기본 원칙:
 - `USE_MOCK_SOURCES`는 반드시 `false`
 - `ENABLE_FALLBACK_SOURCE_GUESS`는 기본적으로 `false`
@@ -201,6 +212,10 @@ VM 없이 운영하려면 GitHub Actions를 스케줄러로만 쓰고, runtime s
 
 선택 secret:
 - `GEMINI_API_KEY`
+- `JOBS_MARKET_V2_LLM_PROVIDER`
+- `JOBS_MARKET_V2_LLM_BASE_URL`
+- `JOBS_MARKET_V2_LLM_API_KEY`
+- `JOBS_MARKET_V2_LLM_MODEL`
 - `SLACK_WEBHOOK_URL`
 
 secret 값 초안은 아래 파일을 복사해서 정리하면 된다.

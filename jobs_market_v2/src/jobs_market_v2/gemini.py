@@ -88,6 +88,23 @@ def _extract_response_text(payload: dict) -> str:
     return parts[0].get("text", "")
 
 
+def _extract_chat_completions_text(payload: dict[str, Any]) -> str:
+    choices = payload.get("choices") or []
+    if not choices:
+        return ""
+    message = choices[0].get("message") or {}
+    content = message.get("content")
+    if isinstance(content, list):
+        text_parts: list[str] = []
+        for item in content:
+            if isinstance(item, dict) and item.get("type") == "text":
+                text = item.get("text")
+                if isinstance(text, str):
+                    text_parts.append(text)
+        return "\n".join(text_parts)
+    return content if isinstance(content, str) else ""
+
+
 def _strip_json_fence(text: str) -> str:
     stripped = text.strip()
     if stripped.startswith("```"):
@@ -109,6 +126,109 @@ def _parse_response_json(text: str) -> dict[str, str]:
         if start >= 0 and end > start:
             return json.loads(stripped[start : end + 1])
         raise
+
+
+def _active_llm_provider(settings) -> str:
+    provider = normalize_whitespace(getattr(settings, "llm_provider", "")).lower()
+    if provider:
+        return provider
+    if normalize_whitespace(getattr(settings, "llm_base_url", "")) or normalize_whitespace(getattr(settings, "llm_api_key", "")):
+        return "openai_compatible"
+    return "gemini"
+
+
+def _active_llm_api_key(settings) -> str:
+    return normalize_whitespace(getattr(settings, "llm_api_key", "") or getattr(settings, "gemini_api_key", ""))
+
+
+def _active_llm_model(settings) -> str:
+    return normalize_whitespace(getattr(settings, "llm_model", "") or getattr(settings, "gemini_model", ""))
+
+
+def _active_llm_base_url(settings) -> str:
+    return normalize_whitespace(getattr(settings, "llm_base_url", ""))
+
+
+def _resolve_chat_completions_url(base_url: str) -> str:
+    normalized = normalize_whitespace(base_url)
+    if not normalized:
+        raise ValueError("Missing OpenAI-compatible LLM base URL")
+    if normalized.endswith("/chat/completions"):
+        return normalized
+    if normalized.endswith("/v1"):
+        return normalized.rstrip("/") + "/chat/completions"
+    return normalized.rstrip("/") + "/v1/chat/completions"
+
+
+def _call_json_llm(
+    *,
+    prompt: str,
+    settings,
+    temperature: float,
+    max_output_tokens: int,
+    gemini_fallback_model: str | None = None,
+) -> dict[str, Any]:
+    provider = _active_llm_provider(settings)
+    api_key = _active_llm_api_key(settings)
+    model = _active_llm_model(settings)
+    if provider in {"", "gemini"}:
+        model_candidates = [model, gemini_fallback_model]
+        last_error: Exception | None = None
+        for candidate_model in dict.fromkeys(model for model in model_candidates if model):
+            try:
+                response = httpx.post(
+                    f"https://generativelanguage.googleapis.com/v1beta/models/{candidate_model}:generateContent",
+                    params={"key": api_key},
+                    json={
+                        "contents": [{"parts": [{"text": prompt}]}],
+                        "generationConfig": {
+                            "temperature": temperature,
+                            "maxOutputTokens": max_output_tokens,
+                            "responseMimeType": "application/json",
+                            "thinkingConfig": {"thinkingBudget": 0},
+                        },
+                    },
+                    timeout=build_timeout(settings.gemini_timeout_seconds, getattr(settings, "connect_timeout_seconds", 5.0)),
+                )
+                response.raise_for_status()
+                return _parse_response_json(_extract_response_text(response.json()))
+            except httpx.HTTPStatusError as exc:
+                last_error = exc
+                if exc.response.status_code == 404:
+                    continue
+                raise
+            except Exception as exc:  # noqa: BLE001
+                last_error = exc
+                raise
+        if last_error:
+            raise last_error
+        return {}
+
+    if provider not in {"openai", "openai_compatible", "openai-compatible", "vibemakers"}:
+        raise ValueError(f"Unsupported LLM provider: {provider}")
+
+    response = httpx.post(
+        _resolve_chat_completions_url(_active_llm_base_url(settings)),
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "model": model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "Return only a single JSON object that matches the user's requested schema. Do not include markdown fences or commentary.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            "max_tokens": max_output_tokens,
+            "temperature": temperature,
+        },
+        timeout=build_timeout(settings.gemini_timeout_seconds, getattr(settings, "connect_timeout_seconds", 5.0)),
+    )
+    response.raise_for_status()
+    return _parse_response_json(_extract_chat_completions_text(response.json()))
 
 
 def _looks_like_boilerplate(line: str) -> bool:
@@ -204,43 +324,17 @@ def _call_gemini(raw_sections: dict[str, str], settings) -> dict[str, str]:
 {json.dumps(raw_sections, ensure_ascii=False)}
 """.strip()
 
-    model_candidates = [settings.gemini_model, "gemini-2.5-flash"]
-    last_error: Exception | None = None
-
-    for model in dict.fromkeys(model for model in model_candidates if model):
-        try:
-            response = httpx.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-                params={"key": settings.gemini_api_key},
-                json={
-                    "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {
-                        "temperature": 0.1,
-                        "maxOutputTokens": 1024,
-                        "responseMimeType": "application/json",
-                        "thinkingConfig": {"thinkingBudget": 0},
-                    },
-                },
-                timeout=build_timeout(settings.gemini_timeout_seconds, getattr(settings, "connect_timeout_seconds", 5.0)),
-            )
-            response.raise_for_status()
-            return _parse_response_json(_extract_response_text(response.json()))
-        except httpx.HTTPStatusError as exc:
-            last_error = exc
-            if exc.response.status_code == 404:
-                continue
-            raise
-        except Exception as exc:  # noqa: BLE001
-            last_error = exc
-            raise
-
-    if last_error:
-        raise last_error
-    return {}
+    return _call_json_llm(
+        prompt=prompt,
+        settings=settings,
+        temperature=0.1,
+        max_output_tokens=1024,
+        gemini_fallback_model="gemini-2.5-flash",
+    )
 
 
 def maybe_refine_analysis_fields(raw_sections: dict[str, str], analysis_fields: dict[str, str], settings, paths, budget: GeminiBudget) -> dict[str, str]:
-    if not settings.enable_gemini_fallback or not settings.gemini_api_key or not settings.gemini_model:
+    if not settings.enable_gemini_fallback or not _active_llm_api_key(settings) or not _active_llm_model(settings):
         return analysis_fields
     if not budget.can_call():
         return analysis_fields
@@ -348,22 +442,12 @@ def _call_gemini_role_salvage(payload: dict[str, str], settings) -> dict[str, An
 {json.dumps(payload, ensure_ascii=False)}
 """.strip()
 
-    response = httpx.post(
-        f"https://generativelanguage.googleapis.com/v1beta/models/{settings.gemini_model}:generateContent",
-        params={"key": settings.gemini_api_key},
-        json={
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "temperature": 0.0,
-                "maxOutputTokens": 256,
-                "responseMimeType": "application/json",
-                "thinkingConfig": {"thinkingBudget": 0},
-            },
-        },
-        timeout=build_timeout(settings.gemini_timeout_seconds, getattr(settings, "connect_timeout_seconds", 5.0)),
+    return _call_json_llm(
+        prompt=prompt,
+        settings=settings,
+        temperature=0.0,
+        max_output_tokens=256,
     )
-    response.raise_for_status()
-    return _parse_response_json(_extract_response_text(response.json()))
 
 
 def maybe_salvage_job_role(
@@ -374,7 +458,7 @@ def maybe_salvage_job_role(
 ) -> str:
     if not settings.enable_gemini_fallback:
         return ""
-    if not settings.gemini_api_key or not settings.gemini_model or not budget.can_call():
+    if not _active_llm_api_key(settings) or not _active_llm_model(settings) or not budget.can_call():
         return ""
     if not _should_attempt_role_salvage(raw_sections):
         return ""
@@ -502,22 +586,12 @@ def _call_gemini_duplicate_adjudication(payload: dict[str, Any], settings) -> di
 {json.dumps(payload, ensure_ascii=False)}
 """.strip()
 
-    response = httpx.post(
-        f"https://generativelanguage.googleapis.com/v1beta/models/{settings.gemini_model}:generateContent",
-        params={"key": settings.gemini_api_key},
-        json={
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "temperature": 0.0,
-                "maxOutputTokens": 512,
-                "responseMimeType": "application/json",
-                "thinkingConfig": {"thinkingBudget": 0},
-            },
-        },
-        timeout=build_timeout(settings.gemini_timeout_seconds, getattr(settings, "connect_timeout_seconds", 5.0)),
+    return _call_json_llm(
+        prompt=prompt,
+        settings=settings,
+        temperature=0.0,
+        max_output_tokens=512,
     )
-    response.raise_for_status()
-    return _parse_response_json(_extract_response_text(response.json()))
 
 
 def maybe_adjudicate_duplicate_pair(
@@ -530,7 +604,7 @@ def maybe_adjudicate_duplicate_pair(
 ) -> bool | None:
     if not getattr(settings, "enable_gemini_duplicate_adjudication", False):
         return None
-    if not settings.gemini_api_key or not settings.gemini_model or not budget.can_call():
+    if not _active_llm_api_key(settings) or not _active_llm_model(settings) or not budget.can_call():
         return None
 
     payload = _prepare_duplicate_adjudication_payload(left_row, right_row, metrics)
@@ -539,7 +613,8 @@ def maybe_adjudicate_duplicate_pair(
     cache_key = stable_hash(
         [
             payload["policy_version"],
-            normalize_whitespace(settings.gemini_model),
+            _active_llm_provider(settings),
+            normalize_whitespace(_active_llm_model(settings)),
             json.dumps(payload["left"], ensure_ascii=False, sort_keys=True),
             json.dumps(payload["right"], ensure_ascii=False, sort_keys=True),
             json.dumps(payload["metrics"], ensure_ascii=False, sort_keys=True),

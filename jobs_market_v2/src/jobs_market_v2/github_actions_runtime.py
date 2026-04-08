@@ -215,6 +215,10 @@ def write_actions_env_file(
     spreadsheet_id: str,
     service_account_json: str,
     gemini_api_key: str = "",
+    llm_provider: str = "",
+    llm_base_url: str = "",
+    llm_api_key: str = "",
+    llm_model: str = "",
 ) -> list[str]:
     if not spreadsheet_id or not service_account_json:
         raise ValueError("Missing required secrets: GOOGLE_SHEETS_SPREADSHEET_ID, GOOGLE_SERVICE_ACCOUNT_JSON")
@@ -225,6 +229,14 @@ def write_actions_env_file(
         f"GOOGLE_SERVICE_ACCOUNT_JSON={shell_quote_env_value(service_account_value)}",
     ]
     lines.extend(f"{key}={value}" for key, value in DEFAULT_ENV_FLAGS)
+    if llm_provider:
+        lines.append(f"JOBS_MARKET_V2_LLM_PROVIDER={shell_quote_env_value(llm_provider)}")
+    if llm_base_url:
+        lines.append(f"JOBS_MARKET_V2_LLM_BASE_URL={shell_quote_env_value(llm_base_url)}")
+    if llm_api_key:
+        lines.append(f"JOBS_MARKET_V2_LLM_API_KEY={shell_quote_env_value(llm_api_key)}")
+    if llm_model:
+        lines.append(f"JOBS_MARKET_V2_LLM_MODEL={shell_quote_env_value(llm_model)}")
     if gemini_api_key:
         lines.append(f"GEMINI_API_KEY={shell_quote_env_value(gemini_api_key)}")
     env_path.parent.mkdir(parents=True, exist_ok=True)
