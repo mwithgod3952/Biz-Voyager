@@ -1,0 +1,7 @@
+company_name,company_tier,official_domain,company_name_en,region,aliases,discovery_method
+보스반도체,스타트업,bos-semi.com,BOS Semiconductors,수도권,주식회사 보스반도체;BOS Semiconductors,manual_seed_live
+엔젤로보틱스,스타트업,angel-robotics.com,Angel Robotics,수도권,(주)엔젤로보틱스;Angel Robotics,manual_seed_live
+아우토크립트,스타트업,autocrypt.co.kr,Autocrypt,수도권,아우토크립트(주);Autocrypt,manual_seed_live
+퀄리타스반도체,스타트업,q-semi.com,Qualitas Semiconductor,수도권,(주)퀄리타스반도체;Qualitas Semiconductor,manual_seed_live
+스누아이랩,스타트업,snuailab.ai,SNU AI Lab,수도권,스누AI랩;SNU AI LAB,manual_seed_live
+메디인테크,스타트업,medintech.co.kr,Medintech,수도권,주식회사 메디인테크;Medintech,manual_seed_live

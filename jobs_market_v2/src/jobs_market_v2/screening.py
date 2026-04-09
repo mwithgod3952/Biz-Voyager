@@ -33,6 +33,14 @@ _HTML_HIRING_TEXT_HINTS = (
 )
 
 
+def _matches_official_domain(source_domain: str, official_domain: str) -> bool:
+    source = strip_protocol(source_domain)
+    official = strip_protocol(official_domain)
+    if not source or not official:
+        return False
+    return source == official or source.endswith(f".{official}")
+
+
 def _dedupe_screened_sources(frame: pd.DataFrame) -> pd.DataFrame:
     if frame.empty or "source_url" not in frame.columns:
         return frame
@@ -68,7 +76,7 @@ def score_source_quality(row: dict) -> float:
     domain_confidence = float(row.get("official_domain_confidence") or 0.0)
     is_structured_source = source_type in ATS_SOURCE_TYPES or structure_hint in {"json", "rss", "sitemap", "ats"}
 
-    if source_domain and official_domain and source_domain == official_domain:
+    if _matches_official_domain(source_domain, official_domain):
         score += 0.5
     elif source_type in ATS_SOURCE_TYPES and official_domain:
         score += 0.35
@@ -139,7 +147,7 @@ def screen_sources(source_candidates: pd.DataFrame) -> tuple[pd.DataFrame, pd.Da
             rejected_rows.append({**row, "source_bucket": "rejected", "reject_reason": reject_reason})
             continue
 
-        is_official_domain_match = row["source_domain"] == row["official_domain"] and row["official_domain"] != ""
+        is_official_domain_match = _matches_official_domain(row["source_domain"], row["official_domain"])
         is_official_ats = row["source_type"] in ATS_SOURCE_TYPES and row["official_domain"] != ""
         html_approved_eligible = (
             row["source_type"] != "html_page"

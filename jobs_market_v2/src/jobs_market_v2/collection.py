@@ -146,6 +146,10 @@ _AI_ENGINEER_DELIVERY_PHRASES = (
     "developer",
     "엔지니어",
     "개발자",
+    "개발",
+    "검증",
+    "verification",
+    "test engineer",
     "모델 개발자",
     "모델 엔지니어",
     "model developer",
@@ -593,11 +597,12 @@ def _has_any_phrase(text: str, phrases: tuple[str, ...]) -> bool:
 def classify_job_role(*texts: str | None) -> str:
     if not texts:
         return ""
-    title_candidates = [normalize_whitespace(text) for text in texts[:2] if normalize_whitespace(text)]
+    normalized_texts = [normalize_whitespace(text) for text in texts if normalize_whitespace(text)]
+    title_candidates = normalized_texts[:2]
     if not title_candidates:
         return ""
     primary_title = _normalize_role_text(title_candidates[0])
-    corpus = _normalize_role_text(" ".join(title_candidates))
+    corpus = _normalize_role_text(" ".join(normalized_texts))
     if not corpus:
         return ""
     if (
@@ -632,6 +637,11 @@ def classify_job_role(*texts: str | None) -> str:
             return "인공지능 엔지니어"
         if (
             _has_any_phrase(primary_title, _AI_ENGINEER_SIGNAL_PHRASES)
+            and _has_any_phrase(primary_title, _AI_ENGINEER_DELIVERY_PHRASES)
+        ):
+            return "인공지능 엔지니어"
+        if (
+            _has_any_phrase(corpus, _AI_ENGINEER_SIGNAL_PHRASES)
             and _has_any_phrase(primary_title, _AI_ENGINEER_DELIVERY_PHRASES)
         ):
             return "인공지능 엔지니어"
@@ -814,6 +824,11 @@ def normalize_job_payload(
     role = classify_job_role(
         title_raw,
         title_ko,
+        main_tasks,
+        requirements,
+        preferred,
+        core_skills,
+        description_text,
     )
     if (
         role not in ALLOWED_JOB_ROLES
@@ -1976,6 +1991,17 @@ def _build_recruiter_jobs_from_payload(
 def _recruiter_notice_is_open(item: dict, now_ms: int) -> bool:
     if str(item.get("recruitEndYn") or "").upper() == "Y":
         return False
+    receipt_state = normalize_whitespace(
+        str(item.get("receiptState") or item.get("receiptStateName") or "")
+    ).lower()
+    if receipt_state and any(token in receipt_state for token in ("접수마감", "마감", "종료", "closed", "close")):
+        return False
+    try:
+        deadline_count = item.get("deadlineCount")
+        if deadline_count is not None and int(deadline_count) < 0:
+            return False
+    except (TypeError, ValueError):
+        pass
     start = ((item.get("applyStartDate") or {}).get("time"))
     end = ((item.get("applyEndDate") or {}).get("time"))
     try:
@@ -3418,6 +3444,7 @@ def _fetch_recruiter_source(url: str, paths, settings, *, enable_ocr_recovery: b
         items: list[dict] = []
         payload_mode = "state10"
         raw_seen_count = 0
+        now_ms = int(time() * 1000)
         while True:
             request_payload = {"page": page, "pageSize": page_size}
             if payload_mode == "state10":
@@ -3426,7 +3453,7 @@ def _fetch_recruiter_source(url: str, paths, settings, *, enable_ocr_recovery: b
             response.raise_for_status()
             payload = response.json()
             raw_page_items = _extract_recruiter_list_items(payload)
-            page_items = raw_page_items
+            page_items = [item for item in raw_page_items if _recruiter_notice_is_open(item, now_ms)]
             if page == 1 and payload_mode == "state10" and not raw_page_items:
                 fallback_response = client.post(
                     list_url,
@@ -3435,7 +3462,6 @@ def _fetch_recruiter_source(url: str, paths, settings, *, enable_ocr_recovery: b
                 fallback_response.raise_for_status()
                 payload = fallback_response.json()
                 raw_page_items = _extract_recruiter_list_items(payload)
-                now_ms = int(time() * 1000)
                 page_items = [item for item in raw_page_items if _recruiter_notice_is_open(item, now_ms)]
                 payload_mode = "no_state"
             if not page_items:

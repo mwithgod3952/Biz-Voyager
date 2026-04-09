@@ -1,0 +1,4 @@
+company_name,company_tier,official_domain,display_name,region,aliases,discovery_method
+보스반도체,스타트업,bos-semi.com,BOS Semiconductors,수도권,주식회사 보스반도체;BOS Semiconductors,manual_seed_live
+에스티씨랩,스타트업,stclab.com,STCLab,수도권,(주)에스티씨랩;STCLAB,manual_seed_live
+스누아이랩,스타트업,snuailab.ai,SNU AI Lab,수도권,스누AI랩;SNU AI LAB,manual_seed_live

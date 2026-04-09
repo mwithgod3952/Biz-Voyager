@@ -179,3 +179,138 @@ sources:
     is_official_hint: true
     structure_hint: html
     discovery_method: manual_seed_live
+  - company_name: 래블업
+    company_tier: 스타트업
+    source_name: 래블업 Careers 공개 채용
+    source_url: https://www.lablup.com/careers
+    source_type: html_page
+    official_domain: lablup.com
+    is_official_hint: true
+    structure_hint: html
+    discovery_method: manual_seed_live
+  - company_name: 모레
+    company_tier: 스타트업
+    source_name: 모레 GreetingHR 공개 채용
+    source_url: https://moreh.career.greetinghr.com
+    source_type: greetinghr
+    official_domain: moreh.io
+    is_official_hint: true
+    structure_hint: next_data
+    discovery_method: manual_seed_live
+  - company_name: 하이퍼엑셀
+    company_tier: 스타트업
+    source_name: 하이퍼엑셀 GreetingHR 공개 채용
+    source_url: https://hyperaccel.career.greetinghr.com
+    source_type: greetinghr
+    official_domain: hyperaccel.ai
+    is_official_hint: true
+    structure_hint: next_data
+    discovery_method: manual_seed_live
+  - company_name: 하이퍼엑셀
+    company_tier: 스타트업
+    source_name: 하이퍼엑셀 GreetingHR 채용 홈
+    source_url: https://hyperaccel.career.greetinghr.com/ko/guide
+    source_type: greetinghr
+    official_domain: hyperaccel.ai
+    is_official_hint: true
+    structure_hint: next_data
+    discovery_method: manual_seed_live
+  - company_name: 와이즈에이아이
+    company_tier: 스타트업
+    source_name: 와이즈에이아이 공식 채용
+    source_url: https://ai.wiseai.co.kr/about/recruitment
+    source_type: html_page
+    official_domain: ai.wiseai.co.kr
+    is_official_hint: true
+    structure_hint: html
+    discovery_method: manual_seed_live
+  - company_name: 리콘랩스
+    company_tier: 스타트업
+    source_name: 리콘랩스 공식 채용
+    source_url: https://www.reconlabs.ai/team
+    source_type: html_page
+    official_domain: reconlabs.ai
+    is_official_hint: true
+    structure_hint: html
+    discovery_method: manual_seed_live
+  - company_name: 에스티씨랩
+    company_tier: 스타트업
+    source_name: 에스티씨랩 공식 채용
+    source_url: https://career.stclab.com/recruit
+    source_type: html_page
+    official_domain: stclab.com
+    is_official_hint: true
+    structure_hint: html
+    discovery_method: manual_seed_live
+  - company_name: 에스티씨랩
+    company_tier: 스타트업
+    source_name: 에스티씨랩 채용 홈페이지
+    source_url: https://career.stclab.com/
+    source_type: html_page
+    official_domain: stclab.com
+    is_official_hint: true
+    structure_hint: html
+    discovery_method: manual_seed_live
+  - company_name: 보스반도체
+    company_tier: 스타트업
+    source_name: 보스반도체 공식 채용
+    source_url: https://www.bos-semi.com/careers-southkorea
+    source_type: html_page
+    official_domain: bos-semi.com
+    is_official_hint: true
+    structure_hint: html
+    discovery_method: manual_seed_live
+  - company_name: 엔젤로보틱스
+    company_tier: 스타트업
+    source_name: 엔젤로보틱스 공식 채용 공고
+    source_url: https://www.angel-robotics.com/ko/recruit/notice
+    source_type: html_page
+    official_domain: angel-robotics.com
+    is_official_hint: true
+    structure_hint: html
+    discovery_method: manual_seed_live
+  - company_name: 아우토크립트
+    company_tier: 스타트업
+    source_name: 아우토크립트 GreetingHR 포지션
+    source_url: https://autocrypt.career.greetinghr.com/ko/positions
+    source_type: greetinghr
+    official_domain: autocrypt.co.kr
+    is_official_hint: true
+    structure_hint: next_data
+    discovery_method: manual_seed_live
+  - company_name: 퀄리타스반도체
+    company_tier: 스타트업
+    source_name: 퀄리타스반도체 GreetingHR 잡스
+    source_url: https://q-semi.career.greetinghr.com/ko/jobs
+    source_type: greetinghr
+    official_domain: q-semi.com
+    is_official_hint: true
+    structure_hint: next_data
+    discovery_method: manual_seed_live
+  - company_name: 스누아이랩
+    company_tier: 스타트업
+    source_name: 스누아이랩 공식 채용
+    source_url: https://snuailab.ai/nowhiring
+    source_type: html_page
+    official_domain: snuailab.ai
+    is_official_hint: true
+    structure_hint: html
+    discovery_method: manual_seed_live
+  - company_name: 메디인테크
+    company_tier: 스타트업
+    source_name: 메디인테크 채용 공고
+    source_url: https://medintech.co.kr/employment_kr
+    source_type: html_page
+    official_domain: medintech.co.kr
+    is_official_hint: true
+    structure_hint: html
+    discovery_method: manual_seed_live
+  - company_name: 슈어소프트테크
+    company_tier: 중견/중소
+    source_name: 슈어소프트테크 채용공고
+    source_url: https://careers.suresofttech.com/job1
+    source_type: html_page
+    official_domain: suresofttech.com
+    is_official_hint: true
+    structure_hint: html
+    discovery_method: manual_seed_live

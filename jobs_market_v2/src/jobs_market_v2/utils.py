@@ -20,6 +20,7 @@ _ROOT_CANONICAL_SOURCE_HOST_HINTS = (
     "career.greetinghr.com",
     "recruiter.co.kr",
 )
+_GREETINGHR_PATH_PRESERVE_HINTS = ("guide", "jobs", "positions")
 
 
 def normalize_whitespace(value: object | None) -> str:
@@ -73,7 +74,11 @@ def canonicalize_runtime_source_url(url: str | None) -> str:
     if path.endswith("/index"):
         path = path[: -len("/index")]
     host = parts.netloc.lower()
-    if any(hint in host for hint in _ROOT_CANONICAL_SOURCE_HOST_HINTS):
+    if host.endswith("career.greetinghr.com"):
+        lowered_path = path.lower()
+        if not any(f"/{hint}" in lowered_path for hint in _GREETINGHR_PATH_PRESERVE_HINTS):
+            path = ""
+    elif any(hint in host for hint in _ROOT_CANONICAL_SOURCE_HOST_HINTS):
         path = ""
     return urlunsplit((parts.scheme, parts.netloc, path, parts.query, "")).rstrip("/")
 

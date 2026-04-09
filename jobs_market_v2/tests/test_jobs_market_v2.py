@@ -2660,7 +2660,7 @@ def test_source_screening_uses_approved_and_candidate_buckets(sandbox_project: P
     approved, candidate, rejected, _ = screen_sources(candidates)
     assert "https://recruit.navercorp.com/rcrt/list.do" in approved["source_url"].tolist()
     assert "https://careers.samsung.com/job-feed/data-ai.json" in candidate["source_url"].tolist()
-    assert "https://careers.microsoft.com/v2/global/ko-kr/jobs-korea.json" in candidate["source_url"].tolist()
+    assert "https://careers.microsoft.com/v2/global/ko-kr/jobs-korea.json" in approved["source_url"].tolist()
     assert rejected.empty
 
 
@@ -3159,12 +3159,18 @@ def test_job_role_classification() -> None:
     assert classify_job_role("데이터 사이언티스트") == "데이터 사이언티스트"
     assert classify_job_role("데이터분석(데이터사이언스) 인재모집") == "데이터 사이언티스트"
     assert classify_job_role("AI서비스개발 직무 인재모집") == "인공지능 엔지니어"
+    assert classify_job_role("[AI시험인증2팀] AI 검증 및 개발 (신입/경력)") == "인공지능 엔지니어"
     assert classify_job_role("AI Researcher") == "인공지능 리서처"
     assert classify_job_role("머신러닝 엔지니어") == "인공지능 엔지니어"
     assert classify_job_role("Software Engineer, Machine Learning") == "인공지능 엔지니어"
     assert classify_job_role("Machine Learning Software Engineer") == "인공지능 엔지니어"
     assert classify_job_role("Senior Machine Learning Platform Engineer") == "인공지능 엔지니어"
     assert classify_job_role("Sr. Software Engineer, Machine Learning Infrastructure") == "인공지능 엔지니어"
+    assert classify_job_role(
+        "System Software Engineer 신입/경력 채용",
+        "",
+        "AI 반도체 칩 개발 및 양산 프로세스 전반에 대한 이해",
+    ) == "인공지능 엔지니어"
     assert classify_job_role("[AI Research Div.] Postdoctoral Researcher - LLMs (계약직)") == "인공지능 리서처"
     assert classify_job_role("[AI Transformation Dept.] AI FDE(Forward Deployed Engineer) 집중채용") == "인공지능 엔지니어"
     assert classify_job_role("Director - Machine Learning & Computer Vision") == "인공지능 엔지니어"
@@ -5021,6 +5027,92 @@ def test_fetch_recruiter_source_falls_back_without_state_code(monkeypatch: pytes
     assert len(captured_payloads[0]["list"]) == 1
 
 
+def test_fetch_recruiter_source_filters_closed_notices_even_with_state10(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    class FakeResponse:
+        def __init__(self, payload: dict):
+            self._payload = payload
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict:
+            return self._payload
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs) -> None:
+            self.post_calls: list[dict] = []
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb) -> bool:
+            return False
+
+        def post(self, url: str, data: dict):
+            self.post_calls.append({"url": url, "data": dict(data)})
+            return FakeResponse(
+                {
+                    "list": [
+                        {
+                            "jobnoticeName": "[Open] Data Scientist",
+                            "jobnoticeSn": 111,
+                            "systemKindCode": "MRS2",
+                            "applyStartDate": {"time": 0},
+                            "applyEndDate": {"time": 4102444800000},
+                            "receiptState": "접수중",
+                            "deadlineCount": 5,
+                        },
+                        {
+                            "jobnoticeName": "[Closed] AI Engineer",
+                            "jobnoticeSn": 222,
+                            "systemKindCode": "MRS2",
+                            "applyStartDate": {"time": 0},
+                            "applyEndDate": {"time": 0},
+                            "receiptState": "접수마감",
+                            "deadlineCount": -6,
+                        },
+                    ],
+                    "totalCount": 2,
+                }
+            )
+
+        def get(self, url: str):
+            raise AssertionError(f"unexpected detail fetch: {url}")
+
+    captured_payloads: list[dict] = []
+
+    def fake_build(payload: dict, source_url: str, detail_fetcher, **kwargs):
+        captured_payloads.append(payload)
+        return [
+            {
+                "title": item["jobnoticeName"],
+                "description_html": "<div>stub</div>",
+                "job_url": f"{source_url}/app/jobnotice/view?systemKindCode={item.get('systemKindCode')}&jobnoticeSn={item.get('jobnoticeSn')}",
+            }
+            for item in payload.get("list", [])
+        ]
+
+    monkeypatch.setattr(collection_module.httpx, "Client", FakeClient)
+    monkeypatch.setattr(collection_module, "_build_recruiter_jobs_from_payload", fake_build)
+
+    paths = ProjectPaths.from_root(tmp_path)
+    paths.ensure_directories()
+    raw, content_type = collection_module._fetch_recruiter_source(
+        "https://tenant.recruiter.co.kr/career/home",
+        paths,
+        AppSettings(),
+    )
+
+    payload = json.loads(raw)
+    assert content_type == "application/json"
+    assert len(payload["jobs"]) == 1
+    assert payload["jobs"][0]["title"] == "[Open] Data Scientist"
+    assert len(captured_payloads) == 1
+    assert len(captured_payloads[0]["list"]) == 1
+
+
 def test_explicit_non_korea_location_is_filtered_out() -> None:
     record, raw = normalize_job_payload(
         {
@@ -5180,8 +5272,8 @@ def test_normalize_job_payload_uses_gemini_role_salvage_when_heuristics_fail(
     )
     record, _ = normalize_job_payload(
         {
-            "title": "[신세계아이앤씨] 서비스개발 직무 인재모집(채용 시 마감)",
-            "description_html": "<h2>주요업무</h2><ul><li>데이터 분석과 모델링 기반 AI 서비스 개발</li></ul>",
+            "title": "Business Operations Specialist",
+            "description_html": "<h2>주요업무</h2><ul><li>대시보드 기반 지표 모니터링 및 리포트 자동화</li></ul>",
             "job_url": "https://example.com/jobs/1",
         },
         {
@@ -5202,6 +5294,44 @@ def test_normalize_job_payload_uses_gemini_role_salvage_when_heuristics_fail(
     )
 
     assert record["job_role"] == "데이터 분석가"
+
+
+def test_normalize_job_payload_uses_description_context_for_ai_engineer_titles(
+    tmp_path: Path,
+) -> None:
+    paths = ProjectPaths.from_root(tmp_path)
+    paths.ensure_directories()
+    settings = AppSettings(
+        enable_gemini_fallback=False,
+        gemini_role_salvage_max_calls_per_run=0,
+    )
+    record, _ = normalize_job_payload(
+        {
+            "title": "System Software Engineer 신입/경력 채용",
+            "description_html": (
+                "<h2>주요업무</h2><ul><li>AI 반도체 칩 개발 및 양산 프로세스 전반에 대한 이해</li>"
+                "<li>System Software 설계 및 최적화</li></ul>"
+            ),
+            "job_url": "https://example.com/jobs/system-software-engineer",
+        },
+        {
+            "company_name": "하이퍼엑셀",
+            "source_url": "https://hyperaccel.career.greetinghr.com/ko/guide",
+            "source_type": "greetinghr",
+            "source_bucket": "approved",
+            "source_name": "하이퍼엑셀 GreetingHR",
+            "company_tier": "스타트업",
+        },
+        "run-1",
+        "2026-04-09",
+        "2026-04-09T00:00:00+09:00",
+        settings=settings,
+        paths=paths,
+        gemini_budget=collection_module.GeminiBudget(max_calls=0),
+        refine_with_gemini=False,
+    )
+
+    assert record["job_role"] == "인공지능 엔지니어"
 
 
 def test_normalize_job_payload_skips_gemini_role_salvage_for_general_service_delivery_title(
@@ -5820,6 +5950,12 @@ def test_canonicalize_runtime_source_url_roots_custom_ats_hosts() -> None:
     assert canonicalize_runtime_source_url("https://example.com/careers/openings") == "https://example.com/careers/openings"
 
 
+def test_canonicalize_runtime_source_url_preserves_greetinghr_listing_paths() -> None:
+    assert canonicalize_runtime_source_url("https://hyperaccel.career.greetinghr.com/ko/guide") == "https://hyperaccel.career.greetinghr.com/ko/guide"
+    assert canonicalize_runtime_source_url("https://autocrypt.career.greetinghr.com/ko/positions") == "https://autocrypt.career.greetinghr.com/ko/positions"
+    assert canonicalize_runtime_source_url("https://q-semi.career.greetinghr.com/ko/jobs") == "https://q-semi.career.greetinghr.com/ko/jobs"
+
+
 def test_screen_sources_canonicalizes_and_dedupes_custom_greetinghr_urls() -> None:
     source_candidates = pd.DataFrame(
         [
@@ -5856,6 +5992,71 @@ def test_screen_sources_canonicalizes_and_dedupes_custom_greetinghr_urls() -> No
     assert len(registry) == 1
     assert registry.loc[0, "source_url"] == "https://interxlab.career.greetinghr.com"
     assert int(registry.loc[0, "last_active_job_count"]) == 4
+
+
+def test_screen_sources_keeps_distinct_greetinghr_guide_path() -> None:
+    source_candidates = pd.DataFrame(
+        [
+            {
+                "company_name": "하이퍼엑셀",
+                "company_tier": "스타트업",
+                "source_name": "하이퍼엑셀 GreetingHR Root",
+                "source_url": "https://hyperaccel.career.greetinghr.com",
+                "source_type": "greetinghr",
+                "official_domain": "hyperaccel.ai",
+                "is_official_hint": True,
+                "structure_hint": "next_data",
+                "last_active_job_count": 0,
+            },
+            {
+                "company_name": "하이퍼엑셀",
+                "company_tier": "스타트업",
+                "source_name": "하이퍼엑셀 GreetingHR Guide",
+                "source_url": "https://hyperaccel.career.greetinghr.com/ko/guide",
+                "source_type": "greetinghr",
+                "official_domain": "hyperaccel.ai",
+                "is_official_hint": True,
+                "structure_hint": "next_data",
+                "last_active_job_count": 13,
+            },
+        ]
+    )
+
+    approved, candidate, rejected, registry = screen_sources(source_candidates)
+
+    assert candidate.empty
+    assert rejected.empty
+    assert len(approved) == 2
+    assert set(registry["source_url"]) == {
+        "https://hyperaccel.career.greetinghr.com",
+        "https://hyperaccel.career.greetinghr.com/ko/guide",
+    }
+
+
+def test_screen_sources_approves_official_subdomain_html_source() -> None:
+    source_candidates = pd.DataFrame(
+        [
+            {
+                "company_name": "슈어소프트테크",
+                "company_tier": "중견/중소",
+                "source_name": "슈어소프트테크 채용공고",
+                "source_url": "https://careers.suresofttech.com/job1",
+                "source_type": "html_page",
+                "official_domain": "suresofttech.com",
+                "is_official_hint": True,
+                "structure_hint": "html",
+                "last_active_job_count": 0,
+            }
+        ]
+    )
+
+    approved, candidate, rejected, registry = screen_sources(source_candidates)
+
+    assert rejected.empty
+    assert candidate.empty
+    assert len(approved) == 1
+    assert registry.loc[0, "source_bucket"] == "approved"
+    assert registry.loc[0, "source_url"] == "https://careers.suresofttech.com/job1"
 
 
 def test_track_display_extracts_degree_and_special_track_from_detail_text() -> None:
@@ -7408,6 +7609,78 @@ def test_run_weekly_expansion_pipeline_progresses_state_without_collection_publi
     assert summary["published_state"]["promotion_block_reason"] == "weekly_expansion_only"
     assert summary["source_discovery"]["screened_source_count"] == 1
     assert summary["source_verification"]["verification_mode"] == "deferred_until_company_scan_complete"
+
+
+def test_verify_sources_pipeline_uses_incremental_source_scan_progress(
+    monkeypatch: pytest.MonkeyPatch,
+    sandbox_project: Path,
+) -> None:
+    paths = ProjectPaths.from_root(sandbox_project)
+    registry = pd.DataFrame(
+        [
+            {
+                "company_name": "알파",
+                "company_tier": "중견/중소",
+                "source_name": "알파 공식 채용",
+                "source_url": "https://alpha.example/jobs",
+                "source_type": "html_page",
+                "official_domain": "alpha.example",
+                "is_official_hint": True,
+                "structure_hint": "html",
+                "discovery_method": "test",
+                "source_bucket": "approved",
+                "screening_reason": "",
+                "verification_status": "",
+                "failure_count": 0,
+                "last_verified_at": "",
+                "last_success_at": "",
+                "last_active_job_count": 0,
+                "is_quarantined": False,
+                "quarantine_reason": "",
+            }
+        ],
+        columns=list(SOURCE_REGISTRY_COLUMNS),
+    )
+    write_csv(registry, paths.source_registry_path)
+
+    called: dict[str, object] = {}
+
+    def fake_collect_jobs_from_sources(
+        source_registry,
+        paths_arg,
+        settings_arg,
+        *,
+        run_id,
+        snapshot_date,
+        collected_at,
+        enable_source_scan_progress=False,
+        enable_recruiter_ocr_recovery=False,
+    ):
+        called["enable_source_scan_progress"] = enable_source_scan_progress
+        called["enable_recruiter_ocr_recovery"] = enable_recruiter_ocr_recovery
+        updated_registry = registry.copy()
+        updated_registry.loc[:, "verification_status"] = "성공"
+        updated_registry.loc[:, "failure_count"] = 0
+        updated_registry.loc[:, "last_active_job_count"] = 1
+        summary = {
+            "collection_mode": "live",
+            "verified_source_success_count": 1,
+            "verified_source_failure_count": 0,
+            "source_scan_mode": "incremental_cursor",
+            "completed_full_source_scan": False,
+            "processed_collectable_source_count": 1,
+            "selected_collectable_source_count": 1,
+        }
+        return pd.DataFrame(columns=list(JOB_COLUMNS)), [], updated_registry, summary
+
+    monkeypatch.setattr(pipelines_module, "collect_jobs_from_sources", fake_collect_jobs_from_sources)
+
+    summary = pipelines_module.verify_sources_pipeline(project_root=sandbox_project)
+
+    assert called["enable_source_scan_progress"] is True
+    assert called["enable_recruiter_ocr_recovery"] is True
+    assert summary["source_scan_mode"] == "incremental_cursor"
+    assert summary["completed_full_source_scan"] is False
 
 
 def test_processed_verified_source_urls_only_include_current_run_successes() -> None:

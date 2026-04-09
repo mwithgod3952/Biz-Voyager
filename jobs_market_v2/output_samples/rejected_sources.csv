@@ -1,0 +1,3 @@
+company_name,company_tier,source_name,source_url,source_type,source_bucket,source_domain,official_domain,official_domain_confidence,source_quality_score,is_official_hint,structure_hint,discovery_method,verification_status,failure_count,last_success_at,last_active_job_count,quarantine_reason,is_quarantined
+원티드랩,중견/중소,원티드랩 공식 채용,https://www.wanted.co.kr/career_connect,html_page,rejected,www.wanted.co.kr,wanted.co.kr,0.99,0.75,True,html,homepage_link_probe,미검증,0.0,,0.0,,False
+원티드랩,중견/중소,원티드랩 공식 채용,https://www.wanted.co.kr/wdlist,html_page,rejected,www.wanted.co.kr,wanted.co.kr,0.99,0.75,True,html,homepage_link_probe,미검증,0.0,,0.0,,False

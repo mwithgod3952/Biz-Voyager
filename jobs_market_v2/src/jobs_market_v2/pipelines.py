@@ -760,6 +760,7 @@ def verify_sources_pipeline(project_root: Path | None = None) -> dict:
             run_id=run_id,
             snapshot_date=_today(),
             collected_at=_now(),
+            enable_source_scan_progress=True,
             enable_recruiter_ocr_recovery=True,
         )
         write_csv(updated_registry, paths.source_registry_path)

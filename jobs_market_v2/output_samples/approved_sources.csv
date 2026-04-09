@@ -1,0 +1,445 @@
+company_name,company_tier,source_name,source_url,source_type,source_bucket,source_domain,official_domain,official_domain_confidence,source_quality_score,is_official_hint,structure_hint,discovery_method,verification_status,failure_count,last_success_at,last_active_job_count,quarantine_reason,is_quarantined
+앵커노드,중견/중소,앵커노드 공식 채용,https://www.anchornode.io/talent,html_page,approved,www.anchornode.io,anchornode.io,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-08T23:53:49+09:00,0.0,,False
+앵커노드,중견/중소,앵커노드 공식 채용,https://www.anchornode.io/recruit,html_page,approved,www.anchornode.io,anchornode.io,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-08T23:53:49+09:00,0.0,,False
+한국로봇산업진흥원,공공·연구기관,한국로봇산업진흥원 공식 채용,https://kiria.org/portal/info/portalInfoJobList.do;jsessionid=57CF1DD928262B52449E71BA2E6437CC,html_page,approved,kiria.org,kiria.org,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-05T17:11:36+09:00,0.0,,False
+ISC,대기업,ISC 공식 채용,https://isc21.kr/main_e/careers.html,html_page,approved,isc21.kr,isc21.kr,0.99,0.75,True,html,homepage_link_probe,실패,1.0,2026-04-02T01:38:08+09:00,0.0,,False
+제이아이테크,중견/중소,제이아이테크 공식 채용,https://www.ji-tech.co.kr/recruit/recruit.php,html_page,approved,www.ji-tech.co.kr,ji-tech.co.kr,0.99,0.75,True,html,homepage_link_probe,실패,2.0,2026-04-02T00:03:18+09:00,0.0,,False
+제이아이테크,중견/중소,제이아이테크 공식 채용,https://www.ji-tech.co.kr/recruit/part.php,html_page,approved,www.ji-tech.co.kr,ji-tech.co.kr,0.99,0.75,True,html,homepage_link_probe,실패,2.0,2026-04-02T00:03:18+09:00,0.0,,False
+파수,중견/중소,파수 공식 채용,https://www.fasoo.com/recruit,html_page,approved,www.fasoo.com,fasoo.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-08T23:53:49+09:00,0.0,,False
+한국로봇산업진흥원,공공·연구기관,한국로봇산업진흥원 공식 채용,https://kiria.org/portal/info/portalInfoJobList.do;jsessionid=32578D60130706F43548758944D4F688,html_page,approved,kiria.org,kiria.org,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-05T17:11:36+09:00,0.0,,False
+한국로봇산업진흥원,공공·연구기관,한국로봇산업진흥원 공식 채용,https://kiria.org/portal/info/portalInfoJobList.do;jsessionid=4B418FF3058A065D5A352498AE6D3AA2,html_page,approved,kiria.org,kiria.org,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-08T23:15:34+09:00,0.0,,False
+딥바이오,스타트업,딥바이오 공식 채용,https://deepbio.co.kr/career,html_page,approved,deepbio.co.kr,deepbio.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:22:36+09:00,0.0,,False
+바스젠바이오,스타트업,바스젠바이오 공식 채용,https://basgenbio.com/kr/sub/career/recruit.php,html_page,approved,basgenbio.com,basgenbio.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+트위니,스타트업,트위니 공식 채용,http://twinny.ai/recruit,html_page,approved,twinny.ai,twinny.ai,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:22:36+09:00,0.0,,False
+마키나락스,중견/중소,마키나락스 공개 ATS,https://makinarocks.career.greetinghr.com,greetinghr,approved,makinarocks.career.greetinghr.com,makinarocks.ai,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,19.0,,False
+세미파이브,중견/중소,세미파이브 공식 채용,https://semifive.com/company/careers/open-roles,html_page,approved,semifive.com,semifive.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,7.0,,False
+아우토크립트,스타트업,아우토크립트 GreetingHR 포지션,https://autocrypt.career.greetinghr.com,greetinghr,approved,autocrypt.career.greetinghr.com,autocrypt.co.kr,0.99,0.85,True,next_data,manual_seed_live,성공,0.0,2026-04-09T02:16:44+09:00,0.0,,False
+엔젤로보틱스,중견/중소,엔젤로보틱스 공식 채용,https://www.angel-robotics.com/ko/recruit/overview,html_page,approved,www.angel-robotics.com,angel-robotics.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-08T23:53:49+09:00,0.0,,False
+엔젤로보틱스,중견/중소,엔젤로보틱스 공식 채용,https://www.angel-robotics.com/ko/recruit/permanent,html_page,approved,www.angel-robotics.com,angel-robotics.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-08T23:53:49+09:00,0.0,,False
+퀄리타스반도체,스타트업,퀄리타스반도체 GreetingHR 잡스,https://q-semi.career.greetinghr.com,greetinghr,approved,q-semi.career.greetinghr.com,q-semi.com,0.99,0.85,True,next_data,manual_seed_live,성공,0.0,2026-04-09T02:16:44+09:00,0.0,,False
+한국뇌연구원 AI 실증지원사업단,공공·연구기관,한국뇌연구원 AI 실증지원사업단 Recruiter 공개 채용,https://kbri-ai.recruiter.co.kr,recruiter,approved,kbri-ai.recruiter.co.kr,kbri.re.kr,0.99,0.85,True,recruiter,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+극지연구소,공공·연구기관,극지연구소 공개 ATS,http://kopri.recruiter.co.kr,recruiter,approved,kopri.recruiter.co.kr,kopri.re.kr,0.99,0.85,True,ats,homepage_link_probe,실패,6.0,,0.0,,False
+한국교통연구원,공공·연구기관,한국교통연구원 공개 ATS,https://koti.recruiter.co.kr,recruiter,approved,koti.recruiter.co.kr,koti.re.kr,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+한국식품연구원,공공·연구기관,한국식품연구원 공개 ATS,https://kfri.recruiter.co.kr,recruiter,approved,kfri.recruiter.co.kr,kfri.re.kr,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+한국특허전략개발원,공공·연구기관,한국특허전략개발원 공개 ATS,https://kista.recruiter.co.kr,recruiter,approved,kista.recruiter.co.kr,kista.re.kr,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+게임물관리위원회,공공·연구기관,게임물관리위원회 공식 채용,https://www.grac.or.kr/OpenBook/RecruitAPI.aspx,html_page,approved,www.grac.or.kr,grac.or.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+국가수리과학연구소,공공·연구기관,국가수리과학연구소 공식 채용,https://www.nims.re.kr/noticeYard/post/recruit,html_page,approved,www.nims.re.kr,nims.re.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+국방기술품질원,공공·연구기관,국방기술품질원 공식 채용,https://dtaq.re.kr/ko/career/notice.jsp,html_page,approved,dtaq.re.kr,dtaq.re.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+국립아시아문화전당재단,공공·연구기관,국립아시아문화전당재단 공식 채용,https://www.accf.or.kr/main/board/jobposting,html_page,approved,www.accf.or.kr,accf.or.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+기초과학연구원,공공·연구기관,기초과학연구원 공식 채용,https://ibs.re.kr/prog/recruit/eng/sub04_01/view.do,html_page,approved,ibs.re.kr,ibs.re.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+기초과학연구원,공공·연구기관,기초과학연구원 공식 채용,https://ibs.re.kr/prog/recruit/eng/sub04_01/list.do,html_page,approved,ibs.re.kr,ibs.re.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+인천항만공사,공공·연구기관,인천항만공사 공식 채용,https://www.icpa.or.kr/recruit/article/view.do,html_page,approved,www.icpa.or.kr,icpa.or.kr,0.99,0.75,True,html,homepage_link_probe,실패,3.0,,0.0,,False
+인천항만공사,공공·연구기관,인천항만공사 공식 채용,https://www.icpa.or.kr/recruit/index.do,html_page,approved,www.icpa.or.kr,icpa.or.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+첨부파일,공공·연구기관,첨부파일 공식 채용,https://www.w3.org/careers,html_page,approved,www.w3.org,w3.org,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+한국과학기술연구원,공공·연구기관,한국과학기술연구원 공식 채용,https://kist.re.kr/ko/notice/employment-announcement.do,html_page,approved,kist.re.kr,kist.re.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+한국농업기술진흥원,공공·연구기관,한국농업기술진흥원 공식 채용,https://koat.or.kr/comunication/recruit/list.do,html_page,approved,koat.or.kr,koat.or.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+한국농업기술진흥원,공공·연구기관,한국농업기술진흥원 공식 채용,https://koat.or.kr/board/recruit_info/list.do,html_page,approved,koat.or.kr,koat.or.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+한국농업기술진흥원,공공·연구기관,한국농업기술진흥원 공식 채용,https://koat.or.kr/koat/talent.do,html_page,approved,koat.or.kr,koat.or.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+한국로봇산업진흥원,공공·연구기관,한국로봇산업진흥원 공식 채용,https://kiria.org/portal/info/portalInfoJobList.do;jsessionid=32E87659C1330435AB7449009F903399,html_page,approved,kiria.org,kiria.org,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+한국법제연구원,공공·연구기관,한국법제연구원 공식 채용,https://klri.re.kr/kor/recruit/list.do,html_page,approved,klri.re.kr,klri.re.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+한국생산기술연구원,공공·연구기관,한국생산기술연구원 공식 채용,https://www.kitech.re.kr/communication/recruitment,html_page,approved,www.kitech.re.kr,kitech.re.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+한국생산기술연구원,공공·연구기관,한국생산기술연구원 공식 채용,https://www.kitech.re.kr/communication/recruit,html_page,approved,www.kitech.re.kr,kitech.re.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+한국수자원조사기술원,공공·연구기관,한국수자원조사기술원 공식 채용,https://www.kihs.re.kr/kor_sub/bbs/recruit_view.do,html_page,approved,www.kihs.re.kr,kihs.re.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+한국수자원조사기술원,공공·연구기관,한국수자원조사기술원 공식 채용,https://www.kihs.re.kr/kor_sub/bbs/recruit_list.do,html_page,approved,www.kihs.re.kr,kihs.re.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+한국항로표지기술원,공공·연구기관,한국항로표지기술원 공식 채용,https://katon.or.kr/article/job_notice/list,html_page,approved,katon.or.kr,katon.or.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+당근,스타트업,당근 Greenhouse 공개 채용,https://boards-api.greenhouse.io/v1/boards/daangn/jobs?content=true,greenhouse,approved,boards-api.greenhouse.io,about.daangn.com,0.99,0.85,True,json,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,15.0,,False
+쿠팡,대기업,쿠팡 Greenhouse 공개 채용,https://boards-api.greenhouse.io/v1/boards/coupang/jobs?content=true,greenhouse,approved,boards-api.greenhouse.io,coupang.jobs,0.99,0.85,True,json,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,33.0,,False
+크래프톤,대기업,크래프톤 Greenhouse 공개 채용,https://boards-api.greenhouse.io/v1/boards/krafton/jobs?content=true,greenhouse,approved,boards-api.greenhouse.io,krafton.com,0.99,0.85,True,json,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,12.0,,False
+카카오모빌리티,대기업,카카오모빌리티 GreetingHR 공개 채용,https://kakaomobility.career.greetinghr.com,greetinghr,approved,kakaomobility.career.greetinghr.com,kakaomobility.com,0.99,0.85,True,next_data,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,8.0,,False
+고위드,스타트업,고위드 GreetingHR 공개 채용,https://gowid.career.greetinghr.com,greetinghr,approved,gowid.career.greetinghr.com,gowid.com,0.99,0.85,True,next_data,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,1.0,,False
+노타,스타트업,노타 GreetingHR 공개 채용,https://career.nota.ai/en/jobs,greetinghr,approved,career.nota.ai,nota.ai,0.99,1.0,True,next_data,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,16.0,,False
+가온전선,대기업,가온전선 공개 ATS,https://gaoncable.recruiter.co.kr,recruiter,approved,gaoncable.recruiter.co.kr,gaoncable.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,0.0,,False
+인이지,스타트업,(주)인이지 공개 ATS,https://ineeji.career.greetinghr.com,greetinghr,approved,ineeji.career.greetinghr.com,ineeji.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,4.0,,False
+에스아이에이,스타트업,㈜에스아이에이 공개 ATS,https://sianalytics.career.greetinghr.com,greetinghr,approved,sianalytics.career.greetinghr.com,si-analytics.ai,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,2.0,,False
+날비컴퍼니,스타트업,날비컴퍼니 공개 ATS,https://nalbi.career.greetinghr.com,greetinghr,approved,nalbi.career.greetinghr.com,nalbi.ai,0.99,0.85,True,ats,homepage_link_probe,실패,3.0,,0.0,,False
+LS마린솔루션,대기업,LS마린솔루션 공식 채용,https://lsmarinesolution.co.kr/kor/Recruit,html_page,approved,lsmarinesolution.co.kr,lsmarinesolution.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+고영,대기업,고영 공식 채용,https://kohyoung.com/en/careers-at-koh-young,html_page,approved,kohyoung.com,kohyoung.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+고영,대기업,고영 공식 채용,https://kohyoung.com/en/career,html_page,approved,kohyoung.com,kohyoung.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+네이버,대기업,네이버 공식 채용,https://recruit.navercorp.com/rcrt/list.do,html_page,approved,recruit.navercorp.com,recruit.navercorp.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+더블유게임즈,대기업,더블유게임즈 공식 채용,https://doubleugames.com/careers/workinghere.html,html_page,approved,doubleugames.com,doubleugames.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+더블유게임즈,대기업,더블유게임즈 공식 채용,https://doubleugames.com/careers/jobs.html,html_page,approved,doubleugames.com,doubleugames.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+더블유게임즈,대기업,더블유게임즈 공식 채용,https://doubleugames.com/careers/hr_system.html,html_page,approved,doubleugames.com,doubleugames.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+대한전선,대기업,대한전선 공식 채용,https://www.taihan.com/company/jobs,html_page,approved,www.taihan.com,taihan.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+다우기술,대기업,다우기술 공식 채용,https://daou.co.kr/ko/recruit,html_page,approved,daou.co.kr,daou.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+시프트업,대기업,시프트업 공식 채용,https://shiftup.co.kr/recruit/recruit.php,html_page,approved,shiftup.co.kr,shiftup.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+레인보우로보틱스,대기업,레인보우로보틱스 공식 채용,https://rainbow-robotics.com/en_recruit,html_page,approved,rainbow-robotics.com,rainbow-robotics.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+에스원,대기업,에스원 공식 채용,https://www.s1.co.kr/company/recruit/talent,html_page,approved,www.s1.co.kr,s1.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+펄어비스,대기업,펄어비스 공식 채용,https://www.pearlabyss.com/ko-KR/Company/Careers/List,html_page,approved,www.pearlabyss.com,pearlabyss.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+펄어비스,대기업,펄어비스 공식 채용,https://www.pearlabyss.com/ko-KR/Company/Careers/Intro,html_page,approved,www.pearlabyss.com,pearlabyss.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+메사쿠어컴퍼니,스타트업,(주)메사쿠어컴퍼니 공식 채용,https://metsakuur.com/en-careers.html,html_page,approved,metsakuur.com,metsakuur.com,0.99,0.75,True,html,homepage_link_probe,실패,2.0,,0.0,,False
+메사쿠어컴퍼니,스타트업,(주)메사쿠어컴퍼니 공식 채용,https://metsakuur.com/careers,html_page,approved,metsakuur.com,metsakuur.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+실리콘아츠,스타트업,(주)실리콘아츠 공식 채용,https://www.siliconarts.com/jobs-2,html_page,approved,www.siliconarts.com,siliconarts.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,1.0,,False
+몽뷰로,스타트업,(주)몽뷰로 공식 채용,https://www.behance.net/joblist,html_page,approved,www.behance.net,behance.net,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+인이지,스타트업,(주)인이지 공식 채용,https://ineeji.com/html/career/career.php,html_page,approved,ineeji.com,ineeji.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,4.0,,False
+엑소시스템즈,스타트업,(주)엑소시스템즈 공식 채용,https://www.exosystems.io/en/career,html_page,approved,www.exosystems.io,exosystems.io,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+크로프트,스타트업,(주)크로프트 공식 채용,https://www.croft-ai.com/job-positions/organic-certification-coordinator,html_page,approved,www.croft-ai.com,croft-ai.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:50:14+09:00,0.0,,False
+크로프트,스타트업,(주)크로프트 공식 채용,https://www.croft-ai.com/career,html_page,approved,www.croft-ai.com,croft-ai.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,1.0,,False
+센드버드,스타트업,센드버드 Greenhouse 공개 채용,https://boards-api.greenhouse.io/v1/boards/sendbird/jobs?content=true,greenhouse,approved,boards-api.greenhouse.io,sendbird.com,0.99,0.85,True,json,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,2.0,,False
+서울로보틱스,스타트업,서울로보틱스 Greenhouse 공개 채용,https://boards-api.greenhouse.io/v1/boards/seoulrobotics/jobs?content=true,greenhouse,approved,boards-api.greenhouse.io,seoulrobotics.com,0.99,0.85,True,json,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,9.0,,False
+뷰노,중견/중소,뷰노 GreetingHR 공개 채용,https://vunohire.career.greetinghr.com,greetinghr,approved,vunohire.career.greetinghr.com,vuno.co,0.99,0.85,True,next_data,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,2.0,,False
+업스테이지,스타트업,업스테이지 GreetingHR 공개 채용,https://careers.upstage.ai,greetinghr,approved,careers.upstage.ai,upstage.ai,0.99,1.0,True,next_data,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,26.0,,False
+리벨리온,스타트업,리벨리온 GreetingHR 공개 채용,https://rebellions.career.greetinghr.com,greetinghr,approved,rebellions.career.greetinghr.com,rebellions.ai,0.99,0.85,True,next_data,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,25.0,,False
+마크비전,스타트업,마크비전 공개 ATS,https://job-boards.greenhouse.io/marqvision,greenhouse,approved,job-boards.greenhouse.io,marqvision.com,0.99,0.85,True,ats,homepage_link_probe,실패,3.0,,0.0,,False
+스트라드비젼,스타트업,스트라드비젼 공개 ATS,https://stradvision.career.greetinghr.com,greetinghr,approved,stradvision.career.greetinghr.com,stradvision.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,20.0,,False
+아키드로우,스타트업,아키드로우 공개 ATS,https://archisketch.career.greetinghr.com,greetinghr,approved,archisketch.career.greetinghr.com,archisketch.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,2.0,,False
+어크로스비,스타트업,어크로스비 공개 ATS,https://acrossb.career.greetinghr.com,greetinghr,approved,acrossb.career.greetinghr.com,acrossb.net,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+수퍼게이트,스타트업,수퍼게이트(주) 공식 채용,https://supergate.cc/career-2023,html_page,approved,supergate.cc,supergate.cc,0.99,0.75,True,html,homepage_link_probe,실패,2.0,,0.0,,False
+스트라드비젼,스타트업,스트라드비젼 공식 채용,https://stradvision.com/dh/contact/online_careers,html_page,approved,stradvision.com,stradvision.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+엑스퀀트,스타트업,엑스퀀트 공식 채용,https://www.xquant-ai.com/career,html_page,approved,www.xquant-ai.com,xquant-ai.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+채널코퍼레이션,스타트업,채널코퍼레이션 Lever 공개 채용,https://api.lever.co/v0/postings/zoyi?mode=json,lever,approved,api.lever.co,channel.io,0.99,0.85,True,json,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,10.0,,False
+몰로코,외국계 한국법인,몰로코 Greenhouse 공개 채용,https://boards-api.greenhouse.io/v1/boards/moloco/jobs?content=true,greenhouse,approved,boards-api.greenhouse.io,moloco.com,0.99,0.85,True,json,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,10.0,,False
+하이퍼커넥트,외국계 한국법인,하이퍼커넥트·매치그룹 Lever 공개 채용,https://api.lever.co/v0/postings/matchgroup?mode=json,lever,approved,api.lever.co,hyperconnect.com,0.99,0.85,True,json,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,8.0,,False
+스캐터랩,스타트업,주식회사 스캐터랩 공개 ATS,https://www.greetinghr.com?utm_source=career_page&utm_medium=12430,greetinghr,approved,www.greetinghr.com?utm_source=career_page&utm_medium=12430,scatterlab.co.kr,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,0.0,,False
+튜닙,스타트업,튜닙 공개 ATS,https://tunib.career.greetinghr.com,greetinghr,approved,tunib.career.greetinghr.com,tunib.ai,0.99,0.85,True,ats,homepage_link_probe,실패,3.0,,0.0,,False
+해줌,스타트업,해줌 공개 ATS,https://haezoom.career.greetinghr.com,greetinghr,approved,haezoom.career.greetinghr.com,haezoom.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+퓨리오사AI,스타트업,퓨리오사AI Careers 공개 채용,https://furiosa.ai/careers,html_page,approved,furiosa.ai,furiosa.ai,0.99,0.75,True,html,manual_seed_live,성공,0.0,2026-04-09T01:36:58+09:00,2.0,,False
+위더맥스,스타트업,위더맥스 공식 채용,https://wethemax.com/sub/recruit.php,html_page,approved,wethemax.com,wethemax.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+스캐터랩,스타트업,주식회사 스캐터랩 공식 채용,https://www.scatterlab.co.kr/ko/recruiting,html_page,approved,www.scatterlab.co.kr,scatterlab.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,2.0,,False
+파일러,스타트업,파일러 공식 채용,https://pyler.tech/careers,html_page,approved,pyler.tech,pyler.tech,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+티에스엔랩,스타트업,티에스엔랩(주) 공식 채용,https://www.tsnlab.com/careers,html_page,approved,www.tsnlab.com,tsnlab.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+프론테오코리아,스타트업,프론테오코리아 공식 채용,https://korea.fronteo.com/company/careers,html_page,approved,korea.fronteo.com,korea.fronteo.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+포인투테크놀로지,스타트업,포인투테크놀로지 공식 채용,https://hhchoi@point2tech.com/company/careers,html_page,approved,hhchoi@point2tech.com,hhchoi@point2tech.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+휴이노,스타트업,휴이노 공식 채용,https://huinno.com/recruitment,html_page,approved,huinno.com,huinno.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+윕스,중견/중소,(주) 윕스 공식 채용,https://www.wipscorp.com/talent,html_page,approved,www.wipscorp.com,wipscorp.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+윕스,중견/중소,(주) 윕스 공식 채용,https://www.wipscorp.com/job-list,html_page,approved,www.wipscorp.com,wipscorp.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+더존비즈온,대기업,더존비즈온 공식 채용,https://www.douzone.com/job/talented.jsp,html_page,approved,www.douzone.com,douzone.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+더존비즈온,대기업,더존비즈온 공식 채용,https://www.douzone.com/job/recruit.jsp,html_page,approved,www.douzone.com,douzone.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+디티나우,중견/중소,(주)디티나우 공식 채용,https://www.dtnow.co.kr/en/recruit,html_page,approved,www.dtnow.co.kr,dtnow.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+브라이토닉스이미징,중견/중소,(주)브라이토닉스이미징 공식 채용,https://brtnx.com/en/recruit/talent.php,html_page,approved,brtnx.com,brtnx.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+브라이토닉스이미징,중견/중소,(주)브라이토닉스이미징 공식 채용,https://brtnx.com/en/recruit/recruit.php,html_page,approved,brtnx.com,brtnx.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+미니게이트,중견/중소,(주)미니게이트 공식 채용,https://www.minigate.net/recruitment,html_page,approved,www.minigate.net,minigate.net,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+스위트케이,중견/중소,(주)스위트케이 공식 채용,https://sweetk.co.kr/recruit,html_page,approved,sweetk.co.kr,sweetk.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+빅트론텍,중견/중소,(주)빅트론텍 공식 채용,https://www.victrontech.com/careers,html_page,approved,www.victrontech.com,victrontech.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+씨아이피시스템,중견/중소,(주)씨아이피시스템 공식 채용,https://cipsystem.co.kr/helpdesk/recruit_detail2,html_page,approved,cipsystem.co.kr,cipsystem.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+씨아이피시스템,중견/중소,(주)씨아이피시스템 공식 채용,https://cipsystem.co.kr/helpdesk/recruit_detail1,html_page,approved,cipsystem.co.kr,cipsystem.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+씨아이피시스템,중견/중소,(주)씨아이피시스템 공식 채용,https://cipsystem.co.kr/helpdesk/recruit_detail,html_page,approved,cipsystem.co.kr,cipsystem.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+아이브릭스,중견/중소,(주)아이브릭스 공식 채용,https://i-bricks.co.kr/company/employment,html_page,approved,i-bricks.co.kr,i-bricks.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+시지온,중견/중소,(주)시지온 공식 채용,https://corp.cizion.com/recruit,html_page,approved,corp.cizion.com,corp.cizion.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+아이와즈,중견/중소,(주)아이와즈 공식 채용,https://iwaz.co.kr/html/resources/file/IWAZ_company_recruit.hwp,html_page,approved,iwaz.co.kr,iwaz.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+에프에이솔루션,중견/중소,(주)에프에이솔루션 공식 채용,https://www.fasol.co.kr/ko/recruit/recruit,html_page,approved,www.fasol.co.kr,fasol.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+아리아텍,중견/중소,(주)아리아텍 공식 채용,https://www.ariatech.kr/recruit/job-openings,html_page,approved,www.ariatech.kr,ariatech.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+아리아텍,중견/중소,(주)아리아텍 공식 채용,https://www.ariatech.kr/recruit,html_page,approved,www.ariatech.kr,ariatech.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+엠엔비젼,중견/중소,(주)엠엔비젼 공식 채용,https://mnvision.co.kr/recruitment/info,html_page,approved,mnvision.co.kr,mnvision.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+HDC랩스,중견/중소,HDC랩스 공개 ATS,https://hdc-labs.recruiter.co.kr,recruiter,approved,hdc-labs.recruiter.co.kr,hdc-labs.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T03:06:35+09:00,0.0,,False
+위존,중견/중소,(주)위존 공식 채용,https://wezon.com/kr/recruit/recruit.php,html_page,approved,wezon.com,wezon.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+위존,중견/중소,(주)위존 공식 채용,https://wezon.com/kr/recruit/personel_system.php,html_page,approved,wezon.com,wezon.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+이투온,중견/중소,(주)이투온 공식 채용,https://www.e2on.com/recruit.html,html_page,approved,www.e2on.com,e2on.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+인실리코젠,중견/중소,(주)인실리코젠 공식 채용,https://insilicogen.com/careers/list,html_page,approved,insilicogen.com,insilicogen.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+인실리코젠,중견/중소,(주)인실리코젠 공식 채용,https://insilicogen.com/careers/regist_hr,html_page,approved,insilicogen.com,insilicogen.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+인실리코젠,중견/중소,(주)인실리코젠 공식 채용,https://insilicogen.com/careers/qualifications,html_page,approved,insilicogen.com,insilicogen.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+위엠비,중견/중소,(주)위엠비 공식 채용,https://wemb.co.kr/company/recruit,html_page,approved,wemb.co.kr,wemb.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+퍼즐시스템,중견/중소,(주)퍼즐시스템 공식 채용,https://www.puzzlesystems.co.kr/recruit,html_page,approved,www.puzzlesystems.co.kr,puzzlesystems.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+퍼즐시스템,중견/중소,(주)퍼즐시스템 공식 채용,http://puzzlesystems.co.kr/recruit,html_page,approved,puzzlesystems.co.kr,puzzlesystems.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+플랜아이,중견/중소,(주)플랜아이 공식 채용,https://plani.co.kr/career,html_page,approved,plani.co.kr,plani.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+HDC랩스,중견/중소,HDC랩스 공식 채용,https://www.hdc-labs.com/recruit/talent,html_page,approved,www.hdc-labs.com,hdc-labs.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T03:06:35+09:00,0.0,,False
+HDC랩스,중견/중소,HDC랩스 공식 채용,https://www.hdc-labs.com/recruit/recruit_notice,html_page,approved,www.hdc-labs.com,hdc-labs.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T03:06:35+09:00,0.0,,False
+HDC랩스,중견/중소,HDC랩스 공식 채용,https://www.hdc-labs.com/recruit,html_page,approved,www.hdc-labs.com,hdc-labs.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T03:06:35+09:00,0.0,,False
+YG PLUS,중견/중소,YG PLUS 공식 채용,https://www.ygplus.com/contact/recruit,html_page,approved,www.ygplus.com,ygplus.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+RFHIC,중견/중소,RFHIC 공식 채용,https://rfhic.com/careers,html_page,approved,rfhic.com,rfhic.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+라이프퓨쳐텍,중견/중소,㈜라이프퓨쳐텍 공식 채용,https://lftech.ai/recruit,html_page,approved,lftech.ai,lftech.ai,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+가치랩스,중견/중소,가치랩스 공식 채용,https://gazzi.ai/careers,html_page,approved,gazzi.ai,gazzi.ai,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,1.0,,False
+가우디오랩,중견/중소,가우디오랩 공식 채용,https://www.gaudiolab.com/careers/open-position,html_page,approved,www.gaudiolab.com,gaudiolab.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+거대한에이아이실험실 주식회사,중견/중소,거대한에이아이실험실 주식회사 공식 채용,https://hugeailab.com/recruit,html_page,approved,hugeailab.com,hugeailab.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,2.0,,False
+기가비스,중견/중소,기가비스 공식 채용,https://www.gigavis.com/recruit/job-posting,html_page,approved,www.gigavis.com,gigavis.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+기가비스,중견/중소,기가비스 공식 채용,https://www.gigavis.com/recruit/recruit,html_page,approved,www.gigavis.com,gigavis.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+네오위즈홀딩스,중견/중소,네오위즈홀딩스 공식 채용,https://www.neowiz.com/kr/career/browse-job,html_page,approved,www.neowiz.com,neowiz.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+네오위즈홀딩스,중견/중소,네오위즈홀딩스 공식 채용,https://www.neowiz.com/kr/career,html_page,approved,www.neowiz.com,neowiz.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+딥노이드,중견/중소,딥노이드 공개 ATS,https://deepnoid.career.greetinghr.com,greetinghr,approved,deepnoid.career.greetinghr.com,deepnoid.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,9.0,,False
+노을,중견/중소,노을 공식 채용,https://noul.com/career,html_page,approved,noul.com,noul.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+넥스트런,중견/중소,넥스트런 공식 채용,https://nextlearn.kr/career,html_page,approved,nextlearn.kr,nextlearn.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+뉴로다임,중견/중소,뉴로다임 공식 채용,https://www.neurodigm.ai/recruit,html_page,approved,www.neurodigm.ai,neurodigm.ai,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+뉴로메카,중견/중소,뉴로메카 공식 채용,https://www.neuromeka.com/recruit,html_page,approved,www.neuromeka.com,neuromeka.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+대교씨엔에스,중견/중소,대교씨엔에스 공식 채용,https://daekyocns.co.kr/recruit/promotion.aspx,html_page,approved,daekyocns.co.kr,daekyocns.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+대교씨엔에스,중견/중소,대교씨엔에스 공식 채용,https://daekyocns.co.kr/recruit/job.aspx,html_page,approved,daekyocns.co.kr,daekyocns.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+달리웍스,중견/중소,달리웍스 공식 채용,https://www.daliworks.net/careers,html_page,approved,www.daliworks.net,daliworks.net,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+농심엔지니어링,중견/중소,농심엔지니어링 공식 채용,https://www.nongshimeng.com/recruitment/job-posting,html_page,approved,www.nongshimeng.com,nongshimeng.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+농심엔지니어링,중견/중소,농심엔지니어링 공식 채용,https://www.nongshimeng.com/recruitment,html_page,approved,www.nongshimeng.com,nongshimeng.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+농심엔지니어링,중견/중소,농심엔지니어링 공식 채용,https://www.nongshimeng.com/customer-support/recruitment-of-subcontractors,html_page,approved,www.nongshimeng.com,nongshimeng.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+덕산하이메탈,중견/중소,덕산하이메탈 공식 채용,https://dshm.co.kr/recruit_main.aspx,html_page,approved,dshm.co.kr,dshm.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+덕산하이메탈,중견/중소,덕산하이메탈 공식 채용,https://dshm.co.kr/recruit_05.aspx,html_page,approved,dshm.co.kr,dshm.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+덕산하이메탈,중견/중소,덕산하이메탈 공식 채용,https://dshm.co.kr/recruit_04.aspx,html_page,approved,dshm.co.kr,dshm.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+데이터메이커,중견/중소,데이터메이커 공식 채용,https://datamaker.io/ko/company/career/job-openings/53,html_page,approved,datamaker.io,datamaker.io,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,1.0,,False
+데이터메이커,중견/중소,데이터메이커 공식 채용,https://datamaker.io/ko/company/career/job-openings/52,html_page,approved,datamaker.io,datamaker.io,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,1.0,,False
+데이터메이커,중견/중소,데이터메이커 공식 채용,https://datamaker.io/ko/company/career/job-openings/51,html_page,approved,datamaker.io,datamaker.io,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,1.0,,False
+데이터스트림즈,중견/중소,데이터스트림즈 공식 채용,https://datastreams.co.kr/company/careers,html_page,approved,datastreams.co.kr,datastreams.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+도시와농촌,중견/중소,도시와농촌 공식 채용,https://www.dosiwa.com/recruit,html_page,approved,www.dosiwa.com,dosiwa.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+동운아나텍,중견/중소,동운아나텍 공식 채용,https://dwanatech.com/careers,html_page,approved,dwanatech.com,dwanatech.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+디지틀조선,중견/중소,디지틀조선 공식 채용,https://www.chosun.com/national/jobs,html_page,approved,www.chosun.com,chosun.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+덕산테코피아,중견/중소,덕산테코피아 공식 채용,https://dstp.co.kr/career/working-with-ds-techopia.php,html_page,approved,dstp.co.kr,dstp.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+덕산테코피아,중견/중소,덕산테코피아 공식 채용,https://dstp.co.kr/career/business-dna.php,html_page,approved,dstp.co.kr,dstp.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+디포커스,중견/중소,디포커스㈜ 공식 채용,https://dfocus.net/careers_talented,html_page,approved,dfocus.net,dfocus.net,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+라온시큐어,중견/중소,라온시큐어 공식 채용,https://www.raonsecure.com/ko/recruit/raonin,html_page,approved,www.raonsecure.com,raonsecure.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+라온시큐어,중견/중소,라온시큐어 공식 채용,https://www.raonsecure.com/ko/recruit/apply,html_page,approved,www.raonsecure.com,raonsecure.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+레이라 주식회사,중견/중소,레이라 주식회사 공식 채용,https://bokduckbbang.com/recruitment,html_page,approved,bokduckbbang.com,bokduckbbang.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+링크업솔루션 주식회사,중견/중소,링크업솔루션 주식회사 공식 채용,https://www.haijob.co.kr/jobScore/list,html_page,approved,www.haijob.co.kr,haijob.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+링크업솔루션 주식회사,중견/중소,링크업솔루션 주식회사 공식 채용,https://www.haijob.co.kr/jobScore,html_page,approved,www.haijob.co.kr,haijob.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+링크투어스,중견/중소,링크투어스(주) 공식 채용,https://link2us.co.kr/recruit/recruit-link2us,html_page,approved,link2us.co.kr,link2us.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+마드라스체크 주식회사,중견/중소,마드라스체크 주식회사 공식 채용,https://flow.team/recruit,html_page,approved,flow.team,flow.team,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+룸821,중견/중소,룸821 공식 채용,https://room821.im/careers,html_page,approved,room821.im,room821.im,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+랩포디엑스 주식회사,중견/중소,랩포디엑스 주식회사 공식 채용,https://www.lab4dx.co.kr/Career,html_page,approved,www.lab4dx.co.kr,lab4dx.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+메카로,중견/중소,메카로 공식 채용,https://mecaro.com/recruitment/talent.html,html_page,approved,mecaro.com,mecaro.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+메카로,중견/중소,메카로 공식 채용,https://mecaro.com/recruitment/job_intro.html,html_page,approved,mecaro.com,mecaro.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+미스릴,중견/중소,미스릴 공개 ATS,https://mithril.career.greetinghr.com,greetinghr,approved,mithril.career.greetinghr.com,mithril.im,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T02:49:41+09:00,0.0,,False
+몬드리안에이아이,중견/중소,몬드리안에이아이(주) 공개 ATS,https://mondrianai.career.greetinghr.com,greetinghr,approved,mondrianai.career.greetinghr.com,mondrian.ai,0.99,0.85,True,ats,homepage_link_probe,실패,9.0,,0.0,,False
+베스핀글로벌 주식회사,중견/중소,베스핀글로벌 주식회사 공개 ATS,https://bespinglobal.recruiter.co.kr,recruiter,approved,bespinglobal.recruiter.co.kr,bespinglobal.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,3.0,,False
+블루닷 주식회사,중견/중소,블루닷 주식회사 공개 ATS,https://blue-dot.career.greetinghr.com,greetinghr,approved,blue-dot.career.greetinghr.com,blue-dot.io,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,0.0,,False
+비상교육,중견/중소,비상교육 공개 ATS,https://visang.recruiter.co.kr,recruiter,approved,visang.recruiter.co.kr,visang.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,0.0,,False
+사피엔반도체,중견/중소,사피엔반도체 공개 ATS,https://sapien-semicon.career.greetinghr.com,greetinghr,approved,sapien-semicon.career.greetinghr.com,sapien-semicon.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,0.0,,False
+삼익THK,중견/중소,삼익THK 공개 ATS,https://samickthk.recruiter.co.kr,recruiter,approved,samickthk.recruiter.co.kr,samickthk.co.kr,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,0.0,,False
+셀바스AI,중견/중소,셀바스AI 공개 ATS,https://selvasai.career.greetinghr.com,greetinghr,approved,selvasai.career.greetinghr.com,selvasai.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,0.0,,False
+신세계I&C,중견/중소,신세계I&C 공개 ATS,https://shinsegaeinc.recruiter.co.kr,recruiter,approved,shinsegaeinc.recruiter.co.kr,shinsegae-inc.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,2.0,,False
+모바일어플라이언스,중견/중소,모바일어플라이언스 공식 채용,https://www.mobileappliance.co.kr/recruit_page,html_page,approved,www.mobileappliance.co.kr,mobileappliance.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+모코엠시스,중견/중소,모코엠시스 공식 채용,https://mocomsys.com/recruit,html_page,approved,mocomsys.com,mocomsys.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+바른손이앤에이,중견/중소,바른손이앤에이 공식 채용,https://barunsonena.com/recruit,html_page,approved,barunsonena.com,barunsonena.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+바른손이앤에이,중견/중소,바른손이앤에이 공식 채용,https://barunsonena.com/pages/careers,html_page,approved,barunsonena.com,barunsonena.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+바이브컴퍼니,중견/중소,바이브컴퍼니 공식 채용,https://vaiv.kr/recruit/recruitmentNoticelist,html_page,approved,vaiv.kr,vaiv.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+바이브컴퍼니,중견/중소,바이브컴퍼니 공식 채용,https://vaiv.kr/recruit/recruitmentInformation,html_page,approved,vaiv.kr,vaiv.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+모빌린트,중견/중소,모빌린트 공식 채용,https://www.mobilint.com/careers,html_page,approved,www.mobilint.com,mobilint.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,14.0,,False
+뱅크웨어글로벌,중견/중소,뱅크웨어글로벌 공식 채용,https://bankwareglobal.com/career,html_page,approved,bankwareglobal.com,bankwareglobal.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+모비릭스,중견/중소,모비릭스 공식 채용,https://mobirix.com/recruit/recruitment_announcement.html,html_page,approved,mobirix.com,mobirix.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+브레인즈컴퍼니,중견/중소,브레인즈컴퍼니 공식 채용,https://brainz.co.kr/jobs,html_page,approved,brainz.co.kr,brainz.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+비씨엔씨,중견/중소,비씨엔씨 공식 채용,https://bcnc.co.kr/kr/careers/recruit.php,html_page,approved,bcnc.co.kr,bcnc.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+비씨엔씨,중견/중소,비씨엔씨 공식 채용,https://bcnc.co.kr/kr/careers/info.php,html_page,approved,bcnc.co.kr,bcnc.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+비씨엔씨,중견/중소,비씨엔씨 공식 채용,https://bcnc.co.kr/kr/careers/hr.php,html_page,approved,bcnc.co.kr,bcnc.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+비투엔,중견/중소,비투엔 공식 채용,https://b2en.com/career/recruit,html_page,approved,b2en.com,b2en.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+삼일회계법인,중견/중소,삼일회계법인 공식 채용,https://www.pwc.com/gx/en/services/workforce/employment-tax-and-payroll.html,html_page,approved,www.pwc.com,pwc.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+삼일회계법인,중견/중소,삼일회계법인 공식 채용,https://www.pwc.com/gx/en/services/legal-business-solutions/employment.html,html_page,approved,www.pwc.com,pwc.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+성도이엔지,중견/중소,성도이엔지 공식 채용,http://sungdokorea.com/kr/customer/career_list.php,html_page,approved,sungdokorea.com,sungdokorea.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+세종텔레콤,중견/중소,세종텔레콤 공식 채용,https://sejongtelecom.net/page/recruit,html_page,approved,sejongtelecom.net,sejongtelecom.net,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+세나테크놀로지,중견/중소,세나테크놀로지 공식 채용,https://www.sena.co.kr/recruit,html_page,approved,www.sena.co.kr,sena.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+세이지 주식회사,중견/중소,세이지 주식회사 공식 채용,https://saige.ai/careers,html_page,approved,saige.ai,saige.ai,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+솔로몬텍,중견/중소,솔로몬텍 공식 채용,https://www.solomontech.net/careers,html_page,approved,www.solomontech.net,solomontech.net,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+스코넥,중견/중소,스코넥 공식 채용,https://www.skonec.com/careers/interview,html_page,approved,www.skonec.com,skonec.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+스코넥,중견/중소,스코넥 공식 채용,https://www.skonec.com/careers/careers,html_page,approved,www.skonec.com,skonec.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+스코넥,중견/중소,스코넥 공식 채용,https://www.skonec.com/careers/apply,html_page,approved,www.skonec.com,skonec.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+스켈터랩스,중견/중소,스켈터랩스 공식 채용,https://www.skelterlabs.com/career,html_page,approved,www.skelterlabs.com,skelterlabs.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,6.0,,False
+스피치툴스,중견/중소,스피치툴스 공식 채용,https://speechtools.co.kr/career,html_page,approved,speechtools.co.kr,speechtools.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+스페이스뱅크 주식회사,중견/중소,스페이스뱅크 주식회사 공식 채용,https://www.spacebank.company/career,html_page,approved,www.spacebank.company,spacebank.company,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+심심이,중견/중소,심심이(주) 공식 채용,https://simsimi.kr/recruit.html,html_page,approved,simsimi.kr,simsimi.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+쓰리디랩스,중견/중소,쓰리디랩스 공식 채용,https://3dlabs.co.kr/kor/recruit/job__posting.html,html_page,approved,3dlabs.co.kr,3dlabs.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,2.0,,False
+쓰리디랩스,중견/중소,쓰리디랩스 공식 채용,https://3dlabs.co.kr/kor/recruit/system.html,html_page,approved,3dlabs.co.kr,3dlabs.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,2.0,,False
+시큐레터,중견/중소,시큐레터 공식 채용,https://www.seculetter.com/company/recruit,html_page,approved,www.seculetter.com,seculetter.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+쏘닉스,중견/중소,쏘닉스 공식 채용,https://sawnics.com/eng/contact/recruit.html,html_page,approved,sawnics.com,sawnics.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+바이트사이즈,중견/중소,바이트사이즈 공식 채용,https://career.thebytesize.ai/jobs,html_page,approved,career.thebytesize.ai,thebytesize.ai,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,1.0,,False
+여기어때,중견/중소,여기어때 GreetingHR 공개 채용,https://gccompany.career.greetinghr.com,greetinghr,approved,gccompany.career.greetinghr.com,gccompany.co.kr,0.99,0.85,True,next_data,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,8.0,,False
+씨엠티엑스,중견/중소,씨엠티엑스 공개 ATS,https://cmtx.recruiter.co.kr,recruiter,approved,cmtx.recruiter.co.kr,cmtx.co.kr,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,0.0,,False
+씨어스테크놀로지,중견/중소,씨어스테크놀로지 공개 ATS,https://seers.career.greetinghr.com,greetinghr,approved,seers.career.greetinghr.com,seerstech.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,4.0,,False
+안랩,중견/중소,안랩 공개 ATS,https://ahnlab.recruiter.co.kr,recruiter,approved,ahnlab.recruiter.co.kr,ahnlab.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,3.0,,False
+엑셈,중견/중소,엑셈 공개 ATS,https://ex-em.career.greetinghr.com,greetinghr,approved,ex-em.career.greetinghr.com,ex-em.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,5.0,,False
+엠아이큐브솔루션,중견/중소,엠아이큐브솔루션 공개 ATS,https://micube.career.greetinghr.com,greetinghr,approved,micube.career.greetinghr.com,micube.co.kr,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+씨앤에스링크,중견/중소,씨앤에스링크 공식 채용,https://cns-link.co.kr/company/recruit,html_page,approved,cns-link.co.kr,cns-link.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+씨케이솔루션,중견/중소,씨케이솔루션 공식 채용,https://cksolution.co.kr/recruitment/talent,html_page,approved,cksolution.co.kr,cksolution.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+씨케이솔루션,중견/중소,씨케이솔루션 공식 채용,https://cksolution.co.kr/recruitment/recruitment-inform,html_page,approved,cksolution.co.kr,cksolution.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+아이즈비전,중견/중소,아이즈비전 공식 채용,https://eyesvision.com/employ/employment,html_page,approved,eyesvision.com,eyesvision.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+아이시프트,중견/중소,아이시프트 공식 채용,https://www.ishift.co.kr/career,html_page,approved,www.ishift.co.kr,ishift.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+아진엑스텍,중견/중소,아진엑스텍 공식 채용,https://ajinextek.com/kr/career/recruit.php,html_page,approved,ajinextek.com,ajinextek.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+아이티아이즈,중견/중소,아이티아이즈 공식 채용,https://www.iteyes.co.kr/talent,html_page,approved,www.iteyes.co.kr,iteyes.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+아이피아,중견/중소,아이피아 공식 채용,https://www.aipia.co.kr/recruitment,html_page,approved,www.aipia.co.kr,aipia.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+알트,중견/중소,알트 공식 채용,https://altech.kr/kr/recruit/recruit.php,html_page,approved,altech.kr,altech.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+알서포트 주식회사,중견/중소,알서포트 주식회사 공식 채용,https://www.rsupport.com/ko-kr/career/talent,html_page,approved,www.rsupport.com,rsupport.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+알서포트 주식회사,중견/중소,알서포트 주식회사 공식 채용,https://www.rsupport.com/ko-kr/career/roles,html_page,approved,www.rsupport.com,rsupport.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+알서포트 주식회사,중견/중소,알서포트 주식회사 공식 채용,https://www.rsupport.com/ko-kr/career/recruit,html_page,approved,www.rsupport.com,rsupport.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+액토즈소프트,중견/중소,액토즈소프트 공식 채용,https://www.actoz.com/recruit/korean,html_page,approved,www.actoz.com,actoz.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+액토즈소프트,중견/중소,액토즈소프트 공식 채용,https://www.actoz.com/recruit/careers/korean,html_page,approved,www.actoz.com,actoz.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+액토즈소프트,중견/중소,액토즈소프트 공식 채용,https://www.actoz.com/recruit/actozian/korean,html_page,approved,www.actoz.com,actoz.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+알피,중견/중소,알피 공식 채용,https://www.arpi.ai/contact-us//careers,html_page,approved,www.arpi.ai,arpi.ai,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+에이아이네이션,중견/중소,에이아이네이션 공식 채용,https://aination.kr/recruit,html_page,approved,aination.kr,aination.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+에이엘티,중견/중소,에이엘티 공식 채용,https://alt-s.kr/recruit/list.php,html_page,approved,alt-s.kr,alt-s.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+에이엘티,중견/중소,에이엘티 공식 채용,https://alt-s.kr/recruit/talent_manag.php,html_page,approved,alt-s.kr,alt-s.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+에이치씨엔씨,중견/중소,에이치씨엔씨 공식 채용,https://hcnc.co.kr/recruit/23,html_page,approved,hcnc.co.kr,hcnc.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+에이치씨엔씨,중견/중소,에이치씨엔씨 공식 채용,https://hcnc.co.kr/recruit/22,html_page,approved,hcnc.co.kr,hcnc.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+에이치씨엔씨,중견/중소,에이치씨엔씨 공식 채용,https://hcnc.co.kr/recruit/21,html_page,approved,hcnc.co.kr,hcnc.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+에이텍모빌리티,중견/중소,에이텍모빌리티 공식 채용,https://atecmobility.com/recruit/talent.html,html_page,approved,atecmobility.com,atecmobility.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+에이텍모빌리티,중견/중소,에이텍모빌리티 공식 채용,https://atecmobility.com/recruit/hr.html,html_page,approved,atecmobility.com,atecmobility.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+에프원소프트,중견/중소,에프원소프트(주) 공식 채용,https://f1soft.co.kr/company/recruit.html,html_page,approved,f1soft.co.kr,f1soft.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+엑시콘,중견/중소,엑시콘 공식 채용,https://exicon.co.kr/kr/recruit/talent.php,html_page,approved,exicon.co.kr,exicon.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+엑시콘,중견/중소,엑시콘 공식 채용,https://exicon.co.kr/kr/recruit/recruit.php,html_page,approved,exicon.co.kr,exicon.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+엔비티,중견/중소,엔비티 공식 채용,https://nbt.com/jobs,html_page,approved,nbt.com,nbt.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+엘오티베큠,중견/중소,엘오티베큠 공식 채용,https://lotvacuum.com/talent/management.php,html_page,approved,lotvacuum.com,lotvacuum.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+엔피,중견/중소,엔피 공식 채용,https://npinc.co.kr/recruit.php,html_page,approved,npinc.co.kr,npinc.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+에이직랜드,중견/중소,에이직랜드 공식 채용,https://www.asicland.com/talents,html_page,approved,www.asicland.com,asicland.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+에이직랜드,중견/중소,에이직랜드 공식 채용,https://www.asicland.com/careers,html_page,approved,www.asicland.com,asicland.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+엠투아이,중견/중소,엠투아이 공식 채용,https://m2i.co.kr/recruit/jobs2.php,html_page,approved,m2i.co.kr,m2i.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+엠투아이,중견/중소,엠투아이 공식 채용,https://m2i.co.kr/recruit/jobs.php,html_page,approved,m2i.co.kr,m2i.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+오리누 주식회사,중견/중소,오리누 주식회사 공식 채용,https://orinu.org/career,html_page,approved,orinu.org,orinu.org,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+엠투어플주식회사,중견/중소,엠투어플주식회사 공식 채용,https://www.m2appl.kr/careers,html_page,approved,www.m2appl.kr,m2appl.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+웅진,중견/중소,웅진 공개 ATS,https://woongjinit-recruiter.career.greetinghr.com,greetinghr,approved,woongjinit-recruiter.career.greetinghr.com,woongjin.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+웅진씽크빅,중견/중소,웅진씽크빅 공개 ATS,https://thinkbig.career.greetinghr.com,greetinghr,approved,thinkbig.career.greetinghr.com,wjthinkbig.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+웹젠,중견/중소,웹젠 공개 ATS,https://webzen.recruiter.co.kr,recruiter,approved,webzen.recruiter.co.kr,company.webzen.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,0.0,,False
+이지케어텍,중견/중소,이지케어텍 공개 ATS,https://ezcaretech.career.greetinghr.com,greetinghr,approved,ezcaretech.career.greetinghr.com,ezcaretech.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,1.0,,False
+자이언트스텝,중견/중소,자이언트스텝 공개 ATS,https://giantstepcorp.recruiter.co.kr,recruiter,approved,giantstepcorp.recruiter.co.kr,giantstep.co.kr,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,0.0,,False
+임팩티브AI,스타트업,임팩티브AI 공개 ATS,https://impactive-ai.career.greetinghr.com,greetinghr,approved,impactive-ai.career.greetinghr.com,impactive-ai.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,2.0,,False
+오픈베이스,중견/중소,오픈베이스 공식 채용,https://openbase.co.kr/recruit/list/25,html_page,approved,openbase.co.kr,openbase.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+옵티시스,중견/중소,옵티시스 공식 채용,https://www.opticis.com/recruitment/recruit.php,html_page,approved,www.opticis.com,opticis.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+와이어블,중견/중소,와이어블 공식 채용,https://wiable.co.kr/kr/careers/recruit.php,html_page,approved,wiable.co.kr,wiable.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+오픈엣지테크놀로지,중견/중소,오픈엣지테크놀로지 공식 채용,https://www.openedges.com/careers,html_page,approved,www.openedges.com,openedges.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+오킨스전자,중견/중소,오킨스전자 공식 채용,https://okins.co.kr/recruit,html_page,approved,okins.co.kr,okins.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+오킨스전자,중견/중소,오킨스전자 공식 채용,https://okins.co.kr/employment,html_page,approved,okins.co.kr,okins.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+위메이드맥스,중견/중소,위메이드맥스 공식 채용,https://www.wemademax.com/recruit,html_page,approved,www.wemademax.com,wemademax.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+웨이브일렉트로,중견/중소,웨이브일렉트로 공식 채용,https://wavetc.com/recruit/employ_coo,html_page,approved,wavetc.com,wavetc.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+위세아이텍,중견/중소,위세아이텍 공식 채용,https://wise.co.kr/company/employment.do,html_page,approved,wise.co.kr,wise.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+위즈코어 주식회사,중견/중소,위즈코어 주식회사 공식 채용,https://wizcore.co.kr/career/recruitment,html_page,approved,wizcore.co.kr,wizcore.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+위즈코어 주식회사,중견/중소,위즈코어 주식회사 공식 채용,https://wizcore.co.kr/career/information,html_page,approved,wizcore.co.kr,wizcore.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+위즈코어 주식회사,중견/중소,위즈코어 주식회사 공식 채용,https://wizcore.co.kr/career,html_page,approved,wizcore.co.kr,wizcore.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+위메이드플레이,중견/중소,위메이드플레이 공식 채용,https://corp.wemadeplay.com/04careers,html_page,approved,corp.wemadeplay.com,corp.wemadeplay.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+유니셈,중견/중소,유니셈 공식 채용,https://unisem.co.kr/kor/recruitment/talent.php,html_page,approved,unisem.co.kr,unisem.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+유니셈,중견/중소,유니셈 공식 채용,https://unisem.co.kr/kor/recruitment/recruitment.php,html_page,approved,unisem.co.kr,unisem.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+유니테스트,중견/중소,유니테스트 공식 채용,https://uni-test.com/kr/recruit/talent.php,html_page,approved,uni-test.com,uni-test.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+유니테스트,중견/중소,유니테스트 공식 채용,https://uni-test.com/kr/recruit/recruit.php,html_page,approved,uni-test.com,uni-test.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+유라클,중견/중소,유라클 공식 채용,https://uracle.co.kr/company/career,html_page,approved,uracle.co.kr,uracle.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+유니포인트,중견/중소,유니포인트 공식 채용,https://unipoint.co.kr/recruitment,html_page,approved,unipoint.co.kr,unipoint.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+유디에스,중견/중소,유디에스 공식 채용,https://www.uds.ai/recruitment/recruit.html,html_page,approved,www.uds.ai,uds.ai,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+유진로봇,중견/중소,유진로봇 공식 채용,https://yujinrobot.com/company/recruit,html_page,approved,yujinrobot.com,yujinrobot.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+이노와이어리스,중견/중소,이노와이어리스 공식 채용,https://ligaccuver.com/pages/kor/talent.asp,html_page,approved,ligaccuver.com,ligaccuver.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+유엔젤,중견/중소,유엔젤 공식 채용,https://www.uangel.com/kr/index.php/uangel/recruit,html_page,approved,www.uangel.com,uangel.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+인스코비,중견/중소,인스코비 공식 채용,https://inscobee.com/talent.php,html_page,approved,inscobee.com,inscobee.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+인젠트,중견/중소,인젠트 공식 채용,https://inzent.com/recruit_talent.php,html_page,approved,inzent.com,inzent.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+인젠트,중견/중소,인젠트 공식 채용,https://inzent.com/recruit_jobintro.php,html_page,approved,inzent.com,inzent.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+인탑스,중견/중소,인탑스 공식 채용,https://intops.co.kr/dh/careers_recruit01,html_page,approved,intops.co.kr,intops.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+인스피언,중견/중소,인스피언 공식 채용,https://inspien.co.kr/recruit,html_page,approved,inspien.co.kr,inspien.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+자이언트스텝,중견/중소,자이언트스텝 공식 채용,https://giantstep.co.kr/career.php,html_page,approved,giantstep.co.kr,giantstep.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+자이에스앤디,중견/중소,자이에스앤디 공식 채용,https://xisnd.com/article/recruitment/40/46,html_page,approved,xisnd.com,xisnd.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+제노코,중견/중소,제노코 공식 채용,https://genohco.com/kr/career/talent.php,html_page,approved,genohco.com,genohco.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+제노코,중견/중소,제노코 공식 채용,https://genohco.com/kr/career/jobs.php,html_page,approved,genohco.com,genohco.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+제논,중견/중소,제논 공식 채용,https://www.genon.ai/careers,html_page,approved,www.genon.ai,genon.ai,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+제이엘케이,중견/중소,제이엘케이 공식 채용,https://jlkgroup.com/careers,html_page,approved,jlkgroup.com,jlkgroup.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+인핸스,중견/중소,인핸스 공식 채용,https://www.enhans.ai/career,html_page,approved,www.enhans.ai,enhans.ai,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+겁쟁이사자들,중견/중소,주식회사 겁쟁이사자들 공식 채용,https://gupsa.com/recruit,html_page,approved,gupsa.com,gupsa.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+"가이아비티(GAIABT, Inc.)",중견/중소,"주식회사 가이아비티(GAIABT, Inc.) 공식 채용",https://www.gaia-bt.com/careers,html_page,approved,www.gaia-bt.com,gaia-bt.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+나인와트,중견/중소,주식회사 나인와트 공식 채용,https://ninewatt.com/ko/company/career,html_page,approved,ninewatt.com,ninewatt.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+누아,중견/중소,주식회사 누아 공개 ATS,https://nuua.career.greetinghr.com,greetinghr,approved,nuua.career.greetinghr.com,nuua.ai,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,0.0,,False
+로켓툴즈,중견/중소,주식회사 로켓툴즈 공개 ATS,https://rocket-tools.career.greetinghr.com,greetinghr,approved,rocket-tools.career.greetinghr.com,rocket-tools.io,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,0.0,,False
+스피어,중견/중소,스피어 공개 ATS,https://spherecorp.career.greetinghr.com,greetinghr,approved,spherecorp.career.greetinghr.com,spherecorp.kr,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+다온에이치앤에스,중견/중소,주식회사 다온에이치앤에스 공식 채용,http://www.daonhns.com/recruit,html_page,approved,www.daonhns.com,daonhns.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,4.0,,False
+데이터링커,중견/중소,주식회사 데이터링커 공식 채용,https://datalinker.co.kr/recruitment/job-postings,html_page,approved,datalinker.co.kr,datalinker.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+데이터링커,중견/중소,주식회사 데이터링커 공식 채용,https://datalinker.co.kr/recruitment/talent,html_page,approved,datalinker.co.kr,datalinker.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+디비엔텍,중견/중소,주식회사 디비엔텍 공식 채용,https://dbnt.co.kr/c_career,html_page,approved,dbnt.co.kr,dbnt.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+딥아이,중견/중소,주식회사 딥아이 공식 채용,https://deep-ai.kr/ko/career,html_page,approved,deep-ai.kr,deep-ai.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+라온비엔피,중견/중소,주식회사 라온비엔피 공식 채용,https://raonbnp.com/company/recruit,html_page,approved,raonbnp.com,raonbnp.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+딥핑소스,중견/중소,주식회사 딥핑소스 공식 채용,https://www.deepingsource.io/career,html_page,approved,www.deepingsource.io,deepingsource.io,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+라이너,중견/중소,주식회사 라이너 공식 채용,https://liner.com/careers,html_page,approved,liner.com,liner.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+로민,중견/중소,주식회사 로민 공식 채용,https://www.lomin.ai/recruitment-info,html_page,approved,www.lomin.ai,lomin.ai,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+메디컬에이아이,중견/중소,주식회사 메디컬에이아이 공식 채용,https://medicalai.com/en/recruit,html_page,approved,medicalai.com,medicalai.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,2.0,,False
+메디픽셀,중견/중소,주식회사 메디픽셀 공식 채용,https://medipixel.io/careers/ourcrew,html_page,approved,medipixel.io,medipixel.io,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+메디픽셀,중견/중소,주식회사 메디픽셀 공식 채용,https://medipixel.io/careers/jobs,html_page,approved,medipixel.io,medipixel.io,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+메디픽셀,중견/중소,주식회사 메디픽셀 공식 채용,https://medipixel.io/careers,html_page,approved,medipixel.io,medipixel.io,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+루닛,중견/중소,주식회사 루닛 공식 채용,https://www.lunit.io/en/careers,html_page,approved,www.lunit.io,lunit.io,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+메디인테크,중견/중소,주식회사 메디인테크 공식 채용,https://medintech.co.kr/careers,html_page,approved,medintech.co.kr,medintech.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+루토닉스,중견/중소,주식회사 루토닉스 공식 채용,https://rootonix.kr/careers,html_page,approved,rootonix.kr,rootonix.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+법틀,중견/중소,주식회사 법틀 공식 채용,https://buptle.com/employment,html_page,approved,buptle.com,buptle.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+뷰노,중견/중소,주식회사 뷰노 공식 채용,https://vuno.co/career,html_page,approved,vuno.co,vuno.co,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,2.0,,False
+보다,중견/중소,주식회사 보다 공식 채용,http://www.droneboda.com/careers,html_page,approved,www.droneboda.com,droneboda.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+브이웨이,중견/중소,주식회사 브이웨이 공식 채용,https://www.vwaycorp.com/jobs,html_page,approved,www.vwaycorp.com,vwaycorp.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+사각,중견/중소,주식회사 사각 공식 채용,https://www.sakak.co.kr/jobs,html_page,approved,www.sakak.co.kr,sakak.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+비솔,중견/중소,주식회사 비솔 공식 채용,https://visol.ai/career,html_page,approved,visol.ai,visol.ai,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,1.0,,False
+시제,중견/중소,주식회사 시제 공식 채용,https://sije.io/en/career,html_page,approved,sije.io,sije.io,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+에너자이,중견/중소,주식회사 에너자이 공개 ATS,https://enerzai.career.greetinghr.com,greetinghr,approved,enerzai.career.greetinghr.com,enerzai.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,4.0,,False
+인터엑스,중견/중소,주식회사 인터엑스 공개 ATS,https://interxlab.career.greetinghr.com,greetinghr,approved,interxlab.career.greetinghr.com,interxlab.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,19.0,,False
+써로마인드,중견/중소,주식회사 써로마인드 공식 채용,https://surromind.ai/career,html_page,approved,surromind.ai,surromind.ai,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+액션파워,중견/중소,주식회사 액션파워 공식 채용,https://actionpower.kr/recruit,html_page,approved,actionpower.kr,actionpower.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+아이엔드,중견/중소,주식회사 아이엔드 공식 채용,https://www.aiand.kr/recruits,html_page,approved,www.aiand.kr,aiand.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+알체라,중견/중소,알체라 공식 채용,https://www.alchera.ai/company/career,html_page,approved,www.alchera.ai,alchera.ai,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,1.0,,False
+에스와이컴퍼니,중견/중소,주식회사 에스와이컴퍼니 공식 채용,https://syai.kr/careers,html_page,approved,syai.kr,syai.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+아티젠스페이스,중견/중소,주식회사 아티젠스페이스 공식 채용,https://www.artygenspace.com/career,html_page,approved,www.artygenspace.com,artygenspace.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+업템포글로벌,중견/중소,주식회사 업템포글로벌 공식 채용,https://uptempo-global.com/recruit,html_page,approved,uptempo-global.com,uptempo-global.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+에이아이웍스,중견/중소,주식회사 에이아이웍스 공식 채용,https://aiworkx.ai/contents/recruit.html,html_page,approved,aiworkx.ai,aiworkx.ai,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+에이아이리더,중견/중소,주식회사 에이아이리더 공식 채용,https://www.ai-leader.co.kr/recruit,html_page,approved,www.ai-leader.co.kr,ai-leader.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,1.0,,False
+엘로이랩,중견/중소,주식회사 엘로이랩 공식 채용,https://elroilab.com/careers,html_page,approved,elroilab.com,elroilab.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+유니아이,중견/중소,주식회사 유니아이 공식 채용,https://www.uniai.co.kr/career,html_page,approved,www.uniai.co.kr,uniai.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+지니소프트,중견/중소,주식회사 지니소프트 공식 채용,https://www.geniesoft.io/careers,html_page,approved,www.geniesoft.io,geniesoft.io,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+코그로보,중견/중소,주식회사 코그로보 공식 채용,https://kogrobo.com/recruitment.html,html_page,approved,kogrobo.com,kogrobo.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,1.0,,False
+케어랩스,중견/중소,케어랩스 공개 ATS,https://carelabs.career.greetinghr.com,greetinghr,approved,carelabs.career.greetinghr.com,carelabs.co.kr,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,1.0,,False
+코나아이,중견/중소,코나아이 공개 ATS,https://konai.career.greetinghr.com,greetinghr,approved,konai.career.greetinghr.com,konai.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+코미코,중견/중소,코미코 공개 ATS,https://komico.recruiter.co.kr,recruiter,approved,komico.recruiter.co.kr,komico.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,0.0,,False
+트위그팜,중견/중소,주식회사 트위그팜 공식 채용,https://www.twigfarm.net/ko/careers/product-manager,html_page,approved,www.twigfarm.net,twigfarm.net,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+트위그팜,중견/중소,주식회사 트위그팜 공식 채용,https://www.twigfarm.net/ko/careers/product-designer,html_page,approved,www.twigfarm.net,twigfarm.net,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+트위그팜,중견/중소,주식회사 트위그팜 공식 채용,https://www.twigfarm.net/ko/careers/localization-translator,html_page,approved,www.twigfarm.net,twigfarm.net,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,1.0,,False
+퍼즐데이터,중견/중소,주식회사 퍼즐데이터 공식 채용,https://www.puzzledata.com/careers,html_page,approved,www.puzzledata.com,puzzledata.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+펜타게이트,중견/중소,주식회사 펜타게이트 공식 채용,https://pentagate.co.kr/talented,html_page,approved,pentagate.co.kr,pentagate.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+펜타게이트,중견/중소,주식회사 펜타게이트 공식 채용,https://pentagate.co.kr/jobdb/talented,html_page,approved,pentagate.co.kr,pentagate.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+펜타게이트,중견/중소,주식회사 펜타게이트 공식 채용,https://pentagate.co.kr/jobdb/recruitment,html_page,approved,pentagate.co.kr,pentagate.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+포시에스,중견/중소,주식회사 포시에스 공식 채용,https://kr.forcs.com/careers,html_page,approved,kr.forcs.com,kr.forcs.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+평행공간,중견/중소,주식회사 평행공간 공식 채용,https://www.pspace.ai/careers,html_page,approved,www.pspace.ai,pspace.ai,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+포인랩,중견/중소,주식회사 포인랩 공식 채용,https://4inlab.ai/ko/company/careers,html_page,approved,4inlab.ai,4inlab.ai,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+프롬프트타운,중견/중소,주식회사 프롬프트타운 공식 채용,https://prompt.town/employment,html_page,approved,prompt.town,prompt.town,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+프레임아웃,중견/중소,주식회사 프레임아웃 공식 채용,https://frameout.co.kr/careers,html_page,approved,frameout.co.kr,frameout.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+하나루프,중견/중소,주식회사 하나루프 공식 채용,https://hanaloop.com/recruit,html_page,approved,hanaloop.com,hanaloop.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+케이플러스,중견/중소,주식회사케이플러스 공식 채용,https://kplus.biz/incruit/recruit_write,html_page,approved,kplus.biz,kplus.biz,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+케이플러스,중견/중소,주식회사케이플러스 공식 채용,https://kplus.biz/incruit/recruit_chk,html_page,approved,kplus.biz,kplus.biz,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+카이어,중견/중소,카이어 공식 채용,https://www.kaier.co.kr/career,html_page,approved,www.kaier.co.kr,kaier.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+케이에스씨앤씨,중견/중소,케이에스씨앤씨 공식 채용,https://www.kscnc.co.kr/coct/recruitment.ks,html_page,approved,www.kscnc.co.kr,kscnc.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+케이엔제이,중견/중소,케이엔제이 공식 채용,https://knj.kr/careers/job.php,html_page,approved,knj.kr,knj.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+케이엔제이,중견/중소,케이엔제이 공식 채용,https://knj.kr/careers/info.php,html_page,approved,knj.kr,knj.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+케이엔제이,중견/중소,케이엔제이 공식 채용,https://knj.kr/careers,html_page,approved,knj.kr,knj.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+케이티알파,중견/중소,케이티알파 공식 채용,https://ktalpha.com/recruit/typeTalent,html_page,approved,ktalpha.com,ktalpha.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+케이티알파,중견/중소,케이티알파 공식 채용,https://ktalpha.com/recruit,html_page,approved,ktalpha.com,ktalpha.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+코나아이,중견/중소,코나아이 공식 채용,https://konai.com/careers,html_page,approved,konai.com,konai.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+코난테크놀로지,중견/중소,코난테크놀로지 공식 채용,https://konantech.com/pr/recruit,html_page,approved,konantech.com,konantech.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+코넥티브 주식회사,중견/중소,코넥티브 주식회사 공식 채용,https://connecteve.com/sub/recruit/career.php,html_page,approved,connecteve.com,connecteve.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,2.0,,False
+코미코,중견/중소,코미코 공식 채용,https://komico.com/kr/recruit/recruit.php,html_page,approved,komico.com,komico.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+코미코,중견/중소,코미코 공식 채용,https://komico.com/kr/recruit/person.php,html_page,approved,komico.com,komico.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+코드비전 주식회사,중견/중소,코드비전 주식회사 공식 채용,https://codevision.kr/team/recruitnotice,html_page,approved,codevision.kr,codevision.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+코드비전 주식회사,중견/중소,코드비전 주식회사 공식 채용,https://codevision.kr/team/recruit,html_page,approved,codevision.kr,codevision.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+코코넛사일로 주식회사,중견/중소,코코넛사일로 주식회사 공식 채용,https://www.coconutsilo.com/career,html_page,approved,www.coconutsilo.com,coconutsilo.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+콕스웨이브,중견/중소,콕스웨이브 공식 채용,https://www.coxwave.com/careers,html_page,approved,www.coxwave.com,coxwave.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+큐비언트에이아이,중견/중소,큐비언트에이아이 공식 채용,https://qubientai.com/recruitment.html,html_page,approved,qubientai.com,qubientai.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+퀀텀씨엔에스,중견/중소,퀀텀씨엔에스 공식 채용,https://quantumcns.ai/career,html_page,approved,quantumcns.ai,quantumcns.ai,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,1.0,,False
+클로버추얼패션,중견/중소,클로버추얼패션 Lever 공개 채용,https://api.lever.co/v0/postings/clovirtualfashion?mode=json,lever,approved,api.lever.co,clovirtualfashion.com,0.99,0.85,True,json,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,4.0,,False
+자화전자,지역기업,자화전자 GreetingHR 공개 채용,https://jahwa.career.greetinghr.com,greetinghr,approved,jahwa.career.greetinghr.com,jahwa.co.kr,0.99,0.85,True,next_data,manual_seed_live,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+키다리스튜디오,중견/중소,키다리스튜디오 공개 ATS,https://kstd-lezhin.career.greetinghr.com,greetinghr,approved,kstd-lezhin.career.greetinghr.com,kidaristudio.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,1.0,,False
+테스,중견/중소,테스 공개 ATS,https://hites.career.greetinghr.com,greetinghr,approved,hites.career.greetinghr.com,hites.co.kr,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+탑코미디어,중견/중소,탑코미디어 공개 ATS,https://topco.recruiter.co.kr,recruiter,approved,topco.recruiter.co.kr,topcomedia.co.kr,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+폴라리스오피스,중견/중소,폴라리스오피스 공개 ATS,https://polarisofficerecruit.career.greetinghr.com,greetinghr,approved,polarisofficerecruit.career.greetinghr.com,polarisofficecorp.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,1.0,,False
+하나머티리얼즈,중견/중소,하나머티리얼즈 공개 ATS,https://hanamts.career.greetinghr.com,greetinghr,approved,hanamts.career.greetinghr.com,hanamts.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+한솔로지스틱스,중견/중소,한솔로지스틱스 공개 ATS,https://hansol.recruiter.co.kr,recruiter,approved,hansol.recruiter.co.kr,hansollogistics.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+한글과컴퓨터,중견/중소,한글과컴퓨터 공개 ATS,https://hancom.career.greetinghr.com,greetinghr,approved,hancom.career.greetinghr.com,hancom.com,0.99,0.85,True,ats,homepage_link_probe,성공,0.0,2026-04-09T01:44:11+09:00,0.0,,False
+타임기술,중견/중소,타임기술 공식 채용,https://timett.co.kr/recruit,html_page,approved,timett.co.kr,timett.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+텔코웨어,중견/중소,텔코웨어 공식 채용,https://www.telcoware.com/doc/recruit.php/talent,html_page,approved,www.telcoware.com,telcoware.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+텔코웨어,중견/중소,텔코웨어 공식 채용,https://www.telcoware.com/doc/recruit.php/job,html_page,approved,www.telcoware.com,telcoware.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+티로보틱스,중견/중소,티로보틱스 공식 채용,https://t-robotics.net/recruit/recruitList.do,html_page,approved,t-robotics.net,t-robotics.net,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+티엑스알로보틱스,중견/중소,티엑스알로보틱스 공식 채용,https://txr.kr/ko/recruitment/recruit.php,html_page,approved,txr.kr,txr.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+티오리한국,중견/중소,티오리한국 공식 채용,https://theori.io/career/hiring,html_page,approved,theori.io,theori.io,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+팅크웨어,중견/중소,팅크웨어 공식 채용,https://www.thinkware.co.kr/recruit/system,html_page,approved,www.thinkware.co.kr,thinkware.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+팸텍,중견/중소,팸텍 공식 채용,https://pamtek.com/careers/talent,html_page,approved,pamtek.com,pamtek.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+퓨렌스 주식회사,중견/중소,퓨렌스 주식회사 공식 채용,https://furence.com/careers,html_page,approved,furence.com,furence.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+폴라리스오피스,중견/중소,폴라리스오피스 공식 채용,https://www.polarisofficecorp.com/recruiting,html_page,approved,www.polarisofficecorp.com,polarisofficecorp.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T01:36:58+09:00,1.0,,False
+폴라리스오피스,중견/중소,폴라리스오피스 공식 채용,http://www.polarisofficecorp.com/recruiting,html_page,approved,www.polarisofficecorp.com,polarisofficecorp.com,0.99,0.75,True,html,homepage_link_probe,실패,14.0,,0.0,,False
+플레이위드,중견/중소,플레이위드 공식 채용,https://www.playwith.co.kr/Recruit,html_page,approved,www.playwith.co.kr,playwith.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+필옵틱스,중견/중소,필옵틱스 공식 채용,https://philoptics.com/kr/careers/talent.php,html_page,approved,philoptics.com,philoptics.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+필옵틱스,중견/중소,필옵틱스 공식 채용,https://philoptics.com/kr/careers/job_01_01.php,html_page,approved,philoptics.com,philoptics.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+핑퐁,중견/중소,핑퐁 공식 채용,https://pingpong.house/recruit,html_page,approved,pingpong.house,pingpong.house,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+한국그린데이터,중견/중소,한국그린데이터 공식 채용,https://www.greendata.kr/jobs,html_page,approved,www.greendata.kr,greendata.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+한국그린데이터,중견/중소,한국그린데이터 공식 채용,https://www.greendata.kr/en/jobs,html_page,approved,www.greendata.kr,greendata.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+한국딥러닝 주식회사,중견/중소,한국딥러닝 주식회사 공식 채용,https://koreadeep.com/company/careers,html_page,approved,koreadeep.com,koreadeep.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+한국전자영수증,중견/중소,한국전자영수증(주) 공식 채용,https://kdrco.net/kdr/recruitmentAnnouncement,html_page,approved,kdrco.net,kdrco.net,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+한국정보공학,중견/중소,한국정보공학(주) 공식 채용,https://kies.co.kr/PR/recruit,html_page,approved,kies.co.kr,kies.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+한양디지텍,중견/중소,한양디지텍 공식 채용,https://hanyangdgt.com/HTML/Career_En.html,html_page,approved,hanyangdgt.com,hanyangdgt.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+한솔아이원스,중견/중소,한솔아이원스 공식 채용,https://hansoliones.com/kr/recruit/talent.php,html_page,approved,hansoliones.com,hansoliones.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+한솔아이원스,중견/중소,한솔아이원스 공식 채용,https://hansoliones.com/kr/recruit/recruit_info.php,html_page,approved,hansoliones.com,hansoliones.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+핸디소프트,중견/중소,핸디소프트 공식 채용,https://handysoft.co.kr/recruit/recruit_list,html_page,approved,handysoft.co.kr,handysoft.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+핸디소프트,중견/중소,핸디소프트 공식 채용,https://handysoft.co.kr/recruit/system,html_page,approved,handysoft.co.kr,handysoft.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+핸디소프트,중견/중소,핸디소프트 공식 채용,https://handysoft.co.kr/recruit,html_page,approved,handysoft.co.kr,handysoft.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+해성디에스,중견/중소,해성디에스 공식 채용,https://haesungds.com/recruit/talent.php,html_page,approved,haesungds.com,haesungds.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+해성디에스,중견/중소,해성디에스 공식 채용,https://haesungds.com/recruit/system.php,html_page,approved,haesungds.com,haesungds.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+해성디에스,중견/중소,해성디에스 공식 채용,https://haesungds.com/recruit/recruit.php,html_page,approved,haesungds.com,haesungds.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+한솔코에버,중견/중소,한솔코에버 공식 채용,https://coever.co.kr/recruit/recruit_3,html_page,approved,coever.co.kr,coever.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+한솔코에버,중견/중소,한솔코에버 공식 채용,https://coever.co.kr/recruit/recruit_2,html_page,approved,coever.co.kr,coever.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+한솔코에버,중견/중소,한솔코에버 공식 채용,https://coever.co.kr/recruit/recruit_1,html_page,approved,coever.co.kr,coever.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+현대에이치티,중견/중소,현대에이치티 공식 채용,https://hyundaiht.co.kr/kr/person/talent.php,html_page,approved,hyundaiht.co.kr,hyundaiht.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+효성 ITX,중견/중소,효성 ITX 공식 채용,https://hyosungitx.com/ko/recruit/talent.do,html_page,approved,hyosungitx.com,hyosungitx.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+한싹,중견/중소,한싹 공식 채용,https://hanssak.co.kr/recruit/talent.html,html_page,approved,hanssak.co.kr,hanssak.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+한싹,중견/중소,한싹 공식 채용,https://hanssak.co.kr/recruit/notice.html,html_page,approved,hanssak.co.kr,hanssak.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+한싹,중견/중소,한싹 공식 채용,https://hanssak.co.kr/recruit/filed_1.html,html_page,approved,hanssak.co.kr,hanssak.co.kr,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+휴네시온,중견/중소,휴네시온 공식 채용,https://hunesion.com/recruit/content4,html_page,approved,hunesion.com,hunesion.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+휴네시온,중견/중소,휴네시온 공식 채용,https://hunesion.com/recruit/content3,html_page,approved,hunesion.com,hunesion.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+휴네시온,중견/중소,휴네시온 공식 채용,https://hunesion.com/recruit/content2,html_page,approved,hunesion.com,hunesion.com,0.99,0.75,True,html,homepage_link_probe,성공,0.0,2026-04-09T00:56:17+09:00,0.0,,False
+모레,스타트업,모레 GreetingHR 공개 채용,https://moreh.career.greetinghr.com,greetinghr,approved,moreh.career.greetinghr.com,moreh.io,0.99,0.85,True,next_data,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,7.0,,False
+하이퍼엑셀,스타트업,하이퍼엑셀 GreetingHR 공개 채용,https://hyperaccel.career.greetinghr.com,greetinghr,approved,hyperaccel.career.greetinghr.com,hyperaccel.ai,0.99,0.85,True,next_data,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,5.0,,False
+래블업,스타트업,래블업 Careers 공개 채용,https://www.lablup.com/careers,html_page,approved,www.lablup.com,lablup.com,0.99,0.75,True,html,manual_seed_live,성공,0.0,2026-04-09T01:51:07+09:00,0.0,,False
+와이즈에이아이,스타트업,와이즈에이아이 공식 채용,https://ai.wiseai.co.kr/about/recruitment,html_page,approved,ai.wiseai.co.kr,ai.wiseai.co.kr,0.99,0.75,True,html,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+보스반도체,스타트업,보스반도체 공식 채용,https://www.bos-semi.com/careers-southkorea,html_page,approved,www.bos-semi.com,bos-semi.com,0.99,0.75,True,html,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,0.0,,False
+엔젤로보틱스,스타트업,엔젤로보틱스 공식 채용 공고,https://www.angel-robotics.com/ko/recruit/notice,html_page,approved,www.angel-robotics.com,angel-robotics.com,0.99,0.75,True,html,manual_seed_live,성공,0.0,2026-04-09T02:16:44+09:00,2.0,,False
+메디인테크,스타트업,메디인테크 채용 공고,https://medintech.co.kr/employment_kr,html_page,approved,medintech.co.kr,medintech.co.kr,0.99,0.75,True,html,manual_seed_live,성공,0.0,2026-04-09T02:16:44+09:00,0.0,,False
+슈어소프트테크,중견/중소,슈어소프트테크 채용공고,https://careers.suresofttech.com/job1,html_page,approved,careers.suresofttech.com,suresofttech.com,0.99,0.75,True,html,manual_seed_live,성공,0.0,2026-04-09T03:39:10+09:00,3.0,,False
+하이퍼엑셀,스타트업,하이퍼엑셀 GreetingHR 채용 홈,https://hyperaccel.career.greetinghr.com/ko/guide,greetinghr,approved,hyperaccel.career.greetinghr.com,hyperaccel.ai,0.99,0.85,True,next_data,manual_seed_live,성공,0.0,2026-04-09T04:17:25+09:00,5.0,,False
+미스릴,중견/중소,미스릴 공개 ATS,https://mithril.career.greetinghr.com/ko/guide,greetinghr,approved,mithril.career.greetinghr.com,mithril.im,0.99,0.85,True,ats,homepage_link_probe,미검증,0.0,,0.0,,False

@@ -6,4 +6,13 @@ __pycache__/
 
 /jobs_market_v2/runtime/
 /jobs_market_v2/.env
+/jobs_market_v2/.env.actions-test
 /jobs_market_v2/.jupyter_smoke/
+/jobs_market_v2/.pytest_cache/
+/jobs_market_v2/notebooks/.ipynb_checkpoints/
+/jobs_market_v2/scripts/__pycache__/
+/jobs_market_v2/src/jobs_market_v2.egg-info/
+/jobs_market_v2/src/jobs_market_v2/__pycache__/
+/jobs_market_v2/tests/__pycache__/
+/jobs_market_v2_expansion/
+/jobs_market_v2_backup_*/
