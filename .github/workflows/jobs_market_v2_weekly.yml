@@ -76,15 +76,11 @@ jobs:
 
       - name: Configure .env
         env:
+          GOOGLE_SHEETS_SPREADSHEET_ID: ${{ secrets.GOOGLE_SHEETS_SPREADSHEET_ID }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          JOBS_MARKET_V2_LLM_PROVIDER: ${{ secrets.JOBS_MARKET_V2_LLM_PROVIDER }}
-          JOBS_MARKET_V2_LLM_BASE_URL: ${{ secrets.JOBS_MARKET_V2_LLM_BASE_URL }}
-          JOBS_MARKET_V2_LLM_API_KEY: ${{ secrets.JOBS_MARKET_V2_LLM_API_KEY }}
-          JOBS_MARKET_V2_LLM_MODEL: ${{ secrets.JOBS_MARKET_V2_LLM_MODEL }}
         run: |
           set -euo pipefail
-          export GOOGLE_SHEETS_SPREADSHEET_ID="$(tr -d '\r\n' < "$PROJECT_DIR/config/published_google_sheet_id.txt")"
           python "$PROJECT_DIR/scripts/github_actions_runtime.py" configure-env \
             --env-path "$PROJECT_DIR/.env"
 
