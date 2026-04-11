@@ -49,7 +49,9 @@ def _install() -> None:
         "지피유",
         "광학문자인식",
         "컴퓨터비전",
+        "컴퓨터 비전",
         "자율주행",
+        "adas",
         "에이디에이에스",
         "가속기",
         "런타임",
@@ -161,6 +163,7 @@ def _install() -> None:
     service_allow = (
         "software engineer, machine learning",
         "machine learning software engineer",
+        "machine learning platform engineer",
         "machine learning engineer",
         "ml engineer",
         "mlops engineer",
@@ -176,6 +179,38 @@ def _install() -> None:
     research_engineer_titles = ("research engineer", "리서치 엔지니어", "연구 엔지니어")
     academic_terms = ("논문", "학회", "출판", "저널", "publication", "conference", "workshop", "journal", "박사", "phd", "benchmark")
     delivery_terms = ("설계", "구현", "개발", "구축", "운영", "배포", "서빙", "pipeline", "파이프라인", "제품", "서비스", "customer", "고객")
+    weak_ai_software_titles = ("ai software engineer", "global software engineer", "applied ai technical engineer")
+    strong_ai_work_terms = (
+        "machine learning",
+        "ml",
+        "llm",
+        "vlm",
+        "computer vision",
+        "document ai",
+        "model training",
+        "model serving",
+        "data platform",
+        "data pipeline",
+        "npu",
+        "gpu",
+        "runtime",
+        "inference",
+        "머신러닝",
+        "딥러닝",
+        "엘엘엠",
+        "브이엘엠",
+        "컴퓨터비전",
+        "문서",
+        "모델 학습",
+        "모델 훈련",
+        "모델 서빙",
+        "데이터 플랫폼",
+        "데이터 파이프라인",
+        "엔피유",
+        "지피유",
+        "런타임",
+        "추론",
+    )
 
     def target_signal(text: str) -> bool:
         if has_any(text, ai_signals + data_engineer_titles + data_scientist_titles):
@@ -201,7 +236,11 @@ def _install() -> None:
         title_has_analyst = has_any(title_corpus, analyst_titles)
         if has_any(title_corpus, title_only_non_target):
             return ""
+        if has_any(title_corpus, ("adas application engineer", "application engineer")) and has_any(corpus, ("adas", "에이디에이에스", "컴퓨터 비전", "컴퓨터비전", "자율주행")):
+            return "인공지능 엔지니어"
         if has_any(title_corpus, strict_non_target_titles) and not title_has_analyst:
+            return ""
+        if has_any(primary_title, weak_ai_software_titles) and not has_any(body_corpus, strong_ai_work_terms):
             return ""
         if has_any(title_corpus, simple_hard_exclude) and not has_any(title_corpus, ("compiler", "graph optimization")):
             return ""
@@ -222,6 +261,8 @@ def _install() -> None:
             return "인공지능 엔지니어"
         if title_has_analyst:
             return "데이터 분석가"
+        if has_any(title_corpus, ("연구직", "연구원")) and target_signal(corpus) and not has_any(title_corpus, ("developer", "engineer", "개발자", "엔지니어")):
+            return "인공지능 리서처"
         if has_any(title_corpus, research_engineer_titles + researcher_titles):
             academic_score = count_terms(corpus, academic_terms)
             delivery_score = count_terms(corpus, delivery_terms)
@@ -274,7 +315,7 @@ def _install() -> None:
     extra_focus = (
         ("문서AI", (re.compile(r"\bdocument ai\b", re.I), re.compile(r"\bocr\b", re.I), re.compile(r"광학문자인식"), re.compile(r"문서"))),
         ("AI반도체", (re.compile(r"\bnpu\b", re.I), re.compile(r"\bgpu\b", re.I), re.compile(r"\blpu\b", re.I), re.compile(r"엔피유"), re.compile(r"지피유"), re.compile(r"엘피유"), re.compile(r"가속기"), re.compile(r"반도체"))),
-        ("검증", (re.compile(r"검증"), re.compile(r"테스트벤치"), re.compile(r"\bverification\b", re.I), re.compile(r"\bvalidation\b", re.I))),
+        ("검증", (re.compile(r"(?:모델|성능|품질|시스템|알고리즘|인공지능|AI)\s*검증", re.I), re.compile(r"테스트벤치"), re.compile(r"\bverification\b", re.I), re.compile(r"\bvalidation\b", re.I))),
         ("헬스케어", (re.compile(r"의료"), re.compile(r"임상"), re.compile(r"심전도"), re.compile(r"\becg\b", re.I))),
         ("자율주행", (re.compile(r"자율주행"), re.compile(r"\badas\b", re.I), re.compile(r"에이디에이에스"), re.compile(r"\bvslam\b", re.I), re.compile(r"측위"), re.compile(r"\blocalization\b", re.I), re.compile(r"\bpositioning\b", re.I), re.compile(r"센서\s*퓨전"), re.compile(r"센서\s*퓨젼"))),
         ("인프라", (re.compile(r"런타임"), re.compile(r"드라이버"), re.compile(r"\bsdk\b", re.I), re.compile(r"쿠버네티스"), re.compile(r"\bkubernetes\b", re.I), re.compile(r"\bci/cd\b", re.I))),
