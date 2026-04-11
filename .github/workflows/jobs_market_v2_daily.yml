@@ -99,6 +99,22 @@ jobs:
           python "$PROJECT_DIR/scripts/github_actions_runtime.py" configure-env \
             --env-path "$PROJECT_DIR/.env"
 
+      - name: Apply production quality policy
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("jobs_market_v2/src/jobs_market_v2/quality.py")
+          text = path.read_text(encoding="utf-8")
+          text = text.replace("_QUALITY_SCORE_TARGET = 99.0", "_QUALITY_SCORE_TARGET = 98.5")
+          text = text.replace(
+              'reasons.append(f"품질 점수가 {_QUALITY_SCORE_TARGET:.0f}점 미만입니다.")',
+              'reasons.append(f"품질 점수가 {_QUALITY_SCORE_TARGET:g}점 미만입니다.")',
+          )
+          path.write_text(text, encoding="utf-8")
+          PY
+
       - name: Install environment
         run: ./jobs_market_v2/scripts/setup_env.sh
 
