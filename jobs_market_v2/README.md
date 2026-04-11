@@ -110,6 +110,7 @@ Fill in at least:
 - `GOOGLE_SHEETS_SPREADSHEET_ID`
 - `GOOGLE_SERVICE_ACCOUNT_JSON`
 - `JOBS_MARKET_V2_LLM_API_KEY` if you want LLM-based fallback/refinement
+- `JOBS_MARKET_V2_WORKNET_API_AUTH_KEY` if you want to collect Worknet job postings through the official Open API
 
 Most users do not need to change the provider settings. The checked-in deployment defaults already point to an LLM API backend that runs `gemma-4-31b`.
 
@@ -198,6 +199,38 @@ GOOGLE_SERVICE_ACCOUNT_JSON=/absolute/path/to/service-account.json
 Optional, but recommended. If present, the project can use an LLM API for fallback refinement and harder extraction cases.
 
 By default, the checked-in deployment profile uses `gemma-4-31b`.
+
+### `JOBS_MARKET_V2_WORKNET_API_AUTH_KEY`
+
+Optional, but recommended when you want broader Korean job-board coverage. This key enables the official Worknet/Goyong24 job API adapter.
+
+The adapter uses the official list API first, then hydrates each posting with the official detail API so analysis can use `jobCont`, `certificate`, `major`, `pfCond`, `etcPfCond`, `workdayWorkhrCont`, `etcWelfare`, and related fields. It does not scrape Worknet HTML pages.
+
+Example source URL:
+
+```text
+https://www.work24.go.kr/cm/openApi/call/wk/callOpenApiSvcInfo210L01.do?keyword=데이터+분석|데이터+사이언티스트&display=50&detailLimit=50
+```
+
+Use `source_type: worknet_api` for this source. Keep the `authKey` out of the URL and put it in `.env` instead.
+
+### Work24 Public HTML Fallback
+
+If your organization cannot obtain the official Worknet/Goyong24 API key yet, Biz Voyager can use a conservative public-search fallback:
+
+```text
+https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=데이터+분석|데이터+사이언티스트|데이터사이언스|머신러닝|인공지능&siteClcd=WORK&resultCnt=50&pageLimit=1&detailLimit=20
+```
+
+Use `source_type: work24_public_html` for this source.
+
+This adapter intentionally keeps the scope narrow:
+
+- It searches the public Work24 job-search page and keeps only official Work24 rows (`infoTypeCd=VALIDATION`, `infoTypeGroup=tb_workinfoworknet`).
+- It does not require an API key.
+- `pageLimit` is capped at 5 and `resultCnt` is capped at 50 to avoid aggressive crawling.
+- `detailLimit` defaults to `0`; set it explicitly when you want the collector to read public detail pages for better classification.
+- Raw detail payload storage is redacted for this source type; the sheet should expose Biz Voyager's derived classification, summary fields, source attribution, and the original Work24 link rather than republishing full posting text.
 
 ### Advanced LLM backend overrides
 
