@@ -7,14 +7,17 @@ snapshot is restored by Actions.
 
 from __future__ import annotations
 
+import html
+import json
 import re
 import sys
+from urllib.parse import urljoin
 
 
 def _install() -> None:
     import pandas as pd
 
-    from jobs_market_v2 import collection, presentation, quality
+    from jobs_market_v2 import collection, gemini, presentation, quality
     from jobs_market_v2.constants import ALLOWED_JOB_ROLES, JOB_COLUMNS
     from jobs_market_v2.models import GateResult
     from jobs_market_v2.presentation import build_analysis_fields, build_display_fields
@@ -25,6 +28,140 @@ def _install() -> None:
     has_any = collection._has_any_phrase
     old_classify = collection.classify_job_role
     old_evaluate_quality_gate = quality.evaluate_quality_gate
+
+    def call_llm_for_html_jobs(payload: dict, settings) -> list[dict[str, str]]:
+        prompt = f"""
+다음 HTML 채용/모집 페이지 후보 정보에서 실제 채용 공고 링크만 골라 JSON으로 반환하라.
+
+제약:
+- 절대 새 링크를 만들지 마라
+- 입력 anchors에 있는 url만 사용하라
+- title은 anchors text를 바탕으로 정리하되 새 정보를 만들지 마라
+- 채용 공고가 아니면 제외하라
+- 결과가 없으면 빈 배열을 반환하라
+- JSON만 반환하라
+
+반환 형식:
+{{"jobs":[{{"title":"","job_url":"","location":"","experience_level":""}}]}}
+
+입력:
+{json.dumps(payload, ensure_ascii=False)}
+""".strip()
+        response = gemini._call_json_llm(prompt=prompt, settings=settings, temperature=0.1, max_output_tokens=1024)
+        if isinstance(response, dict):
+            jobs = response.get("jobs") or response.get("items") or []
+        elif isinstance(response, list):
+            jobs = response
+        else:
+            jobs = []
+        return jobs if isinstance(jobs, list) else []
+
+    def extract_html_jobs_with_llm(content: str, base_url: str, *, settings=None, paths=None, budget=None) -> list[dict]:
+        if not settings or not paths or not budget:
+            return []
+        if (
+            not settings.enable_gemini_fallback
+            or not gemini._active_llm_api_key(settings)
+            or not gemini._active_llm_model(settings)
+            or not budget.can_call()
+        ):
+            return []
+        if not (
+            collection._html_page_looks_like_hiring_page(content)
+            or collection._html_source_has_hiring_path_signal({"source_url": base_url})
+        ):
+            return []
+
+        payload, allowed_urls = collection._prepare_html_gemini_probe_payload(content, base_url)
+        if not payload["anchors"]:
+            return []
+
+        cache_path = paths.logs_dir / "gemini_html_jobs_cache.json"
+        cache: dict[str, list[dict[str, str]]] = {}
+        if cache_path.exists():
+            try:
+                cache = json.loads(cache_path.read_text(encoding="utf-8"))
+            except Exception:  # noqa: BLE001
+                cache = {}
+        cache_key = collection.stable_hash(
+            [
+                payload["base_url"],
+                payload["page_title"],
+                payload["page_excerpt"],
+                json.dumps(payload["anchors"], ensure_ascii=False),
+            ]
+        )
+        if cache_key not in cache:
+            budget.consume()
+            try:
+                cache[cache_key] = call_llm_for_html_jobs(payload, settings)
+                collection.atomic_write_text(cache_path, json.dumps(cache, ensure_ascii=False, indent=2))
+            except Exception:  # noqa: BLE001
+                return []
+
+        jobs: list[dict] = []
+        seen: set[str] = set()
+        for item in cache.get(cache_key, []):
+            if not isinstance(item, dict):
+                continue
+            title = normalize(item.get("title"))
+            job_url = normalize(item.get("job_url"))
+            if not title or not job_url:
+                continue
+            resolved_url = urljoin(base_url, job_url)
+            if resolved_url not in allowed_urls or resolved_url in seen:
+                continue
+            seen.add(resolved_url)
+            jobs.append(
+                {
+                    "title": title,
+                    "description_html": f"<div>{html.escape(title)}</div>",
+                    "job_url": resolved_url,
+                    "location": normalize(item.get("location")),
+                    "experience_level": normalize(item.get("experience_level")),
+                }
+            )
+        return jobs
+
+    def refine_jobs_with_llm(jobs: list[dict], settings, paths) -> list[dict]:
+        if not settings.enable_gemini_fallback or not gemini._active_llm_api_key(settings) or not gemini._active_llm_model(settings):
+            return jobs
+
+        budget = gemini.GeminiBudget(max_calls=settings.gemini_max_calls_per_run)
+        prioritized = sorted(
+            ((index, collection._gemini_priority_score(job)) for index, job in enumerate(jobs)),
+            key=lambda item: item[1],
+            reverse=True,
+        )
+
+        for index, score in prioritized:
+            if score <= 0 or not budget.can_call():
+                break
+            job = jobs[index]
+            current_analysis = {
+                "주요업무_분석용": job.get("주요업무_분석용", ""),
+                "자격요건_분석용": job.get("자격요건_분석용", ""),
+                "우대사항_분석용": job.get("우대사항_분석용", ""),
+                "핵심기술_분석용": job.get("핵심기술_분석용", ""),
+                "상세본문_분석용": job.get("상세본문_분석용", ""),
+            }
+            refined_analysis = gemini.maybe_refine_analysis_fields(
+                {
+                    "main_tasks": job.get("main_tasks"),
+                    "requirements": job.get("requirements"),
+                    "preferred": job.get("preferred"),
+                    "core_skills": job.get("core_skills"),
+                    "description_text": job.get("description_text"),
+                },
+                current_analysis,
+                settings,
+                paths,
+                budget,
+            )
+            if refined_analysis != current_analysis:
+                job.update(refined_analysis)
+                job.update(build_display_fields(refined_analysis))
+        return jobs
 
     ai_signals = (
         "machine learning",
@@ -372,6 +509,9 @@ def _install() -> None:
         return GateResult(passed=passed, reasons=reasons, metrics=metrics)
 
     collection.classify_job_role = classify_job_role
+    collection._call_gemini_for_html_jobs = call_llm_for_html_jobs
+    collection._extract_html_jobs_with_gemini = extract_html_jobs_with_llm
+    collection._refine_jobs_with_gemini = refine_jobs_with_llm
     collection._refresh_existing_job_role = refresh_existing_job_role
     collection._refresh_merged_job_rows = refresh_merged_job_rows
     quality.evaluate_quality_gate = evaluate_quality_gate
