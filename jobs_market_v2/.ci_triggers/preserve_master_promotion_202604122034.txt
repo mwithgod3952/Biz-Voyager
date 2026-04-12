@@ -1,0 +1,5 @@
+Trigger jobs_market_v2_daily after deploying master preservation promotion logic.
+
+Expected invariant:
+- master row count must not shrink below the previous published master solely because staging was refreshed or filtered.
+- promotion should preserve prior master rows as 미확인보존 when they are absent from the candidate staging set.
