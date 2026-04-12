@@ -1,0 +1,73 @@
+name: apply_jobs_market_v2_quality_sync
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/apply_jobs_market_v2_quality_sync.yml"
+      - ".github/patches/jobs_market_v2_quality_sync_20260412.patch"
+
+permissions:
+  contents: write
+
+env:
+  PATCH_PATH: .github/patches/jobs_market_v2_quality_sync_20260412.patch
+
+concurrency:
+  group: jobs-market-v2-quality-sync
+  cancel-in-progress: true
+
+jobs:
+  apply-quality-sync:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply validated quality sync patch
+        run: |
+          set -euo pipefail
+          if git apply --check "$PATCH_PATH"; then
+            git apply "$PATCH_PATH"
+          elif git apply --reverse --check "$PATCH_PATH"; then
+            echo "Patch is already applied; nothing to do."
+            exit 0
+          else
+            echo "Patch cannot be applied cleanly."
+            git apply --stat "$PATCH_PATH" || true
+            exit 1
+          fi
+
+      - name: Install environment
+        run: ./jobs_market_v2/scripts/setup_env.sh
+
+      - name: Validate patched quality system
+        working-directory: jobs_market_v2
+        run: |
+          set -euo pipefail
+          ./.venv/bin/pytest -q tests/test_jobs_market_v2.py -k 'sync_tabs_to_google_sheets or section_sanitizer_drops_hiring_admin_sections_without_spaced_headings or section_sanitizer_drops_application_document_and_reference_check_tails or normalize_job_analysis_fields_truncates_cross_column_and_admin_tails'
+          ./.venv/bin/python -m jobs_market_v2.cli doctor
+
+      - name: Commit patched source files
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            jobs_market_v2/src/jobs_market_v2/presentation.py \
+            jobs_market_v2/src/jobs_market_v2/quality.py \
+            jobs_market_v2/src/jobs_market_v2/sheets.py \
+            jobs_market_v2/tests/test_jobs_market_v2.py
+          if git diff --cached --quiet; then
+            echo "No source changes to commit."
+            exit 0
+          fi
+          git commit -m "[skip ci] Apply jobs_market_v2 quality sync patch"
+          git pull --rebase origin main
+          git push origin HEAD:main
