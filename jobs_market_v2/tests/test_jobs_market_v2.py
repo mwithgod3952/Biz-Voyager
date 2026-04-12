@@ -32,6 +32,7 @@ from jobs_market_v2.collection import (
     normalize_job_payload,
     normalize_experience_level,
     parse_jobs_from_payload,
+    refresh_job_roles,
 )
 from jobs_market_v2.constants import (
     COMPANY_CANDIDATE_COLUMNS,
@@ -3185,6 +3186,75 @@ def test_job_role_classification() -> None:
     assert classify_job_role("Security Engineer | 인프라 (보안, AI Security)") == ""
     assert classify_job_role("Software Engineer, Backend | ML Data Platform") == ""
     assert classify_job_role("AI Agent 프론트엔드 개발자") == ""
+    assert classify_job_role("전문연구요원 및 산업기능요원(보충역)", "", "현재 지원 가능한 직무는 아래와 같습니다.") == ""
+    assert classify_job_role("Senior Software Engineer- System", "", "CI/CD 운영과 시스템 소프트웨어를 담당합니다.", "GPU") == ""
+    assert classify_job_role("SoC Design Verification Engineer", "", "CPU UVM 테스트벤치와 SoC 검증을 담당합니다.") == ""
+    assert classify_job_role("생체신호 FE Junior 개발자", "", "의료 소프트웨어 제품의 프론트엔드 기능을 개발합니다.") == ""
+    assert classify_job_role("[Upstage] AI 교육 전문 강사 및 멘토풀 모집", "", "AI 기술 지식과 교육 역량을 보유한 강사를 모집합니다.") == ""
+    assert classify_job_role("Software Engineer - Launching Platform", "", "클라우드 마켓플레이스향 제품 패키징과 내부 운영 도구를 개발합니다.") == ""
+    assert classify_job_role("Process Innovation(PI)(대리~팀장)", "", "전사 프로세스 진단 및 표준 운영 절차를 수립합니다.") == ""
+    assert classify_job_role("IT(AX)전략 담당자 대리~본부장급(팀 세팅 중)", "", "고객사 AX 전략 방향성과 시스템 현황 분석을 담당합니다.") == ""
+    assert classify_job_role("AX팀 기술 리더 (AX Tech Leader)", "", "시스템 아키텍처와 개발 표준을 수립하고 팀을 리딩합니다.") == ""
+    assert classify_job_role("[인터엑스] 2026년 전문연구요원 대규모 채용", "", "제조 특화 언어모델 훈련과 연구 직무를 포함한 대규모 채용입니다.") == ""
+    assert classify_job_role("[우주항공국방기술실(판교)] SW검증 (경력)", "", "우주항공 방산 분야 소프트웨어 검증과 신뢰성 시험을 수행합니다.") == ""
+    assert classify_job_role("Advanced Research | 플래닛 대전 [신입/경력] Firmware Evaluation Engineer", "", "펌웨어 코드 평가와 제어 루프 검증을 수행합니다.") == ""
+    assert (
+        classify_job_role(
+            "[AI Research Div.] [전문연구요원] Research Scientist/Engineer - Vision-Language-Action (VLA) for Robotics (2년 이상)",
+            "",
+            "VLA 모델과 강화학습, 로봇 학습 알고리즘 연구개발을 수행하고 학회 논문 수준의 연구를 진행합니다.",
+        )
+        == "인공지능 리서처"
+    )
+
+
+def test_refresh_job_roles_reapplies_current_taxonomy() -> None:
+    def job_row(company: str, title: str, role: str, main_tasks: str, job_key: str) -> dict:
+        row = {column: "" for column in JOB_COLUMNS}
+        row.update(
+            {
+                "job_key": job_key,
+                "change_hash": f"hash-{job_key}",
+                "first_seen_at": "2026-04-12T00:00:00+09:00",
+                "last_seen_at": "2026-04-12T00:00:00+09:00",
+                "is_active": True,
+                "missing_count": 0,
+                "snapshot_date": "2026-04-12",
+                "run_id": "test-run",
+                "source_url": f"https://example.com/{job_key}",
+                "source_name": "Example Careers",
+                "company_name": company,
+                "company_tier": "스타트업",
+                "job_title_raw": title,
+                "experience_level_raw": "경력",
+                "job_role": role,
+                "job_url": f"https://example.com/jobs/{job_key}",
+                "record_status": "신규",
+                "주요업무_분석용": main_tasks,
+            }
+        )
+        return row
+
+    frame = pd.DataFrame(
+        [
+            job_row("리벨리온", "SoC Design Verification Engineer", "인공지능 엔지니어", "CPU UVM 테스트벤치와 SoC 검증을 담당합니다.", "soc"),
+            job_row(
+                "크래프톤",
+                "[AI Research Div.] [전문연구요원] Research Scientist/Engineer - Vision-Language-Action (VLA) for Robotics (2년 이상)",
+                "인공지능 엔지니어",
+                "VLA 모델과 강화학습, 로봇 학습 알고리즘 연구개발을 수행하고 학회 논문 수준의 연구를 진행합니다.",
+                "vla",
+            ),
+            job_row("테스트AI", "Machine Learning Engineer", "인공지능 엔지니어", "추천 모델 학습과 서빙 파이프라인을 개발합니다.", "ml"),
+        ],
+        columns=list(JOB_COLUMNS),
+    )
+
+    refreshed = refresh_job_roles(frame)
+
+    assert "SoC Design Verification Engineer" not in set(refreshed["job_title_raw"])
+    assert refreshed.loc[refreshed["job_key"] == "vla", "job_role"].item() == "인공지능 리서처"
+    assert refreshed.loc[refreshed["job_key"] == "ml", "job_role"].item() == "인공지능 엔지니어"
 
 
 def test_html_cleaning_and_section_extraction() -> None:

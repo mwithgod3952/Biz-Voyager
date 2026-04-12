@@ -141,6 +141,84 @@ _AI_ENGINEER_EXCLUSION_PHRASES = (
     "data engineer",
 )
 
+_NON_TARGET_TITLE_ONLY_PHRASES = (
+    "전문연구요원 및 산업기능요원",
+    "산업기능요원",
+    "전문연구요원 대규모",
+    "대규모 채용",
+    "멘토풀",
+    "강사",
+    "교육 전문",
+    "process innovation",
+    "it ax 전략",
+    "ax 전략",
+    "ax팀",
+    "ax tech leader",
+    "기술 리더",
+    "sw검증",
+    "software engineer launching platform",
+)
+_SERVICE_HARD_EXCLUSION_TITLE_PHRASES = (
+    "software engineer system",
+    "soc design verification",
+    "design verification engineer",
+    "verification engineer",
+    "firmware",
+    "펌웨어",
+    "fe junior",
+    "fe developer",
+    "fe 개발자",
+)
+_SERVICE_SOFT_EXCLUSION_TITLE_PHRASES = (
+    "software engineer system",
+    "software engineer",
+    "software developer",
+    "system software engineer",
+    "platform software engineer",
+)
+_SERVICE_ALLOW_TITLE_PHRASES = (
+    "software engineer machine learning",
+    "software engineer, machine learning",
+    "machine learning software engineer",
+    "machine learning platform engineer",
+    "machine learning engineer",
+    "ml engineer",
+    "mlops engineer",
+    "ai engineer",
+    "ai system software engineer",
+    "ai compiler engineer",
+    "deep learning engineer",
+)
+_SERVICE_TARGET_WORK_PHRASES = (
+    "machine learning",
+    "ml",
+    "mlops",
+    "llm",
+    "rag",
+    "foundation model",
+    "computer vision",
+    "model training",
+    "model serving",
+    "model optimization",
+    "inference",
+    "ai 반도체",
+    "npu",
+    "gpu",
+    "머신러닝",
+    "딥러닝",
+    "엘엘엠",
+    "브이엘엠",
+    "컴퓨터 비전",
+    "컴퓨터비전",
+    "모델 학습",
+    "모델 훈련",
+    "모델 서빙",
+    "추론",
+    "엔피유",
+    "지피유",
+    "인공지능 반도체",
+)
+
 _AI_ENGINEER_DELIVERY_PHRASES = (
     "engineer",
     "developer",
@@ -605,6 +683,19 @@ def classify_job_role(*texts: str | None) -> str:
     corpus = _normalize_role_text(" ".join(normalized_texts))
     if not corpus:
         return ""
+    title_corpus = _normalize_role_text(" ".join(title_candidates))
+    body_corpus = _normalize_role_text(" ".join(normalized_texts[2:]))
+    title_has_analyst = _has_any_phrase(title_corpus, ("data analyst", "analytics analyst", "데이터 분석가", "데이터분석가"))
+    if _has_any_phrase(title_corpus, _NON_TARGET_TITLE_ONLY_PHRASES) and not title_has_analyst:
+        return ""
+    if _has_any_phrase(title_corpus, _SERVICE_HARD_EXCLUSION_TITLE_PHRASES):
+        return ""
+    if (
+        _has_any_phrase(title_corpus, _SERVICE_SOFT_EXCLUSION_TITLE_PHRASES)
+        and not _has_any_phrase(title_corpus, _SERVICE_ALLOW_TITLE_PHRASES)
+        and not _has_any_phrase(body_corpus, _SERVICE_TARGET_WORK_PHRASES)
+    ):
+        return ""
     if (
         _has_any_phrase(corpus, ("데이터사이언스", "데이터 사이언스", "data science"))
         and _has_any_phrase(corpus, ("데이터분석", "데이터 분석", "analytics", "analysis"))
@@ -933,6 +1024,44 @@ def normalize_job_payload(
     }
     raw_detail = {column: raw_detail.get(column, "") for column in RAW_DETAIL_COLUMNS}
     return record, raw_detail
+
+
+def refresh_job_roles(frame: pd.DataFrame) -> pd.DataFrame:
+    """Re-apply the current role taxonomy to previously collected job rows."""
+    if frame.empty:
+        return pd.DataFrame(columns=list(JOB_COLUMNS))
+
+    refreshed_rows: list[dict[str, Any]] = []
+    analysis_columns = (
+        "주요업무_분석용",
+        "자격요건_분석용",
+        "우대사항_분석용",
+        "핵심기술_분석용",
+        "상세본문_분석용",
+    )
+    for row in frame.fillna("").to_dict(orient="records"):
+        analysis_fields = {column: normalize_whitespace(row.get(column)) for column in analysis_columns}
+        if not any(analysis_fields.values()):
+            analysis_fields = build_analysis_fields(row)
+
+        role = classify_job_role(
+            row.get("job_title_raw"),
+            row.get("공고제목_표시"),
+            analysis_fields.get("주요업무_분석용", ""),
+            analysis_fields.get("자격요건_분석용", ""),
+            analysis_fields.get("우대사항_분석용", ""),
+            analysis_fields.get("핵심기술_분석용", ""),
+            analysis_fields.get("상세본문_분석용", ""),
+        )
+        if role not in ALLOWED_JOB_ROLES:
+            continue
+
+        row["job_role"] = role
+        row.update(analysis_fields)
+        row.update(build_display_fields(row, analysis_fields=analysis_fields))
+        refreshed_rows.append({column: row.get(column, "") for column in JOB_COLUMNS})
+
+    return pd.DataFrame(refreshed_rows, columns=list(JOB_COLUMNS))
 
 
 def _gemini_priority_score(job: dict) -> int:

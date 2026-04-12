@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 
-from .collection import canonicalize_job_key, collect_jobs_from_sources, merge_incremental
+from .collection import canonicalize_job_key, collect_jobs_from_sources, merge_incremental, refresh_job_roles
 from .company_screening import collect_company_evidence, split_company_buckets
 from .company_seed_sources import (
     CATALOG_SOURCE_TYPES,
@@ -825,6 +825,9 @@ def collect_jobs_pipeline(
             registry_to_write = _merge_updated_source_registry(existing_registry, updated_registry)
         if not dry_run:
             write_csv(registry_to_write, registry_output_path or paths.source_registry_path)
+            jobs_before_role_refresh = len(jobs)
+            jobs = refresh_job_roles(jobs)
+            summary["role_refresh_dropped_job_count"] = int(jobs_before_role_refresh - len(jobs))
             filtered_jobs, dropped_jobs = filter_low_quality_jobs(jobs, settings=settings, paths=paths)
             write_csv(filtered_jobs, paths.staging_jobs_path)
             write_parquet(filtered_jobs, paths.first_snapshot_path)
@@ -898,6 +901,9 @@ def update_incremental_pipeline(
             existing_registry = read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
             registry_to_write = _merge_updated_source_registry(existing_registry, updated_registry)
         write_csv(registry_to_write, registry_output_path or paths.source_registry_path)
+        merged_before_role_refresh = len(merged)
+        merged = refresh_job_roles(merged)
+        summary["role_refresh_dropped_job_count"] = int(merged_before_role_refresh - len(merged))
         filtered_jobs, dropped_jobs = filter_low_quality_jobs(merged, settings=settings, paths=paths)
         write_csv(filtered_jobs, paths.staging_jobs_path)
         write_jsonl(raw_records, paths.raw_detail_path)
