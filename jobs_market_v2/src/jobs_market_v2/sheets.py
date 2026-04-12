@@ -49,6 +49,9 @@ def _update_worksheet_with_retry(worksheet, values) -> None:
     last_error: Exception | None = None
     for attempt in range(GOOGLE_SHEETS_UPDATE_RETRY_ATTEMPTS):
         try:
+            clear = getattr(worksheet, "clear", None)
+            if clear is not None:
+                clear()
             worksheet.update(values if values else [[]])
             return
         except Exception as exc:  # noqa: BLE001

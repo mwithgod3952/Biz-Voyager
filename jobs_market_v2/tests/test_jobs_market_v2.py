@@ -6327,6 +6327,42 @@ def test_section_sanitizer_drops_cta_and_stops_before_benefits_tail() -> None:
     assert sanitized == "모델을 설계하고 배포합니다.\n파이프라인을 운영합니다."
 
 
+def test_section_sanitizer_drops_hiring_admin_sections_without_spaced_headings() -> None:
+    text = """
+한국어 비즈니스 의사소통 능력이 있는 분
+해외 여행에 결격 사유가 없는 분
+채용전형
+서류전형 > 직무 테스트 및 면접전형 > 처우 협의 > 최종 합격
+근무조건
+계약직
+""".strip()
+
+    sanitized = sanitize_section_text(text)
+
+    assert "한국어 비즈니스 의사소통" in sanitized
+    assert "채용전형" not in sanitized
+    assert "서류전형" not in sanitized
+    assert "근무조건" not in sanitized
+
+
+def test_section_sanitizer_drops_application_document_and_reference_check_tails() -> None:
+    text = """
+국제 학회 및 저널 논문 출판 경험이 있는 분
+의료 인공지능 프로젝트 경험이 있는 분
+필수 – 이력서, 논문(석사 이상 학위 소지자)
+선택 –, 포트폴리오 등
+*(에 따라 레퍼런스체크 실시될 수 있음)
+""".strip()
+
+    sanitized = sanitize_section_text(text)
+
+    assert "국제 학회 및 저널 논문 출판 경험" in sanitized
+    assert "의료 인공지능 프로젝트 경험" in sanitized
+    assert "이력서" not in sanitized
+    assert "포트폴리오" not in sanitized
+    assert "레퍼런스" not in sanitized
+
+
 def test_section_sanitizer_drops_faq_lines_and_deduplicates_repeated_content() -> None:
     text = """
 Senior Data Analyst 역할에서 핵심 의사결정을 지원합니다.
@@ -6956,6 +6992,63 @@ def test_normalize_job_analysis_fields_sanitizes_visible_sections_from_analysis_
     assert gate.metrics["english_leak_count"] == 0
 
 
+def test_normalize_job_analysis_fields_truncates_cross_column_and_admin_tails() -> None:
+    staging = pd.DataFrame(
+        [
+            {
+                "company_name": "테스트회사",
+                "source_name": "테스트 채용",
+                "job_title_raw": "Data Engineer",
+                "job_title_ko": "Data Engineer",
+                "job_role": "인공지능 엔지니어",
+                "job_url": "https://example.com/jobs/data-engineer",
+                "source_url": "https://example.com/feed",
+                "source_bucket": "approved",
+                "company_tier": "스타트업",
+                "record_status": "유지",
+                "is_active": True,
+                "주요업무_분석용": "데이터레이크 구축 및 운영 업무를 담당합니다.\n자격요건\n파이썬 개발 경험",
+                "자격요건_분석용": "파이썬 개발 경험\n우대조건\n대규모 데이터 처리 경험",
+                "우대사항_분석용": (
+                    "의료 인공지능 프로젝트 경험\n"
+                    "필수 – 이력서, 논문(석사 이상 학위 소지자)\n"
+                    "선택 –, 포트폴리오 등\n"
+                    "*(에 따라 레퍼런스체크 실시될 수 있음)"
+                ),
+                "핵심기술_분석용": "Python\nSQL",
+                "상세본문_분석용": "",
+                "회사명_표시": "테스트회사",
+                "소스명_표시": "테스트 채용",
+                "공고제목_표시": "Data Engineer",
+                "경력수준_표시": "",
+                "경력근거_표시": "",
+                "채용트랙_표시": "",
+                "채용트랙근거_표시": "",
+                "직무초점_표시": "",
+                "직무초점근거_표시": "",
+                "구분요약_표시": "",
+                "직무명_표시": "인공지능 엔지니어",
+                "주요업무_표시": "",
+                "자격요건_표시": "",
+                "우대사항_표시": "",
+                "핵심기술_표시": "",
+            }
+        ]
+    )
+
+    normalized = normalize_job_analysis_fields(staging)
+    row = normalized.iloc[0]
+
+    assert row["주요업무_분석용"] == "데이터레이크 구축 및 운영 업무를 담당합니다."
+    assert row["자격요건_분석용"] == "파이썬 개발 경험"
+    assert row["우대사항_분석용"] == "의료 인공지능 프로젝트 경험"
+    assert "자격요건" not in row["주요업무_분석용"]
+    assert "우대조건" not in row["자격요건_분석용"]
+    assert "이력서" not in row["우대사항_분석용"]
+    assert "레퍼런스" not in row["우대사항_분석용"]
+    assert row["주요업무_표시"] == "데이터레이크 구축 및 운영 업무를 담당합니다."
+
+
 def test_discover_sources_prefers_approved_companies_when_bucket_exists(sandbox_project: Path) -> None:
     discover_companies_pipeline(project_root=sandbox_project)
     collect_company_evidence_pipeline(project_root=sandbox_project)
@@ -6998,6 +7091,7 @@ def test_sheet_tabs_include_company_registry_and_evidence(sandbox_project: Path)
 def test_sync_tabs_to_google_sheets_sets_client_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
     timeout_calls: list[tuple[float, float] | None] = []
     updates: list[str] = []
+    calls: list[str] = []
 
     class FakeWorksheet:
         def __init__(self, title: str) -> None:
@@ -7006,9 +7100,10 @@ def test_sync_tabs_to_google_sheets_sets_client_timeout(monkeypatch: pytest.Monk
             self.col_count = 20
 
         def clear(self) -> None:
-            raise AssertionError("clear should not be called before update")
+            calls.append(f"{self.title}:clear")
 
         def update(self, values) -> None:
+            calls.append(f"{self.title}:update")
             updates.append(self.title)
 
         def resize(self, rows: int | None = None, cols: int | None = None) -> None:
@@ -7071,6 +7166,7 @@ def test_sync_tabs_to_google_sheets_sets_client_timeout(monkeypatch: pytest.Monk
     assert synced is True
     assert timeout_calls == [(3.0, 12.0)]
     assert "기업선정 탭" in updates
+    assert calls[:2] == ["기업선정 탭:clear", "기업선정 탭:update"]
 
 
 def test_sync_tabs_to_google_sheets_truncates_oversized_cells(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -7083,7 +7179,7 @@ def test_sync_tabs_to_google_sheets_truncates_oversized_cells(monkeypatch: pytes
             self.col_count = 20
 
         def clear(self) -> None:
-            raise AssertionError("clear should not be called before update")
+            return None
 
         def update(self, values) -> None:
             captured_values[self.title] = values
@@ -7160,7 +7256,7 @@ def test_sync_tabs_to_google_sheets_retries_retryable_update_timeout(monkeypatch
             self.col_count = 20
 
         def clear(self) -> None:
-            raise AssertionError("clear should not be called before update")
+            return None
 
         def update(self, values) -> None:
             update_attempts.append(1)
@@ -7238,7 +7334,7 @@ def test_sync_tabs_to_google_sheets_updates_only_selected_tabs(monkeypatch: pyte
             self.col_count = 20
 
         def clear(self) -> None:
-            raise AssertionError("clear should not be called before update")
+            return None
 
         def update(self, values) -> None:
             updates.append(self.title)

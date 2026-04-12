@@ -16,7 +16,9 @@ from .presentation import (
     _DEFAULT_EXPERIENCE_DISPLAY,
     _DEFAULT_PREFERRED_DISPLAY,
     _PREFERRED_HEADING_PATTERNS,
+    _REQUIREMENTS_HEADING_PATTERNS,
     _extract_section_from_raw_detail,
+    _looks_like_section_heading,
     _preserve_english_task_lines,
     _track_from_text,
     build_display_fields,
@@ -695,15 +697,35 @@ def _row_has_low_quality_analysis(row: pd.Series) -> bool:
     return False
 
 
+def _truncate_analysis_section_at_headings(value: object, stop_patterns: tuple[re.Pattern[str], ...]) -> str:
+    text = _normalized_cell(value)
+    if not text:
+        return ""
+
+    kept_lines: list[str] = []
+    for raw_line in text.split("\n"):
+        line = normalize_whitespace(raw_line)
+        if not line:
+            continue
+        if _looks_like_section_heading(line, stop_patterns):
+            break
+        kept_lines.append(line)
+    return "\n".join(kept_lines)
+
+
 def _normalize_main_task_analysis(row: pd.Series) -> str:
     for candidate in (row.get("주요업무_분석용"), row.get("main_tasks")):
         raw = _normalized_cell(candidate)
         if not raw:
             continue
-        sanitized = sanitize_section_text(raw)
+        section_only = _truncate_analysis_section_at_headings(
+            raw,
+            _REQUIREMENTS_HEADING_PATTERNS + _PREFERRED_HEADING_PATTERNS,
+        )
+        sanitized = sanitize_section_text(section_only)
         if sanitized and not section_loss_looks_high(raw, sanitized):
             return sanitized
-        preserved = _preserve_english_task_lines(raw)
+        preserved = _preserve_english_task_lines(section_only)
         if preserved:
             return preserved
         if sanitized:
@@ -1172,9 +1194,14 @@ def normalize_job_analysis_fields(staging_jobs: pd.DataFrame) -> pd.DataFrame:
 
     if "주요업무_분석용" in normalized.columns:
         normalized["주요업무_분석용"] = normalized.apply(_normalize_main_task_analysis, axis=1)
-    for column in ("자격요건_분석용", "우대사항_분석용"):
-        if column in normalized.columns:
-            normalized[column] = normalized[column].fillna("").astype(str).map(sanitize_section_text)
+    if "자격요건_분석용" in normalized.columns:
+        normalized["자격요건_분석용"] = normalized["자격요건_분석용"].fillna("").astype(str).map(
+            lambda value: sanitize_section_text(
+                _truncate_analysis_section_at_headings(value, _PREFERRED_HEADING_PATTERNS)
+            )
+        )
+    if "우대사항_분석용" in normalized.columns:
+        normalized["우대사항_분석용"] = normalized["우대사항_분석용"].fillna("").astype(str).map(sanitize_section_text)
     if "핵심기술_분석용" in normalized.columns:
         normalized["핵심기술_분석용"] = normalized["핵심기술_분석용"].fillna("").astype(str).map(sanitize_core_skill_text)
     if "상세본문_분석용" in normalized.columns:
