@@ -112,6 +112,29 @@ jobs:
               'reasons.append(f"품질 점수가 {_QUALITY_SCORE_TARGET:g}점 미만입니다.")',
           )
           path.write_text(text, encoding="utf-8")
+
+          guard_path = Path("jobs_market_v2/src/sitecustomize.py")
+          guard = guard_path.read_text(encoding="utf-8")
+          if "old_merge_incremental = collection.merge_incremental" not in guard:
+              guard = guard.replace(
+                  "    old_classify = collection.classify_job_role\n",
+                  "    old_classify = collection.classify_job_role\n    old_merge_incremental = collection.merge_incremental\n",
+              )
+          if "def merge_incremental_with_role_refresh" not in guard:
+              guard = guard.replace(
+                  "    extra_focus = (\n",
+                  "    def merge_incremental_with_role_refresh(*args, **kwargs) -> pd.DataFrame:\n"
+                  "        merged = old_merge_incremental(*args, **kwargs)\n"
+                  "        return refresh_merged_job_rows(merged)\n\n"
+                  "    extra_focus = (\n",
+              )
+          if "collection.merge_incremental = merge_incremental_with_role_refresh" not in guard:
+              guard = guard.replace(
+                  "    collection.classify_job_role = classify_job_role\n",
+                  "    collection.classify_job_role = classify_job_role\n"
+                  "    collection.merge_incremental = merge_incremental_with_role_refresh\n",
+              )
+          guard_path.write_text(guard, encoding="utf-8")
           PY
 
       - name: Install environment
