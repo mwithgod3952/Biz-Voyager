@@ -1,0 +1,376 @@
+diff --git a/jobs_market_v2/src/jobs_market_v2/presentation.py b/jobs_market_v2/src/jobs_market_v2/presentation.py
+index de9ce8a..665c44d 100644
+--- a/jobs_market_v2/src/jobs_market_v2/presentation.py
++++ b/jobs_market_v2/src/jobs_market_v2/presentation.py
+@@ -244,31 +244,82 @@ _FAQ_OR_ADMIN_LINE_PATTERNS = (
+     re.compile(r"자주\s*묻는"),
+     re.compile(r"안내\s*사항"),
+     re.compile(r"아래\s*안내"),
++    re.compile(r"근무\s*조건"),
+     re.compile(r"근무\s*형태"),
+     re.compile(r"근무\s*시작일"),
++    re.compile(r"근무\s*예정지"),
++    re.compile(r"임금\s*조건"),
+     re.compile(r"기술\s*스택"),
+     re.compile(r"직무\s*과제"),
+     re.compile(r"어떻게\s*되나요"),
+     re.compile(r"어떻게\s*진행되나요"),
+     re.compile(r"지원해드릴\s*예정"),
++    re.compile(r"지원\s*전\s*꼭\s*확인"),
++    re.compile(r"이력서\s*제출\s*관련"),
++    re.compile(r"코딩테스트\s*관련"),
++    re.compile(r"재지원\s*관련"),
++    re.compile(r"채용\s*프로세스"),
++    re.compile(r"채용\s*전형"),
++    re.compile(r"채용\s*절차"),
++    re.compile(r"영입\s*여정"),
++    re.compile(r"전형\s*방법"),
++    re.compile(r"접수\s*방법"),
++    re.compile(r"제출\s*서류"),
++    re.compile(r"제출\s*자료"),
++    re.compile(r"^[*\-•()\s]*(?:필수|선택)\s*[–—:-].*(?:이력서|경력기술서|포트폴리오|논문|자기소개서|서류)"),
++    re.compile(r"\[?선택사항\]?.*(?:포트폴리오|첨부파일|유알엘|url)"),
++    re.compile(r"서류\s*전형"),
++    re.compile(r"면접\s*전형"),
++    re.compile(r"처우\s*협의"),
++    re.compile(r"최종\s*합격"),
++    re.compile(r"레퍼런스\s*체크"),
++    re.compile(r"복리\s*후생"),
++    re.compile(r"기타\s*사항"),
++    re.compile(r"모집\s*인원"),
+     re.compile(r"자세한.*안내"),
+     re.compile(r"채용\s*faq", flags=re.IGNORECASE),
+     re.compile(r"공고명"),
+     re.compile(r"양식"),
++    re.compile(r"피디에프\s*제출"),
++    re.compile(r"피디에프\s*(?:형식|파일)"),
++    re.compile(r"포트폴리오.*제출"),
++    re.compile(r"업로드\s*해주시"),
+ )
+ 
+ _SECTION_TERMINATION_PATTERNS = (
+-    re.compile(r"^근무 조건$"),
++    re.compile(r"^근무\s*조건"),
++    re.compile(r"^근무\s*예정지"),
++    re.compile(r"^임금\s*조건"),
++    re.compile(r"^고용\s*형태"),
+     re.compile(r"^복지 및 혜택$"),
++    re.compile(r"^복리\s*후생"),
++    re.compile(r"^채용\s*전형"),
+     re.compile(r"^채용\s*절차$"),
++    re.compile(r"^채용\s*프로세스"),
+     re.compile(r"^전형\s*절차$"),
++    re.compile(r"^전형\s*방법"),
++    re.compile(r"^접수\s*방법"),
+     re.compile(r"^서류\s*반환\s*정책$"),
+-    re.compile(r"^기타사항$"),
++    re.compile(r"^기타\s*사항"),
+     re.compile(r"^참고\s*사항$"),
+     re.compile(r"^이렇게 합류해요$"),
+     re.compile(r"^이렇게 근무해요$"),
+     re.compile(r"^꼭 확인해 주세요$"),
++    re.compile(r"^지원\s*전\s*꼭\s*확인"),
++    re.compile(r"^이력서\s*제출\s*관련"),
++    re.compile(r"^코딩테스트\s*관련"),
++    re.compile(r"^재지원\s*관련"),
+     re.compile(r"^제출 서류"),
++    re.compile(r"^[*\-•()\s]*(?:필수|선택)\s*[–—:-].*(?:이력서|경력기술서|포트폴리오|논문|자기소개서|서류)"),
++    re.compile(r"^\[?선택사항\]?.*(?:포트폴리오|첨부파일|유알엘|url)"),
++    re.compile(r"^서류\s*전형(?:\s|$|[>▶→:-])"),
++    re.compile(r"^면접\s*전형(?:\s|$|[>▶→:-])"),
++    re.compile(r"^처우\s*협의(?:\s|$|[>▶→:-])"),
++    re.compile(r"^최종\s*합격(?:\s|$|[>▶→:-])"),
++    re.compile(r"^직무\s*테스트.*(?:면접|처우|합격)"),
++    re.compile(r"^.*레퍼런스\s*체크.*(?:진행|실시|처우|합격)"),
++    re.compile(r"^영입\s*여정"),
++    re.compile(r"^계약직$"),
+     re.compile(r"^\)?\s*FAQ", flags=re.IGNORECASE),
+     re.compile(r"^자주\s*묻는"),
+     re.compile(r"^\)?\s*근무\s*형태"),
+@@ -283,6 +334,18 @@ _DETAIL_FALLBACK_NOISE_PATTERNS = (
+     re.compile(r"채용인원"),
+     re.compile(r"수탁연구사업\s*종료일"),
+     re.compile(r"채용 관련 문의"),
++    re.compile(r"근무\s*조건"),
++    re.compile(r"제출\s*서류"),
++    re.compile(r"제출\s*자료"),
++    re.compile(r"^[*\-•()\s]*(?:필수|선택)\s*[–—:-].*(?:이력서|경력기술서|포트폴리오|논문|자기소개서|서류)"),
++    re.compile(r"\[?선택사항\]?.*(?:포트폴리오|첨부파일|유알엘|url)"),
++    re.compile(r"전형\s*방법"),
++    re.compile(r"접수\s*방법"),
++    re.compile(r"복리\s*후생"),
++    re.compile(r"채용\s*프로세스"),
++    re.compile(r"영입\s*여정"),
++    re.compile(r"업로드\s*해주시"),
++    re.compile(r"레퍼런스\s*체크"),
+     re.compile(r"접수기간"),
+     re.compile(r"^\d+\s*제\d+차.*채용공고"),
+     re.compile(r"공고명"),
+@@ -320,6 +383,7 @@ _REQUIREMENTS_HEADING_PATTERNS = (
+     re.compile(r"지원자격"),
+     re.compile(r"공통자격"),
+     re.compile(r"필수요건"),
++    re.compile(r"이런\s*역량과\s*경험을\s*갖추신\s*분을\s*찾습니다"),
+     re.compile(r"이런 분과 함께하고 싶어요"),
+     re.compile(r"이런 분을 찾습니다"),
+     re.compile(r"이런 분을 원해요"),
+@@ -332,7 +396,9 @@ _REQUIREMENTS_HEADING_PATTERNS = (
+ 
+ _PREFERRED_HEADING_PATTERNS = (
+     re.compile(r"우대사항"),
++    re.compile(r"우대\s*조건"),
+     re.compile(r"선호(?:사항)?"),
++    re.compile(r"이런\s*역량과\s*경험을\s*갖추신\s*분이면\s*더욱\s*좋습니다"),
+     re.compile(r"이런 분이면 더 좋아요"),
+     re.compile(r"이런 분이면 더 좋습니다"),
+     re.compile(r"이런 분이라면 더 좋아요"),
+diff --git a/jobs_market_v2/src/jobs_market_v2/quality.py b/jobs_market_v2/src/jobs_market_v2/quality.py
+index 74a0673..48b791f 100644
+--- a/jobs_market_v2/src/jobs_market_v2/quality.py
++++ b/jobs_market_v2/src/jobs_market_v2/quality.py
+@@ -16,7 +16,9 @@ from .presentation import (
+     _DEFAULT_EXPERIENCE_DISPLAY,
+     _DEFAULT_PREFERRED_DISPLAY,
+     _PREFERRED_HEADING_PATTERNS,
++    _REQUIREMENTS_HEADING_PATTERNS,
+     _extract_section_from_raw_detail,
++    _looks_like_section_heading,
+     _preserve_english_task_lines,
+     _track_from_text,
+     build_display_fields,
+@@ -695,15 +697,35 @@ def _row_has_low_quality_analysis(row: pd.Series) -> bool:
+     return False
+ 
+ 
++def _truncate_analysis_section_at_headings(value: object, stop_patterns: tuple[re.Pattern[str], ...]) -> str:
++    text = _normalized_cell(value)
++    if not text:
++        return ""
++
++    kept_lines: list[str] = []
++    for raw_line in text.split("\n"):
++        line = normalize_whitespace(raw_line)
++        if not line:
++            continue
++        if _looks_like_section_heading(line, stop_patterns):
++            break
++        kept_lines.append(line)
++    return "\n".join(kept_lines)
++
++
+ def _normalize_main_task_analysis(row: pd.Series) -> str:
+     for candidate in (row.get("주요업무_분석용"), row.get("main_tasks")):
+         raw = _normalized_cell(candidate)
+         if not raw:
+             continue
+-        sanitized = sanitize_section_text(raw)
++        section_only = _truncate_analysis_section_at_headings(
++            raw,
++            _REQUIREMENTS_HEADING_PATTERNS + _PREFERRED_HEADING_PATTERNS,
++        )
++        sanitized = sanitize_section_text(section_only)
+         if sanitized and not section_loss_looks_high(raw, sanitized):
+             return sanitized
+-        preserved = _preserve_english_task_lines(raw)
++        preserved = _preserve_english_task_lines(section_only)
+         if preserved:
+             return preserved
+         if sanitized:
+@@ -1172,9 +1194,14 @@ def normalize_job_analysis_fields(staging_jobs: pd.DataFrame) -> pd.DataFrame:
+ 
+     if "주요업무_분석용" in normalized.columns:
+         normalized["주요업무_분석용"] = normalized.apply(_normalize_main_task_analysis, axis=1)
+-    for column in ("자격요건_분석용", "우대사항_분석용"):
+-        if column in normalized.columns:
+-            normalized[column] = normalized[column].fillna("").astype(str).map(sanitize_section_text)
++    if "자격요건_분석용" in normalized.columns:
++        normalized["자격요건_분석용"] = normalized["자격요건_분석용"].fillna("").astype(str).map(
++            lambda value: sanitize_section_text(
++                _truncate_analysis_section_at_headings(value, _PREFERRED_HEADING_PATTERNS)
++            )
++        )
++    if "우대사항_분석용" in normalized.columns:
++        normalized["우대사항_분석용"] = normalized["우대사항_분석용"].fillna("").astype(str).map(sanitize_section_text)
+     if "핵심기술_분석용" in normalized.columns:
+         normalized["핵심기술_분석용"] = normalized["핵심기술_분석용"].fillna("").astype(str).map(sanitize_core_skill_text)
+     if "상세본문_분석용" in normalized.columns:
+diff --git a/jobs_market_v2/src/jobs_market_v2/sheets.py b/jobs_market_v2/src/jobs_market_v2/sheets.py
+index 00ac369..f8316ba 100644
+--- a/jobs_market_v2/src/jobs_market_v2/sheets.py
++++ b/jobs_market_v2/src/jobs_market_v2/sheets.py
+@@ -49,6 +49,9 @@ def _update_worksheet_with_retry(worksheet, values) -> None:
+     last_error: Exception | None = None
+     for attempt in range(GOOGLE_SHEETS_UPDATE_RETRY_ATTEMPTS):
+         try:
++            clear = getattr(worksheet, "clear", None)
++            if clear is not None:
++                clear()
+             worksheet.update(values if values else [[]])
+             return
+         except Exception as exc:  # noqa: BLE001
+diff --git a/jobs_market_v2/tests/test_jobs_market_v2.py b/jobs_market_v2/tests/test_jobs_market_v2.py
+index ac9edc3..1c2e2f5 100644
+--- a/jobs_market_v2/tests/test_jobs_market_v2.py
++++ b/jobs_market_v2/tests/test_jobs_market_v2.py
+@@ -6327,6 +6327,42 @@ def test_section_sanitizer_drops_cta_and_stops_before_benefits_tail() -> None:
+     assert sanitized == "모델을 설계하고 배포합니다.\n파이프라인을 운영합니다."
+ 
+ 
++def test_section_sanitizer_drops_hiring_admin_sections_without_spaced_headings() -> None:
++    text = """
++한국어 비즈니스 의사소통 능력이 있는 분
++해외 여행에 결격 사유가 없는 분
++채용전형
++서류전형 > 직무 테스트 및 면접전형 > 처우 협의 > 최종 합격
++근무조건
++계약직
++""".strip()
++
++    sanitized = sanitize_section_text(text)
++
++    assert "한국어 비즈니스 의사소통" in sanitized
++    assert "채용전형" not in sanitized
++    assert "서류전형" not in sanitized
++    assert "근무조건" not in sanitized
++
++
++def test_section_sanitizer_drops_application_document_and_reference_check_tails() -> None:
++    text = """
++국제 학회 및 저널 논문 출판 경험이 있는 분
++의료 인공지능 프로젝트 경험이 있는 분
++필수 – 이력서, 논문(석사 이상 학위 소지자)
++선택 –, 포트폴리오 등
++*(에 따라 레퍼런스체크 실시될 수 있음)
++""".strip()
++
++    sanitized = sanitize_section_text(text)
++
++    assert "국제 학회 및 저널 논문 출판 경험" in sanitized
++    assert "의료 인공지능 프로젝트 경험" in sanitized
++    assert "이력서" not in sanitized
++    assert "포트폴리오" not in sanitized
++    assert "레퍼런스" not in sanitized
++
++
+ def test_section_sanitizer_drops_faq_lines_and_deduplicates_repeated_content() -> None:
+     text = """
+ Senior Data Analyst 역할에서 핵심 의사결정을 지원합니다.
+@@ -6956,6 +6992,63 @@ def test_normalize_job_analysis_fields_sanitizes_visible_sections_from_analysis_
+     assert gate.metrics["english_leak_count"] == 0
+ 
+ 
++def test_normalize_job_analysis_fields_truncates_cross_column_and_admin_tails() -> None:
++    staging = pd.DataFrame(
++        [
++            {
++                "company_name": "테스트회사",
++                "source_name": "테스트 채용",
++                "job_title_raw": "Data Engineer",
++                "job_title_ko": "Data Engineer",
++                "job_role": "인공지능 엔지니어",
++                "job_url": "https://example.com/jobs/data-engineer",
++                "source_url": "https://example.com/feed",
++                "source_bucket": "approved",
++                "company_tier": "스타트업",
++                "record_status": "유지",
++                "is_active": True,
++                "주요업무_분석용": "데이터레이크 구축 및 운영 업무를 담당합니다.\n자격요건\n파이썬 개발 경험",
++                "자격요건_분석용": "파이썬 개발 경험\n우대조건\n대규모 데이터 처리 경험",
++                "우대사항_분석용": (
++                    "의료 인공지능 프로젝트 경험\n"
++                    "필수 – 이력서, 논문(석사 이상 학위 소지자)\n"
++                    "선택 –, 포트폴리오 등\n"
++                    "*(에 따라 레퍼런스체크 실시될 수 있음)"
++                ),
++                "핵심기술_분석용": "Python\nSQL",
++                "상세본문_분석용": "",
++                "회사명_표시": "테스트회사",
++                "소스명_표시": "테스트 채용",
++                "공고제목_표시": "Data Engineer",
++                "경력수준_표시": "",
++                "경력근거_표시": "",
++                "채용트랙_표시": "",
++                "채용트랙근거_표시": "",
++                "직무초점_표시": "",
++                "직무초점근거_표시": "",
++                "구분요약_표시": "",
++                "직무명_표시": "인공지능 엔지니어",
++                "주요업무_표시": "",
++                "자격요건_표시": "",
++                "우대사항_표시": "",
++                "핵심기술_표시": "",
++            }
++        ]
++    )
++
++    normalized = normalize_job_analysis_fields(staging)
++    row = normalized.iloc[0]
++
++    assert row["주요업무_분석용"] == "데이터레이크 구축 및 운영 업무를 담당합니다."
++    assert row["자격요건_분석용"] == "파이썬 개발 경험"
++    assert row["우대사항_분석용"] == "의료 인공지능 프로젝트 경험"
++    assert "자격요건" not in row["주요업무_분석용"]
++    assert "우대조건" not in row["자격요건_분석용"]
++    assert "이력서" not in row["우대사항_분석용"]
++    assert "레퍼런스" not in row["우대사항_분석용"]
++    assert row["주요업무_표시"] == "데이터레이크 구축 및 운영 업무를 담당합니다."
++
++
+ def test_discover_sources_prefers_approved_companies_when_bucket_exists(sandbox_project: Path) -> None:
+     discover_companies_pipeline(project_root=sandbox_project)
+     collect_company_evidence_pipeline(project_root=sandbox_project)
+@@ -6998,6 +7091,7 @@ def test_sheet_tabs_include_company_registry_and_evidence(sandbox_project: Path)
+ def test_sync_tabs_to_google_sheets_sets_client_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+     timeout_calls: list[tuple[float, float] | None] = []
+     updates: list[str] = []
++    calls: list[str] = []
+ 
+     class FakeWorksheet:
+         def __init__(self, title: str) -> None:
+@@ -7006,9 +7100,10 @@ def test_sync_tabs_to_google_sheets_sets_client_timeout(monkeypatch: pytest.Monk
+             self.col_count = 20
+ 
+         def clear(self) -> None:
+-            raise AssertionError("clear should not be called before update")
++            calls.append(f"{self.title}:clear")
+ 
+         def update(self, values) -> None:
++            calls.append(f"{self.title}:update")
+             updates.append(self.title)
+ 
+         def resize(self, rows: int | None = None, cols: int | None = None) -> None:
+@@ -7071,6 +7166,7 @@ def test_sync_tabs_to_google_sheets_sets_client_timeout(monkeypatch: pytest.Monk
+     assert synced is True
+     assert timeout_calls == [(3.0, 12.0)]
+     assert "기업선정 탭" in updates
++    assert calls[:2] == ["기업선정 탭:clear", "기업선정 탭:update"]
+ 
+ 
+ def test_sync_tabs_to_google_sheets_truncates_oversized_cells(monkeypatch: pytest.MonkeyPatch) -> None:
+@@ -7083,7 +7179,7 @@ def test_sync_tabs_to_google_sheets_truncates_oversized_cells(monkeypatch: pytes
+             self.col_count = 20
+ 
+         def clear(self) -> None:
+-            raise AssertionError("clear should not be called before update")
++            return None
+ 
+         def update(self, values) -> None:
+             captured_values[self.title] = values
+@@ -7160,7 +7256,7 @@ def test_sync_tabs_to_google_sheets_retries_retryable_update_timeout(monkeypatch
+             self.col_count = 20
+ 
+         def clear(self) -> None:
+-            raise AssertionError("clear should not be called before update")
++            return None
+ 
+         def update(self, values) -> None:
+             update_attempts.append(1)
+@@ -7238,7 +7334,7 @@ def test_sync_tabs_to_google_sheets_updates_only_selected_tabs(monkeypatch: pyte
+             self.col_count = 20
+ 
+         def clear(self) -> None:
+-            raise AssertionError("clear should not be called before update")
++            return None
+ 
+         def update(self, values) -> None:
+             updates.append(self.title)
