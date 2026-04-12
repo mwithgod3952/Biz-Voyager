@@ -27,6 +27,7 @@ def _install() -> None:
     has_phrase = collection._has_phrase
     has_any = collection._has_any_phrase
     old_classify = collection.classify_job_role
+    old_merge_incremental = collection.merge_incremental
     old_evaluate_quality_gate = quality.evaluate_quality_gate
 
     def call_llm_for_html_jobs(payload: dict, settings) -> list[dict[str, str]]:
@@ -248,6 +249,14 @@ def _install() -> None:
         "careers at",
         "talent pool",
         "채용공고",
+        "인재채용",
+        "인재 채용",
+        "채용정보",
+        "채용 정보",
+        "채용홈페이지",
+        "채용 홈페이지",
+        "채용페이지",
+        "채용 페이지",
         "각 부문 신입/경력 모집",
         "역할과 책임을 다합니다",
         "product owner",
@@ -449,6 +458,10 @@ def _install() -> None:
             rows.append({column: row.get(column, "") for column in JOB_COLUMNS})
         return pd.DataFrame(rows, columns=list(JOB_COLUMNS))
 
+    def merge_incremental_with_role_refresh(*args, **kwargs) -> pd.DataFrame:
+        merged = old_merge_incremental(*args, **kwargs)
+        return refresh_merged_job_rows(merged)
+
     extra_focus = (
         ("문서AI", (re.compile(r"\bdocument ai\b", re.I), re.compile(r"\bocr\b", re.I), re.compile(r"광학문자인식"), re.compile(r"문서"))),
         ("AI반도체", (re.compile(r"\bnpu\b", re.I), re.compile(r"\bgpu\b", re.I), re.compile(r"\blpu\b", re.I), re.compile(r"엔피유"), re.compile(r"지피유"), re.compile(r"엘피유"), re.compile(r"가속기"), re.compile(r"반도체"))),
@@ -509,6 +522,7 @@ def _install() -> None:
         return GateResult(passed=passed, reasons=reasons, metrics=metrics)
 
     collection.classify_job_role = classify_job_role
+    collection.merge_incremental = merge_incremental_with_role_refresh
     collection._call_gemini_for_html_jobs = call_llm_for_html_jobs
     collection._extract_html_jobs_with_gemini = extract_html_jobs_with_llm
     collection._refine_jobs_with_gemini = refine_jobs_with_llm
