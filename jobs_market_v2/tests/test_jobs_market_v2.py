@@ -10636,6 +10636,7 @@ def test_promote_staging_blocks_suspicious_partial_scan_shrink(
     monkeypatch.setattr(pipelines_module, "_PROMOTION_SHRINK_MIN_DROP_COUNT", 2)
     monkeypatch.setattr(pipelines_module, "_PROMOTION_SHRINK_MIN_DROP_RATIO", 0.1)
     monkeypatch.setattr(pipelines_module, "_PROMOTION_SHRINK_MIN_MISSING_COUNT", 3)
+    monkeypatch.setattr(pipelines_module, "refresh_job_roles", lambda staging_jobs: staging_jobs.copy())
     monkeypatch.setattr(
         pipelines_module,
         "filter_low_quality_jobs",
@@ -10661,7 +10662,7 @@ def test_promote_staging_blocks_suspicious_partial_scan_shrink(
     assert len(refreshed_master) == 10
 
 
-def test_promote_staging_allows_legitimate_shrink_after_full_scan(
+def test_promote_staging_preserves_master_rows_after_full_scan_shrink(
     sandbox_project: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -10757,6 +10758,7 @@ def test_promote_staging_allows_legitimate_shrink_after_full_scan(
     monkeypatch.setattr(pipelines_module, "_PROMOTION_SHRINK_MIN_DROP_COUNT", 2)
     monkeypatch.setattr(pipelines_module, "_PROMOTION_SHRINK_MIN_DROP_RATIO", 0.1)
     monkeypatch.setattr(pipelines_module, "_PROMOTION_SHRINK_MIN_MISSING_COUNT", 3)
+    monkeypatch.setattr(pipelines_module, "refresh_job_roles", lambda staging_jobs: staging_jobs.copy())
     monkeypatch.setattr(
         pipelines_module,
         "filter_low_quality_jobs",
@@ -10775,10 +10777,17 @@ def test_promote_staging_allows_legitimate_shrink_after_full_scan(
     summary = promote_staging_pipeline(project_root=sandbox_project)
 
     assert summary["quality_gate_passed"] is True
-    assert summary["promoted_job_count"] == 7
+    assert summary["promoted_job_count"] == 10
     assert summary["publish_shrink_guard_triggered"] is False
+    assert summary["publish_preservation_applied"] is True
+    assert summary["candidate_master_count"] == 7
+    assert summary["published_master_count"] == 10
+    assert summary["retained_previous_job_count"] == 3
     refreshed_master = read_csv_or_empty(paths.master_jobs_path, JOB_COLUMNS)
-    assert len(refreshed_master) == 7
+    assert len(refreshed_master) == 10
+    assert set(refreshed_master.loc[refreshed_master["job_key"].isin({"job-7", "job-8", "job-9"}), "record_status"]) == {
+        "미확인보존"
+    }
 
 
 def test_filter_low_quality_jobs_drops_empty_or_noisy_analysis_rows() -> None:
