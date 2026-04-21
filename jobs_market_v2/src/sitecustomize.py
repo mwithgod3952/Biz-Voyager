@@ -350,6 +350,32 @@ def _install() -> None:
     academic_terms = ("논문", "학회", "출판", "저널", "publication", "conference", "workshop", "journal", "박사", "phd", "benchmark")
     delivery_terms = ("설계", "구현", "개발", "구축", "운영", "배포", "서빙", "pipeline", "파이프라인", "제품", "서비스", "customer", "고객")
     weak_ai_software_titles = ("ai software engineer", "global software engineer", "applied ai technical engineer")
+    statistical_analyst_titles = (
+        "통계분석",
+        "통계 분석",
+        "빅데이터 분석",
+        "데이터 분석 연구원",
+        "리서치 통계분석",
+    )
+    robot_service_non_target_titles = (
+        "robot service",
+        "robot cs",
+        "robot as",
+        "cs as engineer",
+        "서비스 cs as",
+        "서비스 엔지니어",
+        "로봇 서비스",
+    )
+    robot_service_non_target_body_terms = (
+        "유지보수",
+        "기술 지원",
+        "정기 점검",
+        "긴급 장애 대응",
+        "장애 대응",
+        "부품 교체",
+        "입고 테스트",
+        "서비스 매뉴얼",
+    )
     strong_ai_work_terms = (
         "machine learning",
         "ml",
@@ -404,6 +430,17 @@ def _install() -> None:
             return ""
 
         title_has_analyst = has_any(title_corpus, analyst_titles)
+        if (
+            has_any(title_corpus, robot_service_non_target_titles)
+            and has_any(corpus, robot_service_non_target_body_terms)
+            and not has_any(corpus, strong_ai_work_terms + ("인공지능", "머신러닝", "딥러닝", "기계학습", "llm", "컴퓨터 비전", "컴퓨터비전"))
+        ):
+            return ""
+        if (
+            has_any(title_corpus, statistical_analyst_titles)
+            and not has_any(corpus, strong_ai_work_terms + ("인공지능", "머신러닝", "딥러닝", "기계학습", "llm", "컴퓨터 비전", "컴퓨터비전"))
+        ):
+            return "데이터 분석가"
         if has_any(title_corpus, title_only_non_target):
             return ""
         if has_any(title_corpus, ("adas application engineer", "application engineer")) and has_any(corpus, ("adas", "에이디에이에스", "컴퓨터 비전", "컴퓨터비전", "자율주행")):

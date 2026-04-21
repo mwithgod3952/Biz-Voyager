@@ -309,7 +309,7 @@ _SECTION_TERMINATION_PATTERNS = (
     re.compile(r"^이력서\s*제출\s*관련"),
     re.compile(r"^코딩테스트\s*관련"),
     re.compile(r"^재지원\s*관련"),
-    re.compile(r"^제출 서류"),
+    re.compile(r"^제출\s*서류"),
     re.compile(r"^[*\-•()\s]*(?:필수|선택)\s*[–—:-].*(?:이력서|경력기술서|포트폴리오|논문|자기소개서|서류)"),
     re.compile(r"^\[?선택사항\]?.*(?:포트폴리오|첨부파일|유알엘|url)"),
     re.compile(r"^서류\s*전형(?:\s|$|[>▶→:-])"),
@@ -713,6 +713,8 @@ def _experience_from_text(text: str) -> str:
     lowered = text.lower()
     if not text:
         return ""
+    if "경력무관" in text or "경력 무관" in text or "관계없음" in text:
+        return "경력무관"
     if "전환형 인턴" in text:
         return "전환형 인턴"
     if "인턴" in text or _ENGLISH_INTERN_RE.search(lowered):
@@ -851,7 +853,10 @@ _FOCUS_PATTERNS: tuple[tuple[str, tuple[re.Pattern[str], ...]], ...] = (
         (
             re.compile(r"\bllm\b", flags=re.IGNORECASE),
             re.compile(r"\blarge language model\b", flags=re.IGNORECASE),
+            re.compile(r"엘엘엠"),
             re.compile(r"거대 언어 모델"),
+            re.compile(r"파운데이션 모델"),
+            re.compile(r"\bfoundation model\b", flags=re.IGNORECASE),
             re.compile(r"프롬프트"),
             re.compile(r"에이전트"),
             re.compile(r"\bagent(?:ic)?\b", flags=re.IGNORECASE),
@@ -869,6 +874,14 @@ _FOCUS_PATTERNS: tuple[tuple[str, tuple[re.Pattern[str], ...]], ...] = (
             re.compile(r"\bserving\b", flags=re.IGNORECASE),
             re.compile(r"\bplatform\b", flags=re.IGNORECASE),
             re.compile(r"\bpipeline\b", flags=re.IGNORECASE),
+            re.compile(r"파이프라인"),
+            re.compile(r"런타임"),
+            re.compile(r"드라이버"),
+            re.compile(r"\bdriver\b", flags=re.IGNORECASE),
+            re.compile(r"\bsdk\b", flags=re.IGNORECASE),
+            re.compile(r"쿠버네티스"),
+            re.compile(r"\bkubernetes\b", flags=re.IGNORECASE),
+            re.compile(r"\bci/cd\b", flags=re.IGNORECASE),
             re.compile(r"배포 시스템"),
         ),
     ),
@@ -889,6 +902,8 @@ _FOCUS_PATTERNS: tuple[tuple[str, tuple[re.Pattern[str], ...]], ...] = (
             re.compile(r"\bvision\b", flags=re.IGNORECASE),
             re.compile(r"영상"),
             re.compile(r"이미지"),
+            re.compile(r"컴퓨터비전"),
+            re.compile(r"컴퓨터 비전"),
             re.compile(r"\bcomputer vision\b", flags=re.IGNORECASE),
             re.compile(r"멀티모달"),
             re.compile(r"\bmultimodal\b", flags=re.IGNORECASE),
@@ -901,6 +916,7 @@ _FOCUS_PATTERNS: tuple[tuple[str, tuple[re.Pattern[str], ...]], ...] = (
             re.compile(r"\brobot\b", flags=re.IGNORECASE),
             re.compile(r"\brobotics\b", flags=re.IGNORECASE),
             re.compile(r"\bslam\b", flags=re.IGNORECASE),
+            re.compile(r"에스엘에이엠"),
             re.compile(r"\bmanipulation\b", flags=re.IGNORECASE),
             re.compile(r"\bvla\b", flags=re.IGNORECASE),
         ),
@@ -944,7 +960,53 @@ _FOCUS_PATTERNS: tuple[tuple[str, tuple[re.Pattern[str], ...]], ...] = (
             re.compile(r"\bbig data\b", flags=re.IGNORECASE),
             re.compile(r"\bdata platform\b", flags=re.IGNORECASE),
             re.compile(r"\bdata pipeline\b", flags=re.IGNORECASE),
+            re.compile(r"데이터 플랫폼"),
             re.compile(r"데이터 파이프라인"),
+            re.compile(r"데이터 워크플로우"),
+            re.compile(r"\betl\b", flags=re.IGNORECASE),
+        ),
+    ),
+    (
+        "문서AI",
+        (
+            re.compile(r"\bdocument ai\b", flags=re.IGNORECASE),
+            re.compile(r"\bocr\b", flags=re.IGNORECASE),
+            re.compile(r"광학문자인식"),
+            re.compile(r"문서"),
+        ),
+    ),
+    (
+        "AI반도체",
+        (
+            re.compile(r"\bnpu\b", flags=re.IGNORECASE),
+            re.compile(r"\bgpu\b", flags=re.IGNORECASE),
+            re.compile(r"\blpu\b", flags=re.IGNORECASE),
+            re.compile(r"엔피유"),
+            re.compile(r"지피유"),
+            re.compile(r"엘피유"),
+            re.compile(r"가속기"),
+            re.compile(r"인공지능 가속"),
+            re.compile(r"반도체"),
+        ),
+    ),
+    (
+        "검증",
+        (
+            re.compile(r"(?:모델|성능|품질|시스템|알고리즘|인공지능|AI)\s*검증", flags=re.IGNORECASE),
+            re.compile(r"테스트벤치"),
+            re.compile(r"\bverification\b", flags=re.IGNORECASE),
+            re.compile(r"\bvalidation\b", flags=re.IGNORECASE),
+            re.compile(r"\btestbench\b", flags=re.IGNORECASE),
+        ),
+    ),
+    (
+        "헬스케어",
+        (
+            re.compile(r"의료"),
+            re.compile(r"임상"),
+            re.compile(r"심전도"),
+            re.compile(r"\becg\b", flags=re.IGNORECASE),
+            re.compile(r"\bhealthcare\b", flags=re.IGNORECASE),
         ),
     ),
     (
@@ -1006,6 +1068,15 @@ _FOCUS_PATTERNS: tuple[tuple[str, tuple[re.Pattern[str], ...]], ...] = (
         "자율주행",
         (
             re.compile(r"자율주행"),
+            re.compile(r"\badas\b", flags=re.IGNORECASE),
+            re.compile(r"에이디에이에스"),
+            re.compile(r"\bvslam\b", flags=re.IGNORECASE),
+            re.compile(r"측위"),
+            re.compile(r"\blocalization\b", flags=re.IGNORECASE),
+            re.compile(r"\bpositioning\b", flags=re.IGNORECASE),
+            re.compile(r"위치\s*추정"),
+            re.compile(r"센서\s*퓨전"),
+            re.compile(r"센서\s*퓨젼"),
             re.compile(r"\bautonomous driving\b", flags=re.IGNORECASE),
             re.compile(r"\bautonomous vehicle\b", flags=re.IGNORECASE),
             re.compile(r"\bself-driving\b", flags=re.IGNORECASE),

@@ -138,7 +138,12 @@ def _active_llm_provider(settings) -> str:
 
 
 def _active_llm_api_key(settings) -> str:
-    return normalize_whitespace(getattr(settings, "llm_api_key", "") or getattr(settings, "gemini_api_key", ""))
+    provider = _active_llm_provider(settings)
+    llm_api_key = normalize_whitespace(getattr(settings, "llm_api_key", ""))
+    gemini_api_key = normalize_whitespace(getattr(settings, "gemini_api_key", ""))
+    if provider in {"", "gemini"}:
+        return llm_api_key or gemini_api_key
+    return llm_api_key
 
 
 def _active_llm_model(settings) -> str:

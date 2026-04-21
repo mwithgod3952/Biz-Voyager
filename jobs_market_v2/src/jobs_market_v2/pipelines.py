@@ -22,8 +22,14 @@ from .company_seed_sources import (
     promote_shadow_company_seed_sources,
     refresh_company_seed_sources,
 )
-from .constants import COMPANY_CANDIDATE_COLUMNS, JOB_COLUMNS, RUN_COLUMNS, SOURCE_REGISTRY_COLUMNS
-from .discovery import discover_companies, discover_source_candidates, import_companies, import_sources
+from .constants import COMPANY_CANDIDATE_COLUMNS, IMPORT_COMPANY_COLUMNS, JOB_COLUMNS, RUN_COLUMNS, SOURCE_REGISTRY_COLUMNS
+from .discovery import (
+    discover_companies,
+    discover_source_candidates,
+    discover_work24_population,
+    import_companies,
+    import_sources,
+)
 from .doctor import run_doctor
 from .quality import evaluate_quality_gate, filter_low_quality_jobs, write_quality_gate
 from .reporting import build_coverage_report, write_coverage_report
@@ -165,6 +171,12 @@ def _merge_updated_source_registry(existing_registry: pd.DataFrame, updated_regi
         return existing_registry
     if "source_url" not in existing_registry.columns or "source_url" not in updated_registry.columns:
         return updated_registry
+
+    snapshot_managed_methods = {"work24_limited_public_board_fallback"}
+    if "discovery_method" in existing_registry.columns:
+        existing_registry = existing_registry[
+            ~existing_registry["discovery_method"].fillna("").astype(str).isin(snapshot_managed_methods)
+        ].copy()
 
     merged = existing_registry.copy().astype(object)
     updated_by_url = updated_registry.drop_duplicates(subset=["source_url"], keep="last").astype(object).set_index("source_url")
@@ -681,15 +693,57 @@ def promote_shadow_seed_sources_pipeline(project_root: Path | None = None) -> di
         raise
 
 
+def discover_work24_population_candidates_pipeline(project_root: Path | None = None) -> dict:
+    paths = get_paths(project_root)
+    settings = get_settings(project_root)
+    started_at = _now()
+    run_id = _run_id("discover-work24-population")
+    try:
+        discovered, discovered_jobs, shadow_companies, summary = discover_work24_population(paths, settings)
+        combined = discovered.reset_index(drop=True) if not discovered.empty else pd.DataFrame(columns=list(IMPORT_COMPANY_COLUMNS))
+        write_csv(combined, paths.work24_population_candidates_path)
+        combined_jobs = discovered_jobs.reset_index(drop=True)
+        if not combined_jobs.empty and "worknet_wanted_auth_no" in combined_jobs.columns:
+            auth_key = combined_jobs["worknet_wanted_auth_no"].fillna("").astype(str).str.strip()
+            url_key = combined_jobs.get("job_url", pd.Series([""] * len(combined_jobs))).fillna("").astype(str).str.strip()
+            combined_jobs = combined_jobs.assign(_dedupe_key=auth_key.where(auth_key.ne(""), url_key))
+            combined_jobs = combined_jobs.drop_duplicates(subset=["_dedupe_key"], keep="last").drop(columns=["_dedupe_key"])
+        write_csv(combined_jobs, paths.work24_population_jobs_path)
+        combined_shadow_companies = shadow_companies.reset_index(drop=True)
+        write_csv(combined_shadow_companies, paths.work24_population_shadow_companies_path)
+        summary = {
+            **summary,
+            "stored_work24_population_candidate_count": int(len(combined)),
+            "stored_work24_population_job_count": int(len(combined_jobs)),
+            "stored_work24_population_shadow_company_count": int(len(combined_shadow_companies)),
+            "new_work24_population_candidate_count": int(len(discovered)),
+            "new_work24_population_job_count": int(len(discovered_jobs)),
+            "new_work24_population_shadow_company_count": int(len(shadow_companies)),
+            "work24_population_artifact": str(paths.work24_population_candidates_path),
+            "work24_population_jobs_artifact": str(paths.work24_population_jobs_path),
+            "work24_population_shadow_companies_artifact": str(paths.work24_population_shadow_companies_path),
+            "work24_population_scan_log_artifact": str(paths.work24_population_scan_log_path),
+        }
+        _record_run(paths, "discover-work24-population", run_id, started_at, summary)
+        return summary
+    except Exception as exc:  # noqa: BLE001
+        _record_error(paths, "discover-work24-population", run_id, exc)
+        raise
+
+
 def expand_company_candidates_pipeline(project_root: Path | None = None) -> dict:
     paths = get_paths(project_root)
     started_at = _now()
     run_id = _run_id("expand-company-candidates")
     try:
         seed_summary = collect_company_seed_records_pipeline(project_root)
+        work24_summary = discover_work24_population_candidates_pipeline(project_root)
         discover_summary = discover_companies_pipeline(project_root)
         summary = {
             **seed_summary,
+            "work24_population": work24_summary,
+            "work24_population_candidate_count": int(work24_summary.get("stored_work24_population_candidate_count", 0)),
+            "work24_population_new_candidate_count": int(work24_summary.get("new_work24_population_candidate_count", 0)),
             "expanded_candidate_company_count": int(discover_summary.get("discovered_company_count", 0)),
             "candidate_input_mode": discover_summary.get("candidate_input_mode", ""),
             "seeded_candidate_count": int(discover_summary.get("seeded_candidate_count", 0)),
@@ -707,12 +761,21 @@ def discover_sources_pipeline(project_root: Path | None = None) -> dict:
     run_id = _run_id("discover-sources")
     try:
         approved_companies = read_csv_or_empty(paths.approved_companies_path)
+        registry_companies = read_csv_or_empty(paths.companies_registry_path)
         companies = approved_companies
-        if companies.empty:
-            companies = read_csv_or_empty(paths.companies_registry_path)
-        if companies.empty:
+        company_input_mode = "approved_companies" if not approved_companies.empty else "companies_registry"
+        if companies.empty and registry_companies.empty:
             discover_companies_pipeline(project_root)
-            companies = read_csv_or_empty(paths.companies_registry_path)
+            registry_companies = read_csv_or_empty(paths.companies_registry_path)
+        if companies.empty:
+            companies = registry_companies
+        elif not registry_companies.empty:
+            companies = (
+                pd.concat([approved_companies, registry_companies], ignore_index=True)
+                .drop_duplicates(subset=["company_name"], keep="first")
+                .reset_index(drop=True)
+            )
+            company_input_mode = "approved_companies_plus_registry"
         source_candidates = discover_source_candidates(companies, paths, settings=get_settings(project_root))
         approved, candidate, rejected, registry = screen_sources(source_candidates)
         existing_registry = read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
@@ -731,7 +794,7 @@ def discover_sources_pipeline(project_root: Path | None = None) -> dict:
             "rejected_source_count": int(len(rejected)),
             "screened_source_count": int(len(registry)),
             "company_input_count": int(len(companies)),
-            "company_input_mode": "approved_companies" if not approved_companies.empty else "companies_registry",
+            "company_input_mode": company_input_mode,
         }
         _record_run(paths, "discover-sources", run_id, started_at, summary)
         return summary
