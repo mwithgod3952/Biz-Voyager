@@ -58,6 +58,54 @@ IMPORT_COMPANY_COLUMNS = (
     "candidate_seed_reason",
 )
 
+WORK24_POPULATION_JOB_COLUMNS = (
+    "worknet_wanted_auth_no",
+    "population_source_name",
+    "population_source_url",
+    "population_page",
+    "population_query",
+    "population_role_hint",
+    "title",
+    "company_name",
+    "location",
+    "experience_level",
+    "job_url",
+    "listing_context",
+    "work24_public_tracking_signal",
+    "work24_llm_target_hint",
+    "work24_llm_suggested_role",
+    "work24_llm_reason",
+)
+
+WORK24_POPULATION_SHADOW_COMPANY_COLUMNS = (
+    "company_name",
+    "company_tier",
+    "region",
+    "raw_job_count",
+    "role_hint_count",
+    "llm_target_true_count",
+    "llm_target_false_count",
+    "sample_titles",
+    "sample_job_urls",
+    "sample_role_hints",
+    "sample_queries",
+    "shadow_status",
+    "promoted_candidate",
+    "candidate_seed_reason",
+)
+
+WORK24_POPULATION_SCAN_LOG_COLUMNS = (
+    "scanned_at",
+    "population_source_name",
+    "population_source_url",
+    "population_query",
+    "page",
+    "listing_count",
+    "new_listing_count",
+    "cumulative_unique_job_count",
+    "stopped_reason",
+)
+
 IMPORT_SOURCE_COLUMNS = (
     "company_name",
     "company_tier",
@@ -222,6 +270,9 @@ APPROVED_SOURCE_TYPES = {
     "jsonld",
     "rss",
     "sitemap",
+    "saramin_api",
+    "worknet_api",
+    "work24_public_html",
     "greenhouse",
     "lever",
     "greetinghr",
@@ -237,6 +288,9 @@ APPROVED_SOURCE_TYPES = {
 SUPPORTED_SOURCE_TYPES = APPROVED_SOURCE_TYPES | {"html_page"}
 
 ATS_SOURCE_TYPES = {
+    "saramin_api",
+    "worknet_api",
+    "work24_public_html",
     "greenhouse",
     "lever",
     "greetinghr",

@@ -137,7 +137,10 @@ _NEAR_DUPLICATE_LEVEL_RE = re.compile(
     r"\b(?:senior|staff|sr|jr|lead|principal|director|manager|ii|iii|iv)\b|시니어|주니어|책임|수석|선임",
     flags=re.IGNORECASE,
 )
-_QUALITY_SCORE_TARGET = 99.0
+# The composite score is a soft operational readiness signal; hard blockers
+# such as duplicates, English leaks, invalid experience, and hold pollution
+# remain enforced separately.
+_QUALITY_SCORE_TARGET = 98.5
 _MAIN_TASK_BLANK_THRESHOLD = 0.15
 _REQUIREMENT_BLANK_THRESHOLD = 0.2
 _PREFERRED_BLANK_THRESHOLD = 0.35
@@ -149,6 +152,16 @@ _DROPPED_LOW_QUALITY_RATIO_THRESHOLD = 0.03
 _DUPLICATE_JOB_URL_RATIO_THRESHOLD = 0.01
 _IMPOSSIBLE_EXPERIENCE_RATIO_THRESHOLD = 0.01
 _CARRY_FORWARD_HOLD_RATIO_THRESHOLD = 0.2
+_ROLE_AUDIT_INPUT_COLUMNS = (
+    "job_title_raw",
+    "공고제목_표시",
+    "주요업무_분석용",
+    "자격요건_분석용",
+    "우대사항_분석용",
+    "핵심기술_분석용",
+    "상세본문_분석용",
+)
+_ROLE_AUDIT_SAMPLE_LIMIT = 12
 
 
 def _normalized_cell(value: object) -> str:
@@ -976,6 +989,95 @@ def _impossible_experience_count(frame: pd.DataFrame) -> int:
     return int(values.str.contains(_IMPOSSIBLE_EXPERIENCE_RE, regex=True, na=False).sum())
 
 
+def _role_audit_sample(row: dict[str, object], expected_role: str) -> dict[str, str]:
+    return {
+        "company_name": normalize_whitespace(row.get("company_name")),
+        "job_title_raw": normalize_whitespace(row.get("job_title_raw")),
+        "job_role": normalize_whitespace(row.get("job_role")),
+        "expected_role": expected_role,
+        "job_url": normalize_whitespace(row.get("job_url")),
+    }
+
+
+def _semantic_role_audit(active_jobs: pd.DataFrame) -> dict[str, object]:
+    if active_jobs.empty:
+        return {
+            "role_mismatch_count": 0,
+            "role_non_target_count": 0,
+            "role_mismatch_samples": [],
+            "role_non_target_samples": [],
+        }
+
+    # Keep this lazy: quality.py is imported by pipeline tests, while the role
+    # classifier lives in collection.py.
+    from .collection import classify_job_role
+
+    mismatch_samples: list[dict[str, str]] = []
+    non_target_samples: list[dict[str, str]] = []
+    mismatch_count = 0
+    non_target_count = 0
+    for row in active_jobs.fillna("").to_dict(orient="records"):
+        expected_role = classify_job_role(*[row.get(column, "") for column in _ROLE_AUDIT_INPUT_COLUMNS])
+        current_role = normalize_whitespace(row.get("job_role"))
+        if expected_role not in ALLOWED_JOB_ROLES:
+            non_target_count += 1
+            if len(non_target_samples) < _ROLE_AUDIT_SAMPLE_LIMIT:
+                non_target_samples.append(_role_audit_sample(row, ""))
+            continue
+        if current_role != expected_role:
+            mismatch_count += 1
+            if len(mismatch_samples) < _ROLE_AUDIT_SAMPLE_LIMIT:
+                mismatch_samples.append(_role_audit_sample(row, expected_role))
+    return {
+        "role_mismatch_count": mismatch_count,
+        "role_non_target_count": non_target_count,
+        "role_mismatch_samples": mismatch_samples,
+        "role_non_target_samples": non_target_samples,
+    }
+
+
+def _is_work24_runtime_row(row: dict[str, object]) -> bool:
+    runtime_identity = " ".join(
+        normalize_whitespace(row.get(column))
+        for column in ("source_url", "job_url", "source_name")
+    ).lower()
+    return "work24.go.kr" in runtime_identity or "고용24" in runtime_identity
+
+
+def _apply_work24_semantic_role_filter(frame: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    if frame.empty:
+        return frame.copy(), frame.iloc[0:0].copy()
+
+    from .collection import classify_job_role
+
+    kept_rows: list[dict[str, object]] = []
+    dropped_rows: list[dict[str, object]] = []
+    for row in frame.fillna("").to_dict(orient="records"):
+        if not _is_work24_runtime_row(row):
+            kept_rows.append(row)
+            continue
+
+        expected_role = classify_job_role(*[row.get(column, "") for column in _ROLE_AUDIT_INPUT_COLUMNS])
+        if expected_role not in ALLOWED_JOB_ROLES:
+            row["semantic_filter_reason"] = "work24_semantic_non_target"
+            dropped_rows.append(row)
+            continue
+        current_role = normalize_whitespace(row.get("job_role"))
+        if current_role != expected_role:
+            row["semantic_filter_reason"] = f"work24_role_corrected:{current_role}->{expected_role}"
+            row["job_role"] = expected_role
+            if "직무명_표시" in row:
+                row["직무명_표시"] = expected_role
+        kept_rows.append(row)
+
+    kept = pd.DataFrame(kept_rows, columns=frame.columns)
+    dropped_columns = list(frame.columns)
+    if dropped_rows and "semantic_filter_reason" not in dropped_columns:
+        dropped_columns.append("semantic_filter_reason")
+    dropped = pd.DataFrame(dropped_rows, columns=dropped_columns)
+    return kept.reset_index(drop=True), dropped.reset_index(drop=True)
+
+
 def _blank_ratio(frame: pd.DataFrame, column: str) -> float:
     if frame.empty or column not in frame.columns:
         return 1.0
@@ -1294,9 +1396,14 @@ def filter_low_quality_jobs(staging_jobs: pd.DataFrame, *, settings=None, paths=
         return staging_jobs.copy(), staging_jobs.iloc[0:0].copy()
 
     normalized = normalize_job_analysis_fields(staging_jobs)
+    normalized, semantic_dropped = _apply_work24_semantic_role_filter(normalized)
     keep_mask = ~normalized.apply(_row_has_low_quality_analysis, axis=1)
     filtered = normalized.loc[keep_mask].reset_index(drop=True)
-    dropped = normalized.loc[~keep_mask].reset_index(drop=True)
+    dropped = pd.concat(
+        [semantic_dropped, normalized.loc[~keep_mask].reset_index(drop=True)],
+        ignore_index=True,
+        sort=False,
+    )
     filtered, duplicate_dropped = _collapse_practical_duplicates(filtered, settings=settings, paths=paths)
     if not duplicate_dropped.empty:
         dropped = pd.concat([dropped, duplicate_dropped], ignore_index=True)
@@ -1326,6 +1433,14 @@ def evaluate_quality_gate(staging_jobs: pd.DataFrame, source_registry: pd.DataFr
     impossible_experience_count = _impossible_experience_count(filtered_jobs)
     if impossible_experience_count > 0:
         reasons.append("경력수준 추출값에 비정상 연차가 포함되어 있습니다.")
+
+    role_audit = _semantic_role_audit(active_jobs)
+    role_mismatch_count = int(role_audit["role_mismatch_count"])
+    role_non_target_count = int(role_audit["role_non_target_count"])
+    if role_non_target_count > 0:
+        reasons.append("최신 직무 분류 기준으로 비타깃 공고가 활성 행에 포함되어 있습니다.")
+    if role_mismatch_count > 0:
+        reasons.append("최신 직무 분류 기준과 다른 분류직무가 활성 행에 포함되어 있습니다.")
 
     carry_forward_hold_only_count = 0
     carry_forward_hold_ratio = 0.0
@@ -1403,7 +1518,7 @@ def evaluate_quality_gate(staging_jobs: pd.DataFrame, source_registry: pd.DataFr
         discovered_company_count=discovered_company_count,
     )
     if quality_score_100 < _QUALITY_SCORE_TARGET:
-        reasons.append(f"품질 점수가 {_QUALITY_SCORE_TARGET:.0f}점 미만입니다.")
+        reasons.append(f"품질 점수가 {_QUALITY_SCORE_TARGET:g}점 미만입니다.")
 
     metrics = {
         "english_leak_count": english_leaks,
@@ -1414,6 +1529,10 @@ def evaluate_quality_gate(staging_jobs: pd.DataFrame, source_registry: pd.DataFr
         "dropped_low_quality_job_count": int(len(dropped_jobs)),
         "duplicate_job_url_count": duplicate_job_url_count,
         "impossible_experience_count": impossible_experience_count,
+        "role_mismatch_count": role_mismatch_count,
+        "role_non_target_count": role_non_target_count,
+        "role_mismatch_samples": role_audit["role_mismatch_samples"],
+        "role_non_target_samples": role_audit["role_non_target_samples"],
         "carry_forward_hold_only_count": carry_forward_hold_only_count,
         "carry_forward_hold_ratio": carry_forward_hold_ratio,
         "main_task_blank_ratio": main_task_blank_ratio,

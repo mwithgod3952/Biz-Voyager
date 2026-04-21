@@ -19,6 +19,7 @@ from .pipelines import (
     discover_company_seed_sources_pipeline,
     discover_companies_pipeline,
     discover_sources_pipeline,
+    discover_work24_population_candidates_pipeline,
     doctor_pipeline,
     expand_company_candidates_pipeline,
     import_companies_pipeline,
@@ -42,6 +43,7 @@ _LOCKED_COMMANDS = {
     "discover-company-seed-sources",
     "promote-shadow-seed-sources",
     "collect-company-seed-records",
+    "discover-work24-population",
     "expand-company-candidates",
     "collect-company-evidence",
     "screen-companies",
@@ -128,6 +130,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("discover-company-seed-sources")
     subparsers.add_parser("promote-shadow-seed-sources")
     subparsers.add_parser("collect-company-seed-records")
+    subparsers.add_parser("discover-work24-population")
     subparsers.add_parser("expand-company-candidates")
     collect_company_evidence_parser = subparsers.add_parser("collect-company-evidence")
     collect_company_evidence_parser.add_argument("--batch-size", type=int, default=None)
@@ -182,6 +185,10 @@ def main(argv: list[str] | None = None) -> int:
                 return _summary_exit_code(args.command, summary)
             elif args.command == "collect-company-seed-records":
                 summary = collect_company_seed_records_pipeline()
+                _print(summary)
+                return _summary_exit_code(args.command, summary)
+            elif args.command == "discover-work24-population":
+                summary = discover_work24_population_candidates_pipeline()
                 _print(summary)
                 return _summary_exit_code(args.command, summary)
             elif args.command == "expand-company-candidates":

@@ -1,4 +1,40 @@
 sources:
+  - company_name: 고용24
+    company_tier: 공공·연구기관
+    source_name: 고용24 공개 채용검색 - 데이터 분석가
+    source_url: https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=데이터+분석가|데이터분석가|데이터+분석|BI|SQL|대시보드|데이터+시각화|통계분석|예측분석&siteClcd=WORK&resultCnt=50&pageLimit=5&hotPageLimit=1&scanDepth=200&detailLimit=0&keywordWantedTitle=Y&keywordJobCont=Y&keywordBusiNm=N&keywordStaAreaNm=N
+    source_type: work24_public_html
+    official_domain: work24.go.kr
+    is_official_hint: true
+    structure_hint: public_html_search
+    discovery_method: manual_seed_public_jobboard
+  - company_name: 고용24
+    company_tier: 공공·연구기관
+    source_name: 고용24 공개 채용검색 - 데이터 사이언티스트
+    source_url: https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=데이터+사이언티스트|데이터사이언티스트|데이터사이언스|머신러닝|딥러닝|예측모델|추천모델|ML&siteClcd=WORK&resultCnt=50&pageLimit=5&hotPageLimit=1&scanDepth=200&detailLimit=0&keywordWantedTitle=Y&keywordJobCont=Y&keywordBusiNm=N&keywordStaAreaNm=N
+    source_type: work24_public_html
+    official_domain: work24.go.kr
+    is_official_hint: true
+    structure_hint: public_html_search
+    discovery_method: manual_seed_public_jobboard
+  - company_name: 고용24
+    company_tier: 공공·연구기관
+    source_name: 고용24 공개 채용검색 - 인공지능 리서처
+    source_url: https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=인공지능+연구원|AI+연구원|AI+리서처|인공지능+리서처|Research+Scientist|딥러닝+연구|머신러닝+연구&siteClcd=WORK&resultCnt=50&pageLimit=5&hotPageLimit=1&scanDepth=200&detailLimit=0&keywordWantedTitle=Y&keywordJobCont=Y&keywordBusiNm=N&keywordStaAreaNm=N
+    source_type: work24_public_html
+    official_domain: work24.go.kr
+    is_official_hint: true
+    structure_hint: public_html_search
+    discovery_method: manual_seed_public_jobboard
+  - company_name: 고용24
+    company_tier: 공공·연구기관
+    source_name: 고용24 공개 채용검색 - 인공지능 엔지니어
+    source_url: https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=AI+엔지니어|인공지능+엔지니어|ML+엔지니어|MLOps|LLM|RAG|생성형AI|AI+서비스|AI+플랫폼|데이터+엔지니어|데이터+파이프라인&siteClcd=WORK&resultCnt=50&pageLimit=5&hotPageLimit=1&scanDepth=200&detailLimit=0&keywordWantedTitle=Y&keywordJobCont=Y&keywordBusiNm=N&keywordStaAreaNm=N
+    source_type: work24_public_html
+    official_domain: work24.go.kr
+    is_official_hint: true
+    structure_hint: public_html_search
+    discovery_method: manual_seed_public_jobboard
   - company_name: 당근
     company_tier: 스타트업
     source_name: 당근 Greenhouse 공개 채용

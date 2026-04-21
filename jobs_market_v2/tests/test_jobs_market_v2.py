@@ -8,6 +8,7 @@ import shutil
 import sys
 import types
 from pathlib import Path
+from typing import Any
 
 import httpx
 import pandas as pd
@@ -41,6 +42,8 @@ from jobs_market_v2.constants import (
     IMPORT_COMPANY_COLUMNS,
     JOB_COLUMNS,
     SOURCE_REGISTRY_COLUMNS,
+    WORK24_POPULATION_JOB_COLUMNS,
+    WORK24_POPULATION_SHADOW_COMPANY_COLUMNS,
 )
 from jobs_market_v2.company_seed_sources import (
     auto_promote_shadow_company_seed_sources,
@@ -2665,6 +2668,586 @@ def test_source_screening_uses_approved_and_candidate_buckets(sandbox_project: P
     assert rejected.empty
 
 
+def test_work24_population_source_is_not_direct_source_candidate(sandbox_project: Path) -> None:
+    paths = ProjectPaths.from_root(sandbox_project)
+    work24_url = "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=데이터"
+    manual_path = paths.config_dir / "manual_sources_seed.yaml"
+    manual_path.write_text(
+        manual_path.read_text(encoding="utf-8")
+        + f"""
+  - company_name: 고용24
+    company_tier: 공공·연구기관
+    source_name: 고용24 공개 채용검색
+    source_url: {work24_url}
+    source_type: work24_public_html
+    official_domain: work24.go.kr
+    is_official_hint: true
+    structure_hint: public_html_search
+    discovery_method: manual_seed_public_jobboard
+""",
+        encoding="utf-8",
+    )
+
+    companies, _ = discover_companies(paths)
+    candidates = discover_source_candidates(companies, paths)
+
+    assert "고용24" not in companies["company_name"].tolist()
+    assert work24_url not in candidates["source_url"].tolist()
+
+
+def test_generate_company_candidates_includes_work24_population_artifact(sandbox_project: Path) -> None:
+    paths = ProjectPaths.from_root(sandbox_project)
+    paths.ensure_directories()
+    write_csv(
+        pd.DataFrame(
+            [
+                {
+                    "company_name": "증분데이터랩",
+                    "company_tier": "",
+                    "official_domain": "",
+                    "company_name_en": "",
+                    "region": "서울",
+                    "aliases": [],
+                    "discovery_method": "work24_population_discovery",
+                    "candidate_seed_type": "고용24공개채용검색",
+                    "candidate_seed_url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K-NEW",
+                    "candidate_seed_title": "데이터 사이언티스트",
+                    "candidate_seed_reason": "고용24 공개 채용검색에서 기업 후보 발견",
+                }
+            ],
+            columns=list(IMPORT_COMPANY_COLUMNS),
+        ),
+        paths.work24_population_candidates_path,
+    )
+
+    candidates = generate_company_candidates(paths)
+    row = candidates.loc[candidates["company_name"] == "증분데이터랩"].iloc[0]
+
+    assert row["candidate_seed_type"] == "고용24공개채용검색"
+    assert row["candidate_seed_url"].endswith("wantedAuthNo=K-NEW")
+
+
+def test_discover_work24_population_candidates_builds_company_artifact(
+    monkeypatch: pytest.MonkeyPatch,
+    sandbox_project: Path,
+) -> None:
+    paths = ProjectPaths.from_root(sandbox_project)
+    work24_url = "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=데이터"
+    manual_path = paths.config_dir / "manual_sources_seed.yaml"
+    manual_path.write_text(
+        manual_path.read_text(encoding="utf-8")
+        + f"""
+  - company_name: 고용24
+    company_tier: 공공·연구기관
+    source_name: 고용24 공개 채용검색
+    source_url: {work24_url}
+    source_type: work24_public_html
+    official_domain: work24.go.kr
+    is_official_hint: true
+    structure_hint: public_html_search
+    discovery_method: manual_seed_public_jobboard
+""",
+        encoding="utf-8",
+    )
+
+    def fake_fetch_work24_population_source_jobs(source_url: str, settings, paths=None, source_name: str = ""):
+        assert source_url == work24_url
+        return [
+            {
+                "company_name_hint": "좋은데이터랩",
+                "title": "데이터 사이언티스트",
+                "job_url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K-GOOD",
+                "worknet_wanted_auth_no": "K-GOOD",
+                "location": "서울",
+                "work24_public_tracking_signal": "new",
+                "work24_llm_suggested_role": "데이터 사이언티스트",
+            },
+            {
+                "company_name_hint": "고용24",
+                "title": "플랫폼 운영자",
+                "job_url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K-SELF",
+                "worknet_wanted_auth_no": "K-SELF",
+            },
+        ]
+
+    monkeypatch.setattr(discovery_module, "_fetch_work24_population_source_jobs", fake_fetch_work24_population_source_jobs)
+
+    frame, summary = discovery_module.discover_work24_population_candidates(paths, settings=object())
+
+    assert summary["work24_population_job_count"] == 2
+    assert summary["work24_population_candidate_count"] == 1
+    assert summary["work24_population_shadow_company_count"] == 1
+    assert frame["company_name"].tolist() == ["좋은데이터랩"]
+    assert frame.iloc[0]["candidate_seed_type"] == "고용24공개채용검색"
+    assert frame.iloc[0]["company_tier"] == "중견/중소"
+    assert "wantedAuthNo=K-GOOD" in frame.iloc[0]["candidate_seed_reason"]
+
+
+def test_work24_population_candidate_tier_uses_regional_location_signal() -> None:
+    row = discovery_module._work24_population_candidate_row(
+        {"source_name": "고용24 공개 채용검색", "source_url": "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do"},
+        {
+            "company_name_hint": "대구데이터랩",
+            "title": "데이터 분석가",
+            "job_url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K-DAEGU",
+            "location": "대구 동구",
+            "work24_llm_suggested_role": "데이터 분석가",
+        },
+    )
+
+    assert row is not None
+    assert row["company_tier"] == "지역기업"
+    assert row["region"] == "대구 동구"
+
+    research_row = discovery_module._work24_population_candidate_row(
+        {"source_name": "고용24 공개 채용검색", "source_url": "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do"},
+        {
+            "company_name_hint": "한국과학기술원부설고등과학원",
+            "title": "인공지능 연구원",
+            "job_url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K-RESEARCH",
+            "location": "서울특별시 동대문구",
+            "work24_llm_suggested_role": "인공지능 리서처",
+        },
+    )
+
+    assert research_row is not None
+    assert research_row["company_tier"] == "공공·연구기관"
+
+
+def test_fetch_work24_population_source_jobs_scans_beyond_collection_page_window(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Settings:
+        user_agent = "jobs-market-v2-test"
+        timeout_seconds = 20.0
+        connect_timeout_seconds = 5.0
+        ats_source_timeout_seconds = 10.0
+        ats_source_connect_timeout_seconds = 3.0
+        enable_gemini_fallback = False
+        gemini_html_listing_max_calls_per_run = 0
+        work24_population_max_pages_per_source = 12
+        work24_population_empty_page_stop_count = 1
+        work24_population_stale_page_stop_count = 2
+        work24_population_page_delay_seconds = 0
+
+    fetched_pages: list[int] = []
+
+    def fake_fetch_work24_public_html(url: str, settings, *, data: dict[str, str] | None = None) -> str:
+        assert data is not None
+        page = int(data["currentPageNo"])
+        fetched_pages.append(page)
+        if page > 7:
+            return "<table><tbody></tbody></table>"
+        auth_no = f"K-FULL-{page}"
+        return f"""
+        <table><tbody><tr>
+          <td>
+            <input id="chkboxWantedAuthNo0" value="{auth_no}|VALIDATION|전체데이터랩{page}|데이터 분석가"/>
+            <a data-emp-detail href="/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo={auth_no}&amp;infoTypeCd=VALIDATION&amp;infoTypeGroup=tb_workinfoworknet">데이터 분석가</a>
+          </td>
+          <td><ul class="emp_info_dtl"><li class="member">경력</li><li class="site">서울</li></ul></td>
+        </tr></tbody></table>
+        """
+
+    monkeypatch.setattr(collection_module, "_fetch_work24_public_html", fake_fetch_work24_public_html)
+
+    jobs = discovery_module._fetch_work24_population_source_jobs(
+        "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=데이터&resultCnt=1&pageLimit=5&scanDepth=7",
+        Settings(),
+    )
+
+    assert fetched_pages == [1, 2, 3, 4, 5, 6, 7]
+    assert [job["worknet_wanted_auth_no"] for job in jobs] == [f"K-FULL-{page}" for page in range(1, 8)]
+
+
+def test_fetch_work24_population_source_jobs_records_empty_page_stop_log(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    class Settings:
+        user_agent = "jobs-market-v2-test"
+        timeout_seconds = 20.0
+        connect_timeout_seconds = 5.0
+        ats_source_timeout_seconds = 10.0
+        ats_source_connect_timeout_seconds = 3.0
+        enable_gemini_fallback = False
+        gemini_html_listing_max_calls_per_run = 0
+        work24_population_max_pages_per_source = 20
+        work24_population_empty_page_stop_count = 1
+        work24_population_stale_page_stop_count = 2
+        work24_population_page_delay_seconds = 0
+
+    fetched_pages: list[int] = []
+
+    def fake_fetch_work24_public_html(url: str, settings, *, data: dict[str, str] | None = None) -> str:
+        assert data is not None
+        page = int(data["currentPageNo"])
+        fetched_pages.append(page)
+        if page >= 3:
+            return "<table><tbody></tbody></table>"
+        auth_no = f"K-EMPTY-STOP-{page}"
+        return f"""
+        <table><tbody><tr>
+          <td>
+            <input id="chkboxWantedAuthNo0" value="{auth_no}|VALIDATION|전체데이터랩{page}|데이터 분석가"/>
+            <a data-emp-detail href="/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo={auth_no}&amp;infoTypeCd=VALIDATION&amp;infoTypeGroup=tb_workinfoworknet">데이터 분석가</a>
+          </td>
+        </tr></tbody></table>
+        """
+
+    monkeypatch.setattr(collection_module, "_fetch_work24_public_html", fake_fetch_work24_public_html)
+    paths = ProjectPaths.from_root(tmp_path)
+    paths.ensure_directories()
+
+    jobs = discovery_module._fetch_work24_population_source_jobs(
+        "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=데이터&resultCnt=1&scanDepth=20",
+        Settings(),
+        paths=paths,
+        source_name="고용24 공개 채용검색 - 데이터 분석가",
+    )
+
+    scan_log = pd.read_csv(paths.work24_population_scan_log_path).fillna("")
+    assert fetched_pages == [1, 2, 3]
+    assert len(jobs) == 2
+    assert scan_log["page"].astype(int).tolist() == [1, 2, 3]
+    assert scan_log["listing_count"].astype(int).tolist() == [1, 1, 0]
+    assert scan_log["new_listing_count"].astype(int).tolist() == [1, 1, 0]
+    assert scan_log.iloc[-1]["stopped_reason"] == "empty_page_stop"
+    assert scan_log.iloc[-1]["population_source_name"] == "고용24 공개 채용검색 - 데이터 분석가"
+
+
+def test_discover_work24_population_returns_job_level_population_artifact(
+    monkeypatch: pytest.MonkeyPatch,
+    sandbox_project: Path,
+) -> None:
+    paths = ProjectPaths.from_root(sandbox_project)
+    work24_url = "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=데이터"
+    manual_path = paths.config_dir / "manual_sources_seed.yaml"
+    manual_path.write_text(
+        manual_path.read_text(encoding="utf-8")
+        + f"""
+  - company_name: 고용24
+    company_tier: 공공·연구기관
+    source_name: 고용24 공개 채용검색 - 데이터 분석가
+    source_url: {work24_url}
+    source_type: work24_public_html
+    official_domain: work24.go.kr
+    is_official_hint: true
+    structure_hint: public_html_search
+    discovery_method: manual_seed_public_jobboard
+""",
+        encoding="utf-8",
+    )
+
+    def fake_fetch_work24_population_source_jobs(source_url: str, settings, paths=None, source_name: str = ""):
+        assert source_url == work24_url
+        return [
+            {
+                "company_name_hint": "전체데이터랩",
+                "title": "데이터 분석가",
+                "job_url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K-POP-1",
+                "worknet_wanted_auth_no": "K-POP-1",
+                "location": "서울",
+                "work24_public_page": "6",
+            },
+            {
+                "company_name_hint": "일반물류회사",
+                "title": "물류직원 모집",
+                "job_url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K-POP-2",
+                "worknet_wanted_auth_no": "K-POP-2",
+                "location": "부산",
+                "work24_public_page": "6",
+                "work24_llm_target_hint": "false",
+            }
+        ]
+
+    monkeypatch.setattr(discovery_module, "_fetch_work24_population_source_jobs", fake_fetch_work24_population_source_jobs)
+
+    companies, jobs, shadow_companies, summary = discovery_module.discover_work24_population(paths, settings=object())
+
+    assert companies["company_name"].tolist() == ["전체데이터랩"]
+    assert jobs["worknet_wanted_auth_no"].tolist() == ["K-POP-1", "K-POP-2"]
+    assert jobs.iloc[0]["population_page"] == "6"
+    assert jobs.iloc[0]["population_role_hint"] == "데이터 분석가"
+    assert summary["work24_population_job_count"] == 2
+    assert summary["work24_population_candidate_count"] == 1
+    assert summary["work24_population_shadow_company_count"] == 2
+    assert summary["work24_population_shadow_pending_count"] == 1
+    assert shadow_companies.columns.tolist() == list(WORK24_POPULATION_SHADOW_COMPANY_COLUMNS)
+    pending = shadow_companies.loc[shadow_companies["company_name"] == "일반물류회사"].iloc[0]
+    assert pending["promoted_candidate"] == "false"
+    assert pending["shadow_status"] == "pending_detail_validation"
+    assert pending["llm_target_false_count"] == 1
+
+
+def test_load_work24_population_jobs_refreshes_stale_role_hints(tmp_path: Path) -> None:
+    paths = ProjectPaths.from_root(tmp_path)
+    paths.ensure_directories()
+    stale = pd.DataFrame(
+        [
+            {
+                "worknet_wanted_auth_no": "K-ANALYST-1",
+                "population_source_name": "고용24 공개 채용검색 - 데이터 분석가",
+                "population_source_url": "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=데이터",
+                "population_page": "1",
+                "population_query": "데이터",
+                "population_role_hint": "",
+                "title": "데이터 분석가로서 AI의 힘을 풀어내고 과거 전자입찰 데이터를 분석하여 미래 예측을 보여주세요.",
+                "company_name": "에이치입찰정보연구소",
+                "location": "서울",
+                "experience_level": "경력",
+                "job_url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K-ANALYST-1",
+                "listing_context": "",
+                "work24_public_tracking_signal": "new",
+                "work24_llm_target_hint": "",
+                "work24_llm_suggested_role": "",
+                "work24_llm_reason": "",
+            }
+        ],
+        columns=list(WORK24_POPULATION_JOB_COLUMNS),
+    )
+    write_csv(stale, paths.work24_population_jobs_path)
+
+    refreshed = discovery_module.load_work24_population_jobs(paths)
+
+    assert len(refreshed) == 1
+    assert refreshed.iloc[0]["population_role_hint"] == "데이터 분석가"
+
+
+def test_work24_population_llm_false_blocks_heuristic_candidate() -> None:
+    source_record = {
+        "source_name": "고용24 공개 채용검색 - 데이터 분석가",
+        "source_url": "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=데이터",
+    }
+    job = {
+        "company_name_hint": "심작이엔지",
+        "title": "공공디자인 디자이너 및 연구원 채용",
+        "job_url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K-NONTARGET",
+        "worknet_wanted_auth_no": "K-NONTARGET",
+        "work24_llm_target_hint": "false",
+    }
+
+    assert discovery_module._work24_population_role_hint(source_record, job) == ""
+    assert discovery_module._work24_population_candidate_row(source_record, job) is None
+
+
+def test_work24_population_role_hint_prefers_current_classifier_over_llm_suggestion() -> None:
+    source_record = {
+        "source_name": "고용24 공개 채용검색 - 데이터 분석가",
+        "source_url": "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=데이터",
+    }
+    job = {
+        "company_name_hint": "주식회사 깔로",
+        "title": "통계분석(데이터 사이언스) 인력 모집",
+        "job_url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K-ANALYST-DS",
+        "worknet_wanted_auth_no": "K-ANALYST-DS",
+        "work24_llm_target_hint": "true",
+        "work24_llm_suggested_role": "데이터 사이언티스트",
+    }
+
+    assert discovery_module._work24_population_role_hint(source_record, job) == "데이터 분석가"
+
+
+def test_merge_updated_source_registry_drops_stale_work24_snapshot_sources() -> None:
+    existing = pd.DataFrame(
+        [
+            {
+                "company_name": "오래된오탐",
+                "source_url": "https://www.work24.go.kr/old",
+                "source_type": "work24_public_html",
+                "source_bucket": "candidate",
+                "discovery_method": "work24_limited_public_board_fallback",
+            },
+            {
+                "company_name": "정상랩",
+                "source_url": "https://example.com/jobs",
+                "source_type": "html_page",
+                "source_bucket": "candidate",
+                "discovery_method": "homepage_link_probe",
+            },
+        ],
+        columns=list(SOURCE_REGISTRY_COLUMNS),
+    )
+    updated = pd.DataFrame(
+        [
+            {
+                "company_name": "정상랩",
+                "source_url": "https://example.com/jobs",
+                "source_type": "html_page",
+                "source_bucket": "candidate",
+                "discovery_method": "homepage_link_probe",
+            }
+        ],
+        columns=list(SOURCE_REGISTRY_COLUMNS),
+    )
+
+    merged = pipelines_module._merge_updated_source_registry(existing, updated)
+
+    assert "https://www.work24.go.kr/old" not in merged["source_url"].tolist()
+    assert "https://example.com/jobs" in merged["source_url"].tolist()
+
+
+def test_discover_source_candidates_adds_work24_limited_fallback_for_uncovered_population_company(
+    sandbox_project: Path,
+) -> None:
+    paths = ProjectPaths.from_root(sandbox_project)
+    paths.ensure_directories()
+    write_csv(
+        pd.DataFrame(
+            [
+                {
+                    "company_name": "공식없는랩",
+                    "company_tier": "중견/중소",
+                    "official_domain": "",
+                    "company_name_en": "",
+                    "region": "서울",
+                    "aliases": [],
+                    "discovery_method": "work24_population_discovery",
+                    "candidate_seed_type": "고용24공개채용검색",
+                    "candidate_seed_url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K-FALLBACK",
+                    "candidate_seed_title": "데이터 분석가",
+                    "candidate_seed_reason": "고용24 공개 채용검색에서 기업 후보 발견",
+                }
+            ],
+            columns=list(IMPORT_COMPANY_COLUMNS),
+        ),
+        paths.work24_population_candidates_path,
+    )
+    companies = pd.DataFrame(
+        [
+            {
+                "company_name": "공식없는랩",
+                "company_tier": "중견/중소",
+                "official_domain": "",
+            }
+        ]
+    )
+
+    candidates = discover_source_candidates(companies, paths)
+    fallback = candidates.loc[
+        candidates["discovery_method"] == "work24_limited_public_board_fallback"
+    ].iloc[0]
+    approved, candidate, rejected, _ = screen_sources(candidates)
+
+    assert fallback["company_name"] == "공식없는랩"
+    assert fallback["source_type"] == "work24_public_html"
+    assert "keywordBusiNm=Y" in fallback["source_url"]
+    assert "srcKeyword=" in fallback["source_url"]
+    assert fallback["official_domain"] == ""
+    assert fallback["is_official_hint"] is False or str(fallback["is_official_hint"]).lower() == "false"
+    assert fallback["source_url"] in candidate["source_url"].tolist()
+    assert fallback["source_url"] not in approved["source_url"].tolist()
+    assert rejected.empty
+
+
+def test_discover_source_candidates_adds_work24_limited_fallback_without_approved_company_input(
+    sandbox_project: Path,
+) -> None:
+    paths = ProjectPaths.from_root(sandbox_project)
+    paths.ensure_directories()
+    write_csv(
+        pd.DataFrame(
+            [
+                {
+                    "company_name": "워크넷전용랩",
+                    "company_tier": "",
+                    "official_domain": "",
+                    "company_name_en": "",
+                    "region": "서울",
+                    "aliases": [],
+                    "discovery_method": "work24_population_discovery",
+                    "candidate_seed_type": "고용24공개채용검색",
+                    "candidate_seed_url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K-WORK24-ONLY",
+                    "candidate_seed_title": "데이터 엔지니어",
+                    "candidate_seed_reason": "고용24 공개 채용검색에서 기업 후보 발견",
+                }
+            ],
+            columns=list(IMPORT_COMPANY_COLUMNS),
+        ),
+        paths.work24_population_candidates_path,
+    )
+
+    candidates = discover_source_candidates(pd.DataFrame(), paths)
+    fallback = candidates.loc[
+        candidates["discovery_method"] == "work24_limited_public_board_fallback"
+    ].iloc[0]
+    _, candidate, rejected, _ = screen_sources(candidates)
+
+    assert fallback["company_name"] == "워크넷전용랩"
+    assert fallback["source_url"] in candidate["source_url"].tolist()
+    assert rejected.empty
+
+
+def test_discover_source_candidates_skips_work24_limited_fallback_when_official_source_exists(
+    sandbox_project: Path,
+) -> None:
+    paths = ProjectPaths.from_root(sandbox_project)
+    paths.ensure_directories()
+    write_csv(
+        pd.DataFrame(
+            [
+                {
+                    "company_name": "공식있는랩",
+                    "company_tier": "중견/중소",
+                    "official_domain": "",
+                    "company_name_en": "",
+                    "region": "서울",
+                    "aliases": [],
+                    "discovery_method": "work24_population_discovery",
+                    "candidate_seed_type": "고용24공개채용검색",
+                    "candidate_seed_url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K-OFFICIAL",
+                    "candidate_seed_title": "데이터 분석가",
+                    "candidate_seed_reason": "고용24 공개 채용검색에서 기업 후보 발견",
+                }
+            ],
+            columns=list(IMPORT_COMPANY_COLUMNS),
+        ),
+        paths.work24_population_candidates_path,
+    )
+    write_csv(
+        pd.DataFrame(
+            [
+                {
+                    "company_name": "공식있는랩",
+                    "company_tier": "중견/중소",
+                    "source_name": "공식있는랩 공식 채용",
+                    "source_url": "https://official-lab.example/careers",
+                    "source_type": "html_page",
+                    "source_bucket": "approved",
+                    "source_domain": "official-lab.example",
+                    "official_domain": "official-lab.example",
+                    "official_domain_confidence": 0.99,
+                    "source_quality_score": 0.9,
+                    "is_official_hint": True,
+                    "structure_hint": "html",
+                    "discovery_method": "manual_seed",
+                    "verification_status": "성공",
+                    "failure_count": 0,
+                    "last_success_at": "2026-04-19T00:00:00+09:00",
+                    "last_active_job_count": 1,
+                    "quarantine_reason": "",
+                    "is_quarantined": False,
+                }
+            ],
+            columns=list(SOURCE_REGISTRY_COLUMNS),
+        ),
+        paths.source_registry_path,
+    )
+    companies = pd.DataFrame(
+        [
+            {
+                "company_name": "공식있는랩",
+                "company_tier": "중견/중소",
+                "official_domain": "official-lab.example",
+            }
+        ]
+    )
+
+    candidates = discover_source_candidates(companies, paths)
+
+    assert "work24_limited_public_board_fallback" not in candidates["discovery_method"].tolist()
+
+
 def test_source_screening_treats_live_ats_source_types_as_structured_even_with_custom_hints() -> None:
     candidates = pd.DataFrame(
         [
@@ -3159,6 +3742,32 @@ def test_job_role_classification() -> None:
     assert classify_job_role("Data Analyst") == "데이터 분석가"
     assert classify_job_role("데이터 사이언티스트") == "데이터 사이언티스트"
     assert classify_job_role("데이터분석(데이터사이언스) 인재모집") == "데이터 사이언티스트"
+    assert (
+        classify_job_role(
+            "Data Analyst",
+            "",
+            "데이터 분석을 수행하고 실험 설계를 지원합니다. 사용자 리서치 조직과 협업합니다.",
+        )
+        == "데이터 분석가"
+    )
+    assert (
+        classify_job_role(
+            "리서치 통계분석 및 빅데이터 분석 연구원 모집",
+            "",
+            "통계 분석 및 보고서 작성, 조사원 관리, 빅데이터 분석 업무를 수행합니다.",
+            "학사 졸업 이상의 학위와 통계 패키지 활용 경험이 필요합니다.",
+        )
+        == "데이터 분석가"
+    )
+    assert (
+        classify_job_role(
+            "[브릴스] 로봇 서비스(CS / AS) 엔지니어 채용 (경력)",
+            "",
+            "로봇 시스템 유지보수, 기술 지원, 정기 점검과 긴급 장애 대응을 담당합니다.",
+            "부품 교체와 서비스 매뉴얼 작성 경험이 필요합니다.",
+        )
+        == ""
+    )
     assert classify_job_role("AI서비스개발 직무 인재모집") == "인공지능 엔지니어"
     assert classify_job_role("[AI시험인증2팀] AI 검증 및 개발 (신입/경력)") == "인공지능 엔지니어"
     assert classify_job_role("AI Researcher") == "인공지능 리서처"
@@ -3178,8 +3787,228 @@ def test_job_role_classification() -> None:
     assert classify_job_role("ML Ops Engineer") == "인공지능 엔지니어"
     assert classify_job_role("ML/MLOps 엔지니어") == "인공지능 엔지니어"
     assert classify_job_role("음성인식 엔진/모델 개발자") == "인공지능 엔지니어"
+    assert classify_job_role("데이터 분석가로서 AI의 힘을 풀어내고 과거 전자입찰 데이터를 분석하여 미래 예측을 보여주세요.") == "데이터 분석가"
+    assert classify_job_role("[(청주고용센터) 채용대행] ★㈜코엠에스 비전 알고리즘 개발자(프로그래밍 언어 전문가) 모집★") == "인공지능 엔지니어"
+    assert classify_job_role("농업회사법인 한국미곡거래소(주) AI자동화설계 및 서비스개발 담당") == "인공지능 엔지니어"
+    assert classify_job_role("웨어러블 기기 및 AI 알고리즘 전문가/ 앱개발") == "인공지능 엔지니어"
+    assert classify_job_role("[채용-상시] 인공지능 전문기업 단비아이엔씨에서 UX 전문가를 모집합니다. (경력4년이상~10년이하)") == ""
     assert classify_job_role("[AI실증지원사업단] [A-21](연구직) 2025년 제4차 사업단 직원(계약직) 채용") == "인공지능 리서처"
     assert classify_job_role("[HDC랩스/본사] AI LAB팀 AI 엔지니어 및 데이터 사이언스 부문 경력직 채용") in {"데이터 사이언티스트", "인공지능 엔지니어"}
+    assert (
+        classify_job_role(
+            "AI Research Engineer - Agents & Workflows",
+            "",
+            "고객 문제 해결을 위한 에이전트 및 워크플로우를 설계하고 핵심 빌딩 블록을 개발합니다. "
+            "정확도 기준을 정의하고 평가 프레임워크를 구축합니다.",
+        )
+        == "인공지능 엔지니어"
+    )
+    assert (
+        classify_job_role(
+            "[AI Research Div.] Research Engineer - Foundation Models",
+            "",
+            "파운데이션 모델 성능 향상 및 안정성 개선을 위한 방법론과 실험 인프라를 설계하고 구현합니다. "
+            "대규모 훈련 및 평가 파이프라인을 구축합니다.",
+        )
+        == "인공지능 엔지니어"
+    )
+    assert (
+        classify_job_role(
+            "Algorithm - AI Research Engineer",
+            "",
+            "선도적인 인공지능 연구를 주도적으로 수행하여 학회에 출판합니다. "
+            "세계 유수의 기관들과 연구 협력을 진행합니다.",
+        )
+        == "인공지능 리서처"
+    )
+    assert (
+        classify_job_role(
+            "AI Research Engineer / Scientist",
+            "",
+            "최신 멀티모달 연구를 수행하고 논문을 작성합니다.",
+        )
+        == "인공지능 리서처"
+    )
+    assert (
+        classify_job_role(
+            "AI 개발자(AI Model Developer/Researcher)",
+            "",
+            "고성능 인공지능 모델 개발 및 최적화, 고객 요구사항 기반 맞춤형 인공지능 모델 솔루션 제공, "
+            "모델 훈련 및 추론 최적화를 담당합니다.",
+        )
+        == "인공지능 엔지니어"
+    )
+    assert (
+        classify_job_role(
+            "AI Developer/Researcher",
+            "",
+            "고객 프로젝트를 위한 모델 개발과 제품 적용, 서비스 배포를 담당합니다.",
+        )
+        == "인공지능 엔지니어"
+    )
+    assert (
+        classify_job_role(
+            "ML Engineer / Researcher",
+            "",
+            "머신러닝 시스템 구현, 배포, 운영 자동화를 담당합니다.",
+        )
+        == "인공지능 엔지니어"
+    )
+    assert (
+        classify_job_role(
+            "ML Engineer / Researcher",
+            "",
+            "초경량 LLM 최적화 기법을 연구하고 이를 사내 추론 엔진과 통합하여 실제 온디바이스 환경에서 실행 가능한 형태로 구현합니다.",
+        )
+        == "인공지능 엔지니어"
+    )
+    assert (
+        classify_job_role(
+            "Data Engineer",
+            "",
+            "ETL 파이프라인 구축과 데이터 플랫폼 운영을 담당합니다.",
+        )
+        == "인공지능 엔지니어"
+    )
+    assert (
+        classify_job_role(
+            "Data Engineer (Data Service Team) - Team Lead",
+            "",
+            "데이터 플랫폼 운영과 파이프라인 안정화, 품질 관리를 담당합니다.",
+        )
+        == "인공지능 엔지니어"
+    )
+    assert (
+        classify_job_role(
+            "[Deepflow] 데이터 엔지니어 (Data Engineer) 채용 (정규직)",
+            "",
+            "데이터 워크플로우 오케스트레이션과 데이터 플랫폼 운영을 담당합니다.",
+        )
+        == "인공지능 엔지니어"
+    )
+    assert (
+        classify_job_role(
+            "Data Analytics Engineer",
+            "",
+            "분석용 데이터 모델링과 파이프라인 운영을 담당합니다.",
+        )
+        == "인공지능 엔지니어"
+    )
+    assert (
+        classify_job_role(
+            "Data Analytics Engineer (인턴) | 로컬 비즈니스",
+            "",
+            "분석 파이프라인 구축과 데이터 가치화 플랫폼 운영을 담당합니다.",
+        )
+        == "인공지능 엔지니어"
+    )
+    assert (
+        classify_job_role(
+            "Data Scientist, Growth Analytics",
+            "",
+            "실험 설계와 모델링을 통해 성장 전략을 고도화합니다.",
+        )
+        == "데이터 사이언티스트"
+    )
+    assert (
+        classify_job_role(
+            "Applied Scientist (Analytics)",
+            "",
+            "예측 모델링과 인과 추론을 통해 제품 의사결정을 지원합니다.",
+        )
+        == "데이터 사이언티스트"
+    )
+    assert (
+        classify_job_role(
+            "Forward Deployed Engineer - ML/DS (Junior)",
+            "",
+            "머신러닝 모델 운영, 고객 환경 적용, 배포 자동화를 담당합니다.",
+        )
+        == "인공지능 엔지니어"
+    )
+    assert classify_job_role("Technical Program Manager", "", "AI 플랫폼 개발 일정을 관리합니다.") == ""
+    assert classify_job_role("AI Product Data Manager", "", "AI 제품 데이터 운영을 담당합니다.") == ""
+    assert classify_job_role("[CoS] CoS Manager", "", "전사 전략과 운영 개선을 담당합니다.") == ""
+    assert classify_job_role("[CoS] AX Manager", "", "전사 AI 전환 과제를 리드합니다.") == ""
+    assert classify_job_role("Business Analyst", "", "사업 지표 분석과 운영 의사결정을 지원합니다.") == ""
+    assert classify_job_role("Germany Country Manager - German Speaking, Based in Frankfurt", "", "독일 지역 사업 운영을 담당합니다.") == ""
+    assert classify_job_role("Applied AI Project Manager (PM)", "", "Applied AI 프로젝트 실행과 일정 관리를 담당합니다.") == ""
+    assert classify_job_role("Twigfarm Official Website", "", "https://www.twigfarm.net/ko/careers/localization-translator") == ""
+    assert classify_job_role("Careers at PwC:We're all-in on AI so you can go all-out solving problems", "", "https://www.pwc.com/gx/en/careers.html") == ""
+    assert classify_job_role("Talent Pool (R&D)") == ""
+    assert classify_job_role("채용공고") == ""
+    assert classify_job_role("인재채용", "", "데이터 분석 컨설팅과 AI 솔루션 프로젝트를 소개합니다.") == ""
+    assert classify_job_role("채용 홈페이지", "", "머신러닝과 데이터 분석 직군 채용을 안내합니다.") == ""
+    assert classify_job_role("그로스 리드 (Growth Lead)") == ""
+    assert classify_job_role("AI Technical PM (12년 이상)") == ""
+    assert classify_job_role("Mechatronics R&D") == ""
+    assert classify_job_role("플랫폼 기획자") == ""
+    assert classify_job_role("퍼포먼스 마케터") == ""
+    assert classify_job_role("[인턴-정규직 전환형] PO(Product Owner) - AI") == ""
+    assert classify_job_role("전사 전략기획 담당(대리~팀장급)") == ""
+    assert classify_job_role("동남권(대구/울산 중심) 영업총괄 리더") == ""
+    assert classify_job_role("전략구매 담당자(과장~팀장급)") == ""
+    assert classify_job_role("[쿠팡이츠서비스] 배달파트너 CX 운영 담당자") == ""
+    assert classify_job_role("[쿠팡로지스틱스서비스] Fleet Data & AI Operations Specialist") == ""
+    assert classify_job_role("FP&A Team Leader") == ""
+    assert classify_job_role("CRM Team Leader") == ""
+    assert classify_job_role("[쿠팡] 로켓그로스 데이터 분석 PM 담당자(컨수머블) (경력 10년 이상)") == ""
+    assert classify_job_role("[쿠팡로지스틱스서비스] 캠프 운영 물품 구매 및 데이터 분석 담당자 (Lastmile Supply & Equipment Solution)") == ""
+    assert classify_job_role("[쿠팡이츠서비스] 배달파트너 CX 기획/전략 담당자") == ""
+    assert classify_job_role("태국 웹툰 플랫폼 전략/운영 담당 (5년 이상)") == ""
+    assert classify_job_role("[쿠팡이츠서비스] 배달파트너 CX 기획/전략 담당자(일본어 가능자)") == ""
+    assert classify_job_role("Staff, Back-end Engineer (Growth Engineering)", "", "성장 서비스 백엔드 개발을 담당합니다.") == ""
+    assert classify_job_role("AI개발자_백엔드", "", "AI 서비스 API와 백엔드 기능 개발을 담당합니다.") == ""
+    assert classify_job_role("AI개발자_프론트엔드", "", "AI 기반 제품의 프론트엔드 개발을 담당합니다.") == ""
+    assert classify_job_role("[경력] AI Agent 프론트엔드 개발", "", "AI Agent 웹 프론트엔드 개발을 담당합니다.") == ""
+    assert classify_job_role("Backend 개발자", "", "AI 서비스 백엔드 개발을 담당합니다.") == ""
+    assert classify_job_role("[DM사업부] 백엔드 개발자 (Python / AI)", "", "Python 기반 AI 서비스 백엔드 개발을 담당합니다.") == ""
+    assert classify_job_role("풀스택 (Full-stack) 개발자", "", "AI 솔루션 풀스택 개발을 담당합니다.") == ""
+    assert classify_job_role("Applied AI Technical Engineer (Full Stack)", "", "Applied AI 제품의 풀스택 기능 개발을 담당합니다.") == ""
+    assert classify_job_role("[Solution] AI Software Engineer", "", "AI 솔루션 소프트웨어 개발을 담당합니다.") == ""
+    assert classify_job_role("[Solution] Global Software Engineer", "", "글로벌 제품 소프트웨어 개발을 담당합니다.") == ""
+    assert classify_job_role("Platform Software Engineer", "", "플랫폼 소프트웨어 개발을 담당합니다.") == ""
+    assert classify_job_role("Software Engineer - Console", "", "콘솔 서비스 소프트웨어 개발을 담당합니다.") == ""
+    assert classify_job_role("DFT Engineer", "", "반도체 테스트 설계를 담당합니다.") == ""
+    assert (
+        classify_job_role(
+            "ADAS Application Engineer - Team Lead (Application Team)",
+            "",
+            "ADAS 컴퓨터 비전 시스템 적용과 알고리즘 통합을 담당합니다.",
+        )
+        == "인공지능 엔지니어"
+    )
+    assert (
+        classify_job_role(
+            "Data Analytics Engineer",
+            "",
+            "대시보드 구축과 실험 분석 지원을 담당합니다.",
+        )
+        == "인공지능 엔지니어"
+    )
+    assert classify_job_role("Product Manager | 중고거래", "", "데이터 분석과 실험을 통해 제품 성장을 이끕니다.") == ""
+    assert classify_job_role("CRM Marketer | 마케팅", "", "데이터 분석과 실험 설계를 통해 캠페인을 운영합니다.") == ""
+    assert classify_job_role("Sales Manager- Applied AI", "", "고객 발굴과 영업 전략 수립을 담당합니다.") == ""
+    assert classify_job_role("[HR Div.] Sr. Recruiter", "", "데이터 기반 채용 운영과 인재 확보를 담당합니다.") == ""
+    assert classify_job_role("UI/UX Designer (SaMD)", "", "의료 AI 제품의 사용자 경험을 설계합니다.") == ""
+    assert classify_job_role("[Solution AI-Industry] Business Developer", "", "AI 산업 고객 발굴과 사업 제안을 담당합니다.") == ""
+    assert classify_job_role("DevOps/AI Platform Engineer", "", "AI 플랫폼 인프라와 배포 파이프라인을 운영합니다.") == "인공지능 엔지니어"
+    assert classify_job_role("Software Engineer, Machine Learning | ML 인프라", "", "머신러닝 인프라와 서빙 시스템을 개발합니다.") == "인공지능 엔지니어"
+    assert classify_job_role("AI System Software Engineer", "", "AI 반도체 시스템 소프트웨어와 드라이버를 개발합니다.") == "인공지능 엔지니어"
+    assert classify_job_role("[Solution] AI Software Engineer", "", "컴퓨터비전 모델과 VLM 기반 인공지능 비전 솔루션을 개발합니다.") == "인공지능 엔지니어"
+    assert classify_job_role("[Solution] Global Software Engineer", "", "컴퓨터비전 모델과 VLM 기반 인공지능 비전 솔루션을 개발합니다.") == "인공지능 엔지니어"
+    assert classify_job_role("AI DevOps", "", "모델 검증 후 배포를 위한 CI/CD와 쿠버네티스 운영 자동화를 개발합니다.") == "인공지능 엔지니어"
+    assert classify_job_role("AI Model Production - Document AI", "", "고객사 모델 파인튜닝과 인공지능 솔루션 설치를 담당합니다.") == "인공지능 엔지니어"
+    assert classify_job_role("SLAM research scientist (R&D)", "", "SLAM 알고리즘 연구와 CVPR 논문 실적을 기반으로 연구합니다.") == "인공지능 리서처"
+    assert classify_job_role("측위(Localization/Positioning) research scientist (R&D)", "", "위치 추정 알고리즘을 연구하고 학회 논문을 작성합니다.") == "인공지능 리서처"
+    assert classify_job_role("NPU Software Engineer", "", "NPU 런타임과 소프트웨어 스택을 개발합니다.") == "인공지능 엔지니어"
+    assert classify_job_role("Security Engineer - Cyber Threat Intelligence (CTI) Specialist", "", "위협 탐지 및 보안 분석을 담당합니다.") == ""
+    assert classify_job_role("Solution Architect", "", "고객 요구사항에 맞는 AI 솔루션 아키텍처를 설계합니다.") == ""
+    assert classify_job_role("AI Solutions Consultant", "", "AI 솔루션 컨설팅과 고객 제안 업무를 담당합니다.") == ""
+    assert classify_job_role("AI Solutions Consultant (연구원 ~ 책임급)", "", "AI 솔루션 컨설팅과 고객 제안 업무를 담당합니다.") == ""
+    assert classify_job_role("Product Manager - Application", "", "LLM 제품 전략과 AI 서비스 배포를 담당합니다.") == ""
+    assert classify_job_role("AI Solution Architect - Cloud", "", "고객 대상 AI 플랫폼 아키텍처 설계와 모델 배포를 담당합니다.") == ""
+    assert classify_job_role("AX Consultant", "", "고객 AI 전환 컨설팅과 데이터 전략 수립을 담당합니다.") == ""
     assert classify_job_role("Manager, QA Engineering (Eats Customer)") == ""
     assert classify_job_role("Director of Product Management (Growth Marketing - ML Product)") == ""
     assert classify_job_role("Staff Backend Software Engineer", "machine learning platform") == ""
@@ -3906,6 +4735,8 @@ def test_source_timeout_values_prefer_source_specific_settings() -> None:
     assert _source_timeout_values(Settings(), "html_page") == (8.0, 3.0)
     assert _source_timeout_values(Settings(), "greetinghr") == (10.0, 2.0)
     assert _source_timeout_values(Settings(), "recruiter") == (10.0, 2.0)
+    assert _source_timeout_values(Settings(), "worknet_api") == (10.0, 2.0)
+    assert _source_timeout_values(Settings(), "work24_public_html") == (10.0, 2.0)
     assert _source_timeout_values(Settings(), "greenhouse") == (10.0, 2.0)
     assert _source_timeout_values(Settings(), "unknown") == (20.0, 5.0)
 
@@ -5479,6 +6310,26 @@ def test_normalize_experience_level_drops_employment_type_labels() -> None:
     assert normalize_experience_level("Full-time") == ""
     assert normalize_experience_level("contract") == ""
     assert normalize_experience_level("경력") == "경력"
+    assert normalize_experience_level("관계없음") == "경력무관"
+
+
+def test_display_fields_preserve_worknet_no_experience_requirement_signal() -> None:
+    display = build_display_fields(
+        {
+            "company_name": "분석회사",
+            "source_name": "고용24",
+            "job_title_raw": "데이터 분석가",
+            "experience_level_raw": "관계없음",
+            "job_role": "데이터 분석가",
+            "main_tasks": "실험 설계와 지표 분석을 수행합니다.",
+            "requirements": "SQL 가능자",
+            "preferred": "",
+            "core_skills": "SQL",
+        }
+    )
+
+    assert display["경력수준_표시"] == "경력무관"
+    assert display["경력근거_표시"] == "구조화 메타데이터"
 
 
 def test_display_fields_surface_seniority_and_track_signals() -> None:
@@ -6401,18 +7252,21 @@ def test_section_sanitizer_drops_hiring_admin_sections_without_spaced_headings()
     text = """
 한국어 비즈니스 의사소통 능력이 있는 분
 해외 여행에 결격 사유가 없는 분
-채용전형
-서류전형 > 직무 테스트 및 면접전형 > 처우 협의 > 최종 합격
+제출서류
+*피디에프 제출
 근무조건
-계약직
+주 5일 근무
+채용전형
+서류전형 > 1차면접 > 처우협의 > 최종합격
 """.strip()
 
     sanitized = sanitize_section_text(text)
 
-    assert "한국어 비즈니스 의사소통" in sanitized
-    assert "채용전형" not in sanitized
-    assert "서류전형" not in sanitized
+    assert sanitized == "한국어 비즈니스 의사소통 능력이 있는 분\n해외 여행에 결격 사유가 없는 분"
+    assert "제출서류" not in sanitized
+    assert "피디에프" not in sanitized
     assert "근무조건" not in sanitized
+    assert "서류전형" not in sanitized
 
 
 def test_section_sanitizer_drops_application_document_and_reference_check_tails() -> None:
@@ -6426,10 +7280,10 @@ def test_section_sanitizer_drops_application_document_and_reference_check_tails(
 
     sanitized = sanitize_section_text(text)
 
-    assert "국제 학회 및 저널 논문 출판 경험" in sanitized
-    assert "의료 인공지능 프로젝트 경험" in sanitized
+    assert sanitized == "국제 학회 및 저널 논문 출판 경험이 있는 분\n의료 인공지능 프로젝트 경험이 있는 분"
+    assert "필수" not in sanitized
+    assert "선택" not in sanitized
     assert "이력서" not in sanitized
-    assert "포트폴리오" not in sanitized
     assert "레퍼런스" not in sanitized
 
 
@@ -7001,6 +7855,154 @@ def test_quality_gate_reports_semantic_placeholder_ratios() -> None:
     assert "경력수준 표시값 미기재 비율이 너무 높습니다." in gate.reasons
 
 
+def test_quality_gate_rejects_semantic_role_drift_and_non_target_rows() -> None:
+    staging = pd.DataFrame(
+        [
+            {
+                "company_name": "분석랩",
+                "source_name": "소스",
+                "job_title_raw": "Data Analyst [User Behavior]",
+                "job_title_ko": "Data Analyst [User Behavior]",
+                "job_role": "데이터 사이언티스트",
+                "job_url": "https://example.com/jobs/role-drift",
+                "source_url": "https://example.com/feed",
+                "source_bucket": "approved",
+                "company_tier": "중견/중소",
+                "record_status": "신규",
+                "is_active": True,
+                "주요업무_분석용": "퍼널 리텐션 코호트 분석 및 실험 설계를 수행합니다.",
+                "자격요건_분석용": "제품 지표 분석 경험이 필요합니다.",
+                "우대사항_분석용": "통계 기반 의사결정 경험 우대",
+                "핵심기술_분석용": "SQL\nPython",
+                "상세본문_분석용": "퍼널 리텐션 코호트 분석 및 실험 설계를 수행합니다.\n제품 지표 분석 경험이 필요합니다.",
+                "경력수준_표시": "경력",
+                "경력근거_표시": "구조화 메타데이터",
+                "채용트랙_표시": "",
+                "채용트랙근거_표시": "",
+                "직무초점_표시": "제품 분석",
+                "직무초점근거_표시": "주요업무",
+                "구분요약_표시": "경력 / 제품 분석",
+                "회사명_표시": "분석랩",
+                "소스명_표시": "소스",
+                "공고제목_표시": "Data Analyst [User Behavior]",
+                "직무명_표시": "데이터 사이언티스트",
+                "주요업무_표시": "퍼널 리텐션 코호트 분석 및 실험 설계를 수행합니다.",
+                "자격요건_표시": "제품 지표 분석 경험이 필요합니다.",
+                "우대사항_표시": "통계 기반 의사결정 경험 우대",
+                "핵심기술_표시": "SQL\nPython",
+            },
+            {
+                "company_name": "프로덕트랩",
+                "source_name": "소스",
+                "job_title_raw": "Product Manager | 중고거래",
+                "job_title_ko": "Product Manager | 중고거래",
+                "job_role": "데이터 분석가",
+                "job_url": "https://example.com/jobs/non-target",
+                "source_url": "https://example.com/feed",
+                "source_bucket": "approved",
+                "company_tier": "중견/중소",
+                "record_status": "신규",
+                "is_active": True,
+                "주요업무_분석용": "정성/정량 데이터를 기반으로 제품 전략을 수립합니다.",
+                "자격요건_분석용": "서비스 기획 및 프로젝트 관리 경험이 필요합니다.",
+                "우대사항_분석용": "실험 설계 경험 우대",
+                "핵심기술_분석용": "SQL",
+                "상세본문_분석용": "정성/정량 데이터를 기반으로 제품 전략을 수립합니다.\n서비스 기획 및 프로젝트 관리 경험이 필요합니다.",
+                "경력수준_표시": "경력",
+                "경력근거_표시": "구조화 메타데이터",
+                "채용트랙_표시": "",
+                "채용트랙근거_표시": "",
+                "직무초점_표시": "제품 기획",
+                "직무초점근거_표시": "주요업무",
+                "구분요약_표시": "경력 / 제품 기획",
+                "회사명_표시": "프로덕트랩",
+                "소스명_표시": "소스",
+                "공고제목_표시": "Product Manager | 중고거래",
+                "직무명_표시": "데이터 분석가",
+                "주요업무_표시": "정성/정량 데이터를 기반으로 제품 전략을 수립합니다.",
+                "자격요건_표시": "서비스 기획 및 프로젝트 관리 경험이 필요합니다.",
+                "우대사항_표시": "실험 설계 경험 우대",
+                "핵심기술_표시": "SQL",
+            },
+        ]
+    )
+    registry = pd.DataFrame(
+        [
+            {
+                "source_url": "https://example.com/feed",
+                "source_bucket": "approved",
+                "verification_status": "성공",
+            }
+        ]
+    )
+
+    gate = evaluate_quality_gate(staging, registry, already_filtered=True)
+
+    assert gate.passed is False
+    assert gate.metrics["role_mismatch_count"] == 1
+    assert gate.metrics["role_non_target_count"] == 1
+    assert gate.metrics["role_mismatch_samples"][0]["expected_role"] == "데이터 분석가"
+    assert "최신 직무 분류 기준과 다른 분류직무가 활성 행에 포함되어 있습니다." in gate.reasons
+    assert "최신 직무 분류 기준으로 비타깃 공고가 활성 행에 포함되어 있습니다." in gate.reasons
+
+
+def test_filter_low_quality_jobs_applies_work24_semantic_role_filter() -> None:
+    staging = pd.DataFrame(
+        [
+            {
+                "company_name": "브릴스",
+                "source_name": "고용24 공개 채용검색",
+                "source_url": "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=AI",
+                "source_bucket": "approved",
+                "company_tier": "중견/중소",
+                "is_active": True,
+                "record_status": "신규",
+                "job_role": "데이터 분석가",
+                "job_title_raw": "[브릴스] 로봇 서비스(CS / AS) 엔지니어 채용 (경력)",
+                "job_url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K-ROBOT",
+                "회사명_표시": "브릴스",
+                "소스명_표시": "고용24",
+                "공고제목_표시": "[브릴스] 로봇 서비스(CS / AS) 엔지니어 채용 (경력)",
+                "직무명_표시": "데이터 분석가",
+                "주요업무_분석용": "로봇 시스템 유지보수, 기술 지원, 정기 점검과 긴급 장애 대응을 담당합니다.",
+                "자격요건_분석용": "부품 교체와 서비스 매뉴얼 작성 경험이 필요합니다.",
+                "우대사항_분석용": "산업용 로봇 현장 대응 경험을 우대합니다.",
+                "핵심기술_분석용": "유지보수\n기술지원",
+                "상세본문_분석용": "로봇 시스템 유지보수와 기술 지원을 수행합니다.\n부품 교체와 서비스 매뉴얼 작성 경험이 필요합니다.",
+            },
+            {
+                "company_name": "리서치코리아",
+                "source_name": "고용24 공개 채용검색",
+                "source_url": "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=데이터",
+                "source_bucket": "approved",
+                "company_tier": "중견/중소",
+                "is_active": True,
+                "record_status": "신규",
+                "job_role": "인공지능 리서처",
+                "job_title_raw": "리서치 통계분석 및 빅데이터 분석 연구원 모집",
+                "job_url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K-ANALYST",
+                "회사명_표시": "리서치코리아",
+                "소스명_표시": "고용24",
+                "공고제목_표시": "리서치 통계분석 및 빅데이터 분석 연구원 모집",
+                "직무명_표시": "인공지능 리서처",
+                "주요업무_분석용": "통계 분석 및 보고서 작성, 조사원 관리, 빅데이터 분석 업무를 수행합니다.",
+                "자격요건_분석용": "학사 졸업 이상의 학위와 통계 패키지 활용 경험이 필요합니다.",
+                "우대사항_분석용": "리서치 프로젝트 수행 경험을 우대합니다.",
+                "핵심기술_분석용": "통계분석\nSQL",
+                "상세본문_분석용": "통계 분석 및 보고서 작성, 조사원 관리, 빅데이터 분석 업무를 수행합니다.\n통계 패키지 활용 경험이 필요합니다.",
+            },
+        ]
+    )
+
+    filtered, dropped = filter_low_quality_jobs(staging)
+
+    assert filtered["company_name"].tolist() == ["리서치코리아"]
+    assert filtered.iloc[0]["job_role"] == "데이터 분석가"
+    assert filtered.iloc[0]["직무명_표시"] == "데이터 분석가"
+    assert dropped["company_name"].tolist() == ["브릴스"]
+    assert dropped.iloc[0]["semantic_filter_reason"] == "work24_semantic_non_target"
+
+
 def test_normalize_job_analysis_fields_sanitizes_visible_sections_from_analysis_text() -> None:
     staging = pd.DataFrame(
         [
@@ -7066,33 +8068,47 @@ def test_normalize_job_analysis_fields_truncates_cross_column_and_admin_tails() 
     staging = pd.DataFrame(
         [
             {
-                "company_name": "테스트회사",
-                "source_name": "테스트 채용",
-                "job_title_raw": "Data Engineer",
-                "job_title_ko": "Data Engineer",
+                "company_name": "키다리스튜디오",
+                "source_name": "키다리스튜디오 채용",
+                "job_title_raw": "데이터 엔지니어",
+                "job_title_ko": "데이터 엔지니어",
                 "job_role": "인공지능 엔지니어",
                 "job_url": "https://example.com/jobs/data-engineer",
                 "source_url": "https://example.com/feed",
                 "source_bucket": "approved",
-                "company_tier": "스타트업",
+                "company_tier": "중견/중소",
                 "record_status": "유지",
                 "is_active": True,
-                "주요업무_분석용": "데이터레이크 구축 및 운영 업무를 담당합니다.\n자격요건\n파이썬 개발 경험",
-                "자격요건_분석용": "파이썬 개발 경험\n우대조건\n대규모 데이터 처리 경험",
-                "우대사항_분석용": (
-                    "의료 인공지능 프로젝트 경험\n"
-                    "필수 – 이력서, 논문(석사 이상 학위 소지자)\n"
-                    "선택 –, 포트폴리오 등\n"
-                    "*(에 따라 레퍼런스체크 실시될 수 있음)"
+                "주요업무_분석용": "\n".join(
+                    [
+                        "데이터레이크 구축 및 운영 업무를 담당합니다.",
+                        "이런 역량과 경험을 갖추신 분을 찾습니다.",
+                        "데이터 엔지니어링 유관 경력 3년 이상",
+                    ]
                 ),
-                "핵심기술_분석용": "Python\nSQL",
+                "자격요건_분석용": "\n".join(
+                    [
+                        "데이터 엔지니어링 유관 경력 3년 이상",
+                        "복잡한 쿼리 작성 및 쿼리 튜닝이 가능하신 분",
+                        "우대조건",
+                        "스파크 기반 대용량 데이터 분산 처리 경험",
+                    ]
+                ),
+                "우대사항_분석용": "\n".join(
+                    [
+                        "스파크 기반 대용량 데이터 분산 처리 경험",
+                        "채용 프로세스를 참고해요 !",
+                        "서류 전형 > 1차 인터뷰 > 처우 협의 > 최종 합격",
+                    ]
+                ),
+                "핵심기술_분석용": "스파크\n에스큐엘",
                 "상세본문_분석용": "",
-                "회사명_표시": "테스트회사",
-                "소스명_표시": "테스트 채용",
-                "공고제목_표시": "Data Engineer",
-                "경력수준_표시": "",
+                "회사명_표시": "키다리스튜디오",
+                "소스명_표시": "키다리스튜디오 채용",
+                "공고제목_표시": "데이터 엔지니어",
+                "경력수준_표시": "미기재",
                 "경력근거_표시": "",
-                "채용트랙_표시": "",
+                "채용트랙_표시": "일반채용",
                 "채용트랙근거_표시": "",
                 "직무초점_표시": "",
                 "직무초점근거_표시": "",
@@ -7110,13 +8126,11 @@ def test_normalize_job_analysis_fields_truncates_cross_column_and_admin_tails() 
     row = normalized.iloc[0]
 
     assert row["주요업무_분석용"] == "데이터레이크 구축 및 운영 업무를 담당합니다."
-    assert row["자격요건_분석용"] == "파이썬 개발 경험"
-    assert row["우대사항_분석용"] == "의료 인공지능 프로젝트 경험"
-    assert "자격요건" not in row["주요업무_분석용"]
+    assert "이런 역량" not in row["주요업무_분석용"]
     assert "우대조건" not in row["자격요건_분석용"]
-    assert "이력서" not in row["우대사항_분석용"]
-    assert "레퍼런스" not in row["우대사항_분석용"]
-    assert row["주요업무_표시"] == "데이터레이크 구축 및 운영 업무를 담당합니다."
+    assert "스파크 기반" not in row["자격요건_분석용"]
+    assert row["우대사항_분석용"] == "스파크 기반 대용량 데이터 분산 처리 경험"
+    assert "서류 전형" not in row["우대사항_표시"]
 
 
 def test_discover_sources_prefers_approved_companies_when_bucket_exists(sandbox_project: Path) -> None:
@@ -7135,7 +8149,7 @@ def test_discover_sources_prefers_approved_companies_when_bucket_exists(sandbox_
     summary = discover_sources_pipeline(project_root=sandbox_project)
     registry = read_csv_or_empty(paths.source_registry_path)
 
-    assert summary["company_input_mode"] == "approved_companies"
+    assert summary["company_input_mode"] == "approved_companies_plus_registry"
     registry_companies = set(registry["company_name"].dropna().tolist())
     assert "삼성전자" in registry_companies
     assert existing_companies.issubset(registry_companies)
@@ -8442,6 +9456,699 @@ def test_fetch_source_content_recovers_saramin_relay_detail_as_json_job(
     assert "모델 성능 고도화" in jobs[0]["description_html"]
     assert "경력 3년 이상" in jobs[0]["requirements"]
     assert "얼굴인식 경험자" in jobs[0]["preferred"]
+
+
+def test_fetch_saramin_api_source_hydrates_jobs_via_relay(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Settings:
+        saramin_api_access_key = "saramin-test-key"
+        user_agent = "jobs-market-v2-test"
+        timeout_seconds = 20.0
+        connect_timeout_seconds = 5.0
+        html_source_timeout_seconds = 8.0
+        html_source_connect_timeout_seconds = 3.0
+        ats_source_timeout_seconds = 10.0
+        ats_source_connect_timeout_seconds = 3.0
+
+    seen_api_urls: list[str] = []
+
+    def fake_fetch_saramin_api_json(url: str, settings) -> dict[str, Any]:
+        request_url = collection_module._build_saramin_api_url(url, settings.saramin_api_access_key)
+        seen_api_urls.append(request_url)
+        return {
+            "jobs": {
+                "job": [
+                    {
+                        "url": "https://www.saramin.co.kr/zf_user/jobs/relay/view?view_type=list&rec_idx=53396371",
+                        "active": 1,
+                        "company": {"detail": {"name": "알체라"}},
+                        "position": {
+                            "title": "[알체라] AI 연구원 모집 (얼굴인식/위조판별)",
+                            "location": {"name": "서울 강남구"},
+                            "experience-level": {"name": "경력 3~8년"},
+                        },
+                        "keyword": "python,computer vision,deep learning",
+                    }
+                ]
+            }
+        }
+
+    def fake_fetch_saramin_relay_source(url: str, settings):
+        assert url == "https://www.saramin.co.kr/zf_user/jobs/relay/view?view_type=list&rec_idx=53396371"
+        return (
+            json.dumps(
+                {
+                    "jobs": [
+                        {
+                            "title": "[알체라] AI 연구원 모집 (얼굴인식/위조판별)",
+                            "description_html": "<div><h3>주요업무</h3><p>모델 성능 고도화</p></div>",
+                            "requirements": "Python",
+                            "preferred": "얼굴인식 경험자",
+                            "job_url": url,
+                            "location": "서울 강남구",
+                            "country": "서울 강남구",
+                            "experience_level": "경력 3~8년",
+                        }
+                    ]
+                },
+                ensure_ascii=False,
+            ),
+            "application/json",
+        )
+
+    monkeypatch.setattr(collection_module, "_fetch_saramin_api_json", fake_fetch_saramin_api_json)
+    monkeypatch.setattr(collection_module, "_fetch_saramin_relay_source", fake_fetch_saramin_relay_source)
+
+    content, content_type = collection_module._fetch_saramin_api_source(
+        "https://oapi.saramin.co.kr/job-search?keywords=데이터+사이언티스트",
+        Settings(),
+    )
+    payload = json.loads(content)
+
+    assert content_type == "application/json"
+    assert len(payload["jobs"]) == 1
+    assert payload["jobs"][0]["job_url"] == "https://www.saramin.co.kr/zf_user/jobs/relay/view?view_type=list&rec_idx=53396371"
+    assert "모델 성능 고도화" in payload["jobs"][0]["description_html"]
+    assert any("access-key=saramin-test-key" in request_url for request_url in seen_api_urls)
+    assert any("count=110" in request_url for request_url in seen_api_urls)
+    assert any("fields=posting-date+expiration-date+keyword-code" in request_url for request_url in seen_api_urls)
+
+
+def test_fetch_saramin_api_source_requires_access_key() -> None:
+    class Settings:
+        saramin_api_access_key = ""
+        user_agent = "jobs-market-v2-test"
+        timeout_seconds = 20.0
+        connect_timeout_seconds = 5.0
+        ats_source_timeout_seconds = 10.0
+        ats_source_connect_timeout_seconds = 3.0
+
+    with pytest.raises(RuntimeError, match="Saramin API access-key"):
+        collection_module._fetch_saramin_api_source(
+            "https://oapi.saramin.co.kr/job-search?keywords=데이터+사이언티스트",
+            Settings(),
+        )
+
+
+def test_fetch_source_content_routes_saramin_api(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    class Settings:
+        use_mock_sources = False
+
+    called: list[str] = []
+
+    def fake_fetch_saramin_api_source(url: str, settings):
+        called.append(url)
+        return json.dumps({"jobs": []}, ensure_ascii=False), "application/json"
+
+    monkeypatch.setattr(collection_module, "_fetch_saramin_api_source", fake_fetch_saramin_api_source)
+
+    paths = ProjectPaths.from_root(tmp_path)
+    paths.ensure_directories()
+    content, content_type = collection_module.fetch_source_content(
+        "https://oapi.saramin.co.kr/job-search?keywords=데이터+분석가",
+        paths,
+        Settings(),
+        "saramin_api",
+    )
+
+    assert content_type == "application/json"
+    assert json.loads(content) == {"jobs": []}
+    assert called == ["https://oapi.saramin.co.kr/job-search?keywords=데이터+분석가"]
+
+
+def test_fetch_worknet_api_source_hydrates_jobs_from_detail(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Settings:
+        worknet_api_auth_key = "worknet-test-key"
+        user_agent = "jobs-market-v2-test"
+        timeout_seconds = 20.0
+        connect_timeout_seconds = 5.0
+        ats_source_timeout_seconds = 10.0
+        ats_source_connect_timeout_seconds = 3.0
+
+    seen_urls: list[str] = []
+
+    list_xml = """
+    <wantedRoot>
+      <total>1</total>
+      <wanted>
+        <wantedAuthNo>K120032604110001</wantedAuthNo>
+        <company>좋은데이터랩</company>
+        <title>데이터 사이언티스트 모집</title>
+        <career>경력</career>
+        <region>서울 강남구</region>
+        <wantedInfoUrl>https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K120032604110001</wantedInfoUrl>
+      </wanted>
+    </wantedRoot>
+    """
+    detail_xml = """
+    <wantedDtl>
+      <wantedAuthNo>K120032604110001</wantedAuthNo>
+      <corpInfo>
+        <corpNm>좋은데이터랩</corpNm>
+        <indTpCdNm>응용 소프트웨어 개발 및 공급업</indTpCdNm>
+        <busiCont>AI 기반 데이터 분석 솔루션</busiCont>
+      </corpInfo>
+      <wantedInfo>
+        <jobsNm>데이터 사이언티스트</jobsNm>
+        <wantedTitle>데이터 사이언티스트 모집</wantedTitle>
+        <relJobsNm>데이터 분석가</relJobsNm>
+        <jobCont>머신러닝 모델 개발 및 고객 행동 데이터 분석</jobCont>
+        <enterTpNm>경력 3년 이상</enterTpNm>
+        <eduNm>대졸(4년)</eduNm>
+        <major>통계학, 컴퓨터공학</major>
+        <certificate>정보처리기사</certificate>
+        <compAbl>Python, SQL</compAbl>
+        <pfCond>데이터 사이언스 프로젝트 경험</pfCond>
+        <etcPfCond>추천 시스템 경험자 우대</etcPfCond>
+        <workRegion>서울 강남구</workRegion>
+        <workdayWorkhrCont>주 5일 09:00~18:00</workdayWorkhrCont>
+        <etcWelfare>교육비 지원</etcWelfare>
+        <keywordList>
+          <srchKeywordNm>Python</srchKeywordNm>
+          <srchKeywordNm>Machine Learning</srchKeywordNm>
+        </keywordList>
+      </wantedInfo>
+    </wantedDtl>
+    """
+
+    def fake_fetch_worknet_xml(url: str, settings, *, accept: str = "application/xml") -> str:
+        seen_urls.append(url)
+        if "callOpenApiSvcInfo210L01.do" in url:
+            return list_xml
+        if "callOpenApiSvcInfo210D01.do" in url:
+            return detail_xml
+        raise AssertionError(url)
+
+    monkeypatch.setattr(collection_module, "_fetch_worknet_xml", fake_fetch_worknet_xml)
+
+    content, content_type = collection_module._fetch_worknet_api_source(
+        "https://www.work24.go.kr/cm/openApi/call/wk/callOpenApiSvcInfo210L01.do?keyword=데이터+사이언티스트&display=1&detailLimit=1",
+        Settings(),
+    )
+    payload = json.loads(content)
+
+    assert content_type == "application/json"
+    assert len(payload["jobs"]) == 1
+    assert payload["jobs"][0]["title"] == "데이터 사이언티스트 모집"
+    assert payload["jobs"][0]["company_name_hint"] == "좋은데이터랩"
+    assert payload["jobs"][0]["experience_level"] == "경력 3년 이상"
+    assert "머신러닝 모델 개발" in payload["jobs"][0]["main_tasks"]
+    assert "추천 시스템 경험자" in payload["jobs"][0]["preferred"]
+    assert "Machine Learning" in payload["jobs"][0]["core_skills"]
+    assert any("authKey=worknet-test-key" in url for url in seen_urls)
+    assert any("callTp=L" in url and "returnType=XML" in url for url in seen_urls)
+    assert any("callTp=D" in url and "wantedAuthNo=K120032604110001" in url for url in seen_urls)
+
+
+def test_parse_worknet_api_detail_xml() -> None:
+    content = """
+    <wantedDtl>
+      <wantedAuthNo>K120032604110002</wantedAuthNo>
+      <corpInfo><corpNm>분석회사</corpNm></corpInfo>
+      <wantedInfo>
+        <wantedTitle>데이터 분석가</wantedTitle>
+        <jobCont>실험 설계와 지표 분석</jobCont>
+        <enterTpNm>관계없음</enterTpNm>
+        <pfCond>SQL 가능자</pfCond>
+        <workRegion>서울</workRegion>
+      </wantedInfo>
+    </wantedDtl>
+    """
+
+    jobs = parse_jobs_from_payload(content, "application/xml", "worknet_api")
+
+    assert len(jobs) == 1
+    assert jobs[0]["title"] == "데이터 분석가"
+    assert jobs[0]["company_name_hint"] == "분석회사"
+    assert "실험 설계와 지표 분석" in jobs[0]["main_tasks"]
+    assert jobs[0]["preferred"] == "SQL 가능자"
+
+
+def test_parse_work24_public_html_list_keeps_official_work24_rows_only() -> None:
+    content = """
+    <table><tbody>
+      <tr id="list1">
+        <td>
+          <input id="chkboxWantedAuthNo0" value="K120032604120001|VALIDATION|좋은데이터랩|데이터 분석가 채용"/>
+          <a class="cp_name">좋은데이터랩</a>
+          <a data-emp-detail href="/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K120032604120001&amp;infoTypeCd=VALIDATION&amp;infoTypeGroup=tb_workinfoworknet">
+            데이터 분석가 채용
+          </a>
+        </td>
+        <td>
+          <ul class="emp_info_dtl">
+            <li class="member">경력 3년 대졸(4년)</li>
+            <li class="site">서울 강남구</li>
+          </ul>
+        </td>
+        <td><p>마감일 : 2026-05-31</p><p>등록일 : 2026-04-12</p></td>
+      </tr>
+      <tr id="list2">
+        <td>
+          <input id="chkboxWantedAuthNo1" value="53588077|CSI|외부회사|외부 공고"/>
+          <a data-emp-detail href="/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=53588077&amp;infoTypeCd=CSI&amp;infoTypeGroup=tb_workinfogubun">
+            외부 공고
+          </a>
+        </td>
+      </tr>
+    </tbody></table>
+    """
+
+    jobs = parse_jobs_from_payload(content, "text/html", "work24_public_html", base_url="https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do")
+
+    assert len(jobs) == 1
+    assert jobs[0]["title"] == "데이터 분석가 채용"
+    assert jobs[0]["company_name_hint"] == "좋은데이터랩"
+    assert jobs[0]["worknet_wanted_auth_no"] == "K120032604120001"
+    assert jobs[0]["location"] == "서울 강남구"
+    assert "등록일: 2026-04-12" in jobs[0]["listing_context"]
+
+
+def test_parse_work24_public_html_detail_extracts_clipped_analysis_fields() -> None:
+    content = """
+    <input id="wantedAuthNo" value="K120032604120002"/>
+    <section>
+      <strong>직무내용</strong>
+      추천 모델 개발과 고객 행동 데이터 분석<br/>
+      Python, SQL 기반 실험 지표 관리
+    </section>
+    <table>
+      <tr><th>모집 직종</th><td>데이터 전문가</td></tr>
+      <tr><th>관련 직종</th><td>데이터 분석가</td></tr>
+      <tr><th>직종 키워드</th><td>Python, SQL, 머신러닝</td></tr>
+      <tr><th>경력</th><td>경력 3년</td></tr>
+      <tr><th>학력</th><td>대졸(4년)</td></tr>
+      <tr><th>전공</th><td>통계학</td></tr>
+      <tr><th>컴퓨터 활용 능력</th><td>Python, SQL</td></tr>
+      <tr><th>우대조건</th><td>A/B 테스트 경험</td></tr>
+      <tr><th>기타 우대사항</th><td>추천 시스템 경험</td></tr>
+      <tr><th>근무 예정지</th><td>서울 강남구</td></tr>
+    </table>
+    <ul><li><em class="tit">기업명</em>좋은데이터랩</li></ul>
+    """
+    fallback = {
+        "title": "데이터 사이언티스트",
+        "job_url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K120032604120002&infoTypeCd=VALIDATION&infoTypeGroup=tb_workinfoworknet",
+        "company_name_hint": "좋은데이터랩",
+    }
+
+    job = collection_module._parse_work24_public_detail_job(content, fallback_job=fallback)
+
+    assert job["title"] == "데이터 사이언티스트"
+    assert job["company_name_hint"] == "좋은데이터랩"
+    assert "추천 모델 개발" in job["main_tasks"]
+    assert "통계학" in job["requirements"]
+    assert "추천 시스템 경험" in job["preferred"]
+    assert "Python" in job["core_skills"]
+
+
+def test_parse_work24_public_html_detail_prefers_detail_title_when_listing_title_is_company() -> None:
+    content = """
+    <script>const WANTED_TITLE = "데이터 분석가로서 AI 예측 모델을 구축할 분";</script>
+    <input id="wantedAuthNo" value="K120032604120099"/>
+    <div>
+      <p class="corp_info"><strong>에이치입찰정보연구소</strong></p>
+      <strong class="title">데이터 분석가로서 AI 예측 모델을 구축할 분</strong>
+    </div>
+    <section><strong>직무내용</strong>전자입찰 데이터를 분석하고 예측 모델을 구축합니다.</section>
+    <table>
+      <tr><th>모집 직종</th><td>데이터 분석가</td></tr>
+      <tr><th>근무 예정지</th><td>서울</td></tr>
+    </table>
+    <ul><li><em class="tit">기업명</em>에이치입찰정보연구소</li></ul>
+    """
+    fallback = {
+        "title": "에이치입찰정보연구소",
+        "job_url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K120032604120099",
+        "company_name_hint": "에이치입찰정보연구소",
+    }
+
+    job = collection_module._parse_work24_public_detail_job(content, fallback_job=fallback)
+
+    assert job["title"] == "데이터 분석가로서 AI 예측 모델을 구축할 분"
+    assert job["company_name_hint"] == "에이치입찰정보연구소"
+
+
+def test_parse_work24_public_html_detail_handles_spaced_legal_entity_company_title() -> None:
+    content = """
+    <script>const WANTED_TITLE = "(채용대행) AI 서비스 개발자 모집";</script>
+    <input id="wantedAuthNo" value="KEC0222603170003"/>
+    <div>
+      <p class="corp_info"><strong>(주)엔클라우</strong></p>
+      <strong class="title">(채용대행) AI 서비스 개발자 모집</strong>
+    </div>
+    <section><strong>직무내용</strong>AI 기반 응용서비스 설계, 개발 및 운영</section>
+    <table><tr><th>모집 직종</th><td>정보보호 전문가</td></tr></table>
+    <ul><li><em class="tit">기업명</em>(주)엔클라우</li></ul>
+    """
+    fallback = {
+        "title": "( 주 ) 엔클라우",
+        "job_url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=KEC0222603170003",
+        "company_name_hint": "(주)엔클라우",
+    }
+
+    job = collection_module._parse_work24_public_detail_job(content, fallback_job=fallback)
+
+    assert job["title"] == "(채용대행) AI 서비스 개발자 모집"
+
+
+def test_fetch_work24_public_html_source_hydrates_public_detail(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Settings:
+        user_agent = "jobs-market-v2-test"
+        timeout_seconds = 20.0
+        connect_timeout_seconds = 5.0
+        ats_source_timeout_seconds = 10.0
+        ats_source_connect_timeout_seconds = 3.0
+
+    list_html = """
+    <table><tbody><tr id="list1">
+      <td>
+        <input id="chkboxWantedAuthNo0" value="K120032604120003|VALIDATION|좋은데이터랩|데이터 엔지니어 채용"/>
+        <a data-emp-detail href="/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K120032604120003&amp;infoTypeCd=VALIDATION&amp;infoTypeGroup=tb_workinfoworknet">데이터 엔지니어 채용</a>
+      </td>
+      <td><ul class="emp_info_dtl"><li class="member">경력</li><li class="site">서울</li></ul></td>
+    </tr></tbody></table>
+    """
+    detail_html = """
+    <input id="wantedAuthNo" value="K120032604120003"/>
+    <section><strong>직무내용</strong>데이터 파이프라인 구축 및 품질 모니터링</section>
+    <table>
+      <tr><th>모집 직종</th><td>데이터 엔지니어</td></tr>
+      <tr><th>직종 키워드</th><td>Python, SQL, ETL</td></tr>
+      <tr><th>근무 예정지</th><td>서울</td></tr>
+    </table>
+    <ul><li><em class="tit">기업명</em>좋은데이터랩</li></ul>
+    """
+    seen: list[tuple[str, dict[str, str] | None]] = []
+
+    def fake_fetch_work24_public_html(url: str, settings, *, data: dict[str, str] | None = None) -> str:
+        seen.append((url, data))
+        if data is not None:
+            assert data["siteClcd"] == "WORK"
+            assert data["srcKeyword"] == "데이터"
+            return list_html
+        assert "m.work24.go.kr" in url
+        return detail_html
+
+    monkeypatch.setattr(collection_module, "_fetch_work24_public_html", fake_fetch_work24_public_html)
+
+    content, content_type = collection_module._fetch_work24_public_html_source(
+        "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=데이터&resultCnt=1&detailLimit=1",
+        Settings(),
+    )
+    payload = json.loads(content)
+
+    assert content_type == "application/json"
+    assert len(payload["jobs"]) == 1
+    assert payload["jobs"][0]["company_name_hint"] == "좋은데이터랩"
+    assert "데이터 파이프라인" in payload["jobs"][0]["main_tasks"]
+    assert len(seen) == 2
+
+
+def test_parse_work24_public_list_jobs_prefers_checkbox_title_when_anchor_is_company() -> None:
+    html = """
+    <table><tbody><tr>
+      <td>
+        <input id="chkboxWantedAuthNo0" value="K-TITLE|VALIDATION|(주)좋은랩|데이터 사이언티스트 채용"/>
+        <a data-emp-detail href="/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K-TITLE&amp;infoTypeCd=VALIDATION&amp;infoTypeGroup=tb_workinfoworknet">( 주 ) 좋은랩</a>
+      </td>
+      <td><ul class="emp_info_dtl"><li class="member">경력</li><li class="site">서울</li></ul></td>
+    </tr></tbody></table>
+    """
+
+    jobs = collection_module._parse_work24_public_list_jobs(html)
+
+    assert jobs[0]["company_name_hint"] == "(주)좋은랩"
+    assert jobs[0]["title"] == "데이터 사이언티스트 채용"
+
+
+def test_fetch_work24_public_html_source_rotates_pages_with_progress(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    class Settings:
+        user_agent = "jobs-market-v2-test"
+        timeout_seconds = 20.0
+        connect_timeout_seconds = 5.0
+        ats_source_timeout_seconds = 10.0
+        ats_source_connect_timeout_seconds = 3.0
+        enable_gemini_fallback = False
+        gemini_html_listing_max_calls_per_run = 0
+
+    def list_html(page: int) -> str:
+        auth_no = f"K-PAGE-{page}"
+        return f"""
+        <table><tbody><tr>
+          <td>
+            <input id="chkboxWantedAuthNo0" value="{auth_no}|VALIDATION|좋은데이터랩|데이터 분석가"/>
+            <a data-emp-detail href="/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo={auth_no}&amp;infoTypeCd=VALIDATION&amp;infoTypeGroup=tb_workinfoworknet">데이터 분석가</a>
+          </td>
+          <td><ul class="emp_info_dtl"><li class="member">경력</li><li class="site">서울</li></ul></td>
+        </tr></tbody></table>
+        """
+
+    fetched_pages: list[int] = []
+
+    def fake_fetch_work24_public_html(url: str, settings, *, data: dict[str, str] | None = None) -> str:
+        if data is not None:
+            page = int(data["currentPageNo"])
+            fetched_pages.append(page)
+            return list_html(page)
+        auth_no = collection_module._worknet_query_value(url, "wantedAuthNo")
+        return f"""
+        <input id="wantedAuthNo" value="{auth_no}"/>
+        <section><strong>직무내용</strong>데이터 분석 자동화</section>
+        <table><tr><th>모집 직종</th><td>데이터 분석가</td></tr></table>
+        <ul><li><em class="tit">기업명</em>좋은데이터랩</li></ul>
+        """
+
+    monkeypatch.setattr(collection_module, "_fetch_work24_public_html", fake_fetch_work24_public_html)
+
+    paths = ProjectPaths.from_root(tmp_path)
+    paths.ensure_directories()
+    url = "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=데이터&resultCnt=1&pageLimit=2&hotPageLimit=1&scanDepth=3&detailLimit=10"
+
+    collection_module._fetch_work24_public_html_source(url, Settings(), paths=paths)
+    collection_module._fetch_work24_public_html_source(url, Settings(), paths=paths)
+
+    assert fetched_pages == [1, 2, 1, 3]
+    progress = json.loads((paths.runtime_dir / "work24_public_progress.json").read_text(encoding="utf-8"))
+    source_state = next(iter(progress["sources"].values()))
+    assert source_state["last_pages"] == [1, 3]
+    assert source_state["next_page"] == 2
+    assert "K-PAGE-3" in source_state["new_wanted_auth_nos"]
+
+
+def test_fetch_work24_public_html_source_prioritizes_llm_target_detail(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    class Settings:
+        user_agent = "jobs-market-v2-test"
+        timeout_seconds = 20.0
+        connect_timeout_seconds = 5.0
+        ats_source_timeout_seconds = 10.0
+        ats_source_connect_timeout_seconds = 3.0
+        enable_gemini_fallback = False
+        gemini_html_listing_max_calls_per_run = 1
+
+    list_html = """
+    <table><tbody>
+      <tr>
+        <td>
+          <input id="chkboxWantedAuthNo0" value="K-LOW|VALIDATION|일반랩|웹 개발자"/>
+          <a data-emp-detail href="/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K-LOW&amp;infoTypeCd=VALIDATION&amp;infoTypeGroup=tb_workinfoworknet">웹 개발자</a>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <input id="chkboxWantedAuthNo1" value="K-LLM-TARGET|VALIDATION|AI랩|AI 리서처"/>
+          <a data-emp-detail href="/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K-LLM-TARGET&amp;infoTypeCd=VALIDATION&amp;infoTypeGroup=tb_workinfoworknet">AI 리서처</a>
+        </td>
+      </tr>
+    </tbody></table>
+    """
+    detail_urls: list[str] = []
+
+    def fake_fetch_work24_public_html(url: str, settings, *, data: dict[str, str] | None = None) -> str:
+        if data is not None:
+            return list_html
+        detail_urls.append(url)
+        auth_no = collection_module._worknet_query_value(url, "wantedAuthNo")
+        return f"""
+        <input id="wantedAuthNo" value="{auth_no}"/>
+        <section><strong>직무내용</strong>AI 모델 연구</section>
+        <table><tr><th>모집 직종</th><td>인공지능 리서처</td></tr></table>
+        <ul><li><em class="tit">기업명</em>AI랩</li></ul>
+        """
+
+    def fake_track_with_llm(listings, settings, paths=None, budget=None):
+        tracked = [listing.copy() for listing in listings]
+        for listing in tracked:
+            if listing.get("worknet_wanted_auth_no") == "K-LLM-TARGET":
+                listing["work24_llm_target_hint"] = "true"
+                listing["work24_llm_suggested_role"] = "인공지능 리서처"
+        return tracked
+
+    monkeypatch.setattr(collection_module, "_fetch_work24_public_html", fake_fetch_work24_public_html)
+    monkeypatch.setattr(collection_module, "_track_work24_public_listings_with_llm", fake_track_with_llm)
+
+    paths = ProjectPaths.from_root(tmp_path)
+    paths.ensure_directories()
+    url = "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=AI&resultCnt=2&pageLimit=1&detailLimit=1"
+
+    content, _ = collection_module._fetch_work24_public_html_source(url, Settings(), paths=paths)
+    payload = json.loads(content)
+
+    assert len(detail_urls) == 1
+    assert "wantedAuthNo=K-LLM-TARGET" in detail_urls[0]
+    assert payload["jobs"][1]["work24_llm_suggested_role"] == "인공지능 리서처"
+
+
+def test_fetch_source_content_routes_work24_public_html(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    class Settings:
+        use_mock_sources = False
+
+    called: list[str] = []
+
+    def fake_fetch_work24_public_html_source(url: str, settings, *, paths=None):
+        called.append(url)
+        return json.dumps({"jobs": []}, ensure_ascii=False), "application/json"
+
+    monkeypatch.setattr(collection_module, "_fetch_work24_public_html_source", fake_fetch_work24_public_html_source)
+
+    paths = ProjectPaths.from_root(tmp_path)
+    paths.ensure_directories()
+    content, content_type = collection_module.fetch_source_content(
+        "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=데이터",
+        paths,
+        Settings(),
+        "work24_public_html",
+    )
+
+    assert content_type == "application/json"
+    assert json.loads(content) == {"jobs": []}
+    assert called == ["https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=데이터"]
+
+
+def test_normalize_work24_public_job_uses_company_hint_and_redacts_raw_payload() -> None:
+    source_row = {
+        "source_url": "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=데이터",
+        "source_bucket": "approved",
+        "source_name": "고용24 공개 채용검색",
+        "source_type": "work24_public_html",
+        "company_name": "고용24",
+        "company_tier": "공공·연구기관",
+    }
+    raw_job = {
+        "title": "데이터 사이언티스트",
+        "description_html": "<h2>주요업무</h2><p>원문 전문은 raw payload에 저장하지 않아야 합니다. 머신러닝 모델 개발</p>",
+        "main_tasks": "머신러닝 모델 개발 및 지표 분석",
+        "requirements": "Python, SQL",
+        "preferred": "추천 시스템 경험",
+        "job_url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K120032604120004",
+        "company_name_hint": "(주)좋은데이터랩",
+        "location": "서울",
+        "country": "서울",
+        "experience_level": "경력",
+        "work24_public_tracking_signal": "new",
+        "work24_llm_target_hint": "true",
+        "work24_llm_suggested_role": "데이터 사이언티스트",
+        "work24_llm_reason": "목록 기준 데이터 직무",
+        "work24_llm_tracking_error": "HTTPStatusError",
+    }
+
+    normalized, raw_detail = normalize_job_payload(
+        raw_job,
+        source_row,
+        run_id="run-1",
+        snapshot_date="2026-04-12",
+        collected_at="2026-04-12T00:00:00+09:00",
+        refine_with_gemini=False,
+    )
+
+    assert normalized["company_name"] == "좋은데이터랩"
+    assert raw_detail["company_name"] == "좋은데이터랩"
+    assert "원문 전문은 raw payload" not in raw_detail["raw_payload_json"]
+    assert "work24_llm_suggested_role" in raw_detail["raw_payload_json"]
+    assert "work24_llm_tracking_error" in raw_detail["raw_payload_json"]
+
+
+def test_normalize_worknet_job_uses_listing_company_hint() -> None:
+    source_row = {
+        "source_url": "https://www.work24.go.kr/cm/openApi/call/wk/callOpenApiSvcInfo210L01.do?keyword=데이터",
+        "source_bucket": "approved",
+        "source_name": "워크넷 채용정보 API",
+        "source_type": "worknet_api",
+        "company_name": "워크넷",
+        "company_tier": "공공·연구기관",
+    }
+    raw_job = {
+        "title": "데이터 분석가",
+        "description_html": "<h2>주요업무</h2><p>고객 행동 데이터 분석과 대시보드 구축</p>",
+        "requirements": "SQL 활용 가능자",
+        "preferred": "A/B 테스트 경험",
+        "job_url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K120032604110002",
+        "company_name_hint": "(주)좋은데이터랩",
+        "location": "서울",
+        "country": "서울",
+        "experience_level": "경력",
+    }
+
+    normalized, raw_detail = normalize_job_payload(
+        raw_job,
+        source_row,
+        run_id="run-1",
+        snapshot_date="2026-04-12",
+        collected_at="2026-04-12T00:00:00+09:00",
+        refine_with_gemini=False,
+    )
+
+    assert normalized["company_name"] == "좋은데이터랩"
+    assert raw_detail["company_name"] == "좋은데이터랩"
+
+
+def test_fetch_worknet_api_source_requires_auth_key() -> None:
+    class Settings:
+        worknet_api_auth_key = ""
+        user_agent = "jobs-market-v2-test"
+        timeout_seconds = 20.0
+        connect_timeout_seconds = 5.0
+        ats_source_timeout_seconds = 10.0
+        ats_source_connect_timeout_seconds = 3.0
+
+    with pytest.raises(RuntimeError, match="Worknet API authKey"):
+        collection_module._fetch_worknet_api_source(
+            "https://www.work24.go.kr/cm/openApi/call/wk/callOpenApiSvcInfo210L01.do?keyword=데이터",
+            Settings(),
+        )
+
+
+def test_fetch_source_content_routes_worknet_api(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    class Settings:
+        use_mock_sources = False
+
+    called: list[str] = []
+
+    def fake_fetch_worknet_api_source(url: str, settings):
+        called.append(url)
+        return json.dumps({"jobs": []}, ensure_ascii=False), "application/json"
+
+    monkeypatch.setattr(collection_module, "_fetch_worknet_api_source", fake_fetch_worknet_api_source)
+
+    paths = ProjectPaths.from_root(tmp_path)
+    paths.ensure_directories()
+    content, content_type = collection_module.fetch_source_content(
+        "https://www.work24.go.kr/cm/openApi/call/wk/callOpenApiSvcInfo210L01.do?keyword=데이터",
+        paths,
+        Settings(),
+        "worknet_api",
+    )
+
+    assert content_type == "application/json"
+    assert json.loads(content) == {"jobs": []}
+    assert called == ["https://www.work24.go.kr/cm/openApi/call/wk/callOpenApiSvcInfo210L01.do?keyword=데이터"]
 
 
 def test_is_html_scout_candidate_requires_strong_listing_path() -> None:
@@ -9809,6 +11516,70 @@ def test_call_gemini_supports_openai_compatible_chat_completions(monkeypatch: py
     assert result["main_tasks"] == "데이터 파이프라인 구축"
 
 
+def test_html_listing_llm_fallback_uses_openai_compatible_backend(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    class FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, object]:
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": '{"jobs":[{"title":"AI Engineer","job_url":"https://example.com/jobs/ai-engineer"}]}'
+                        }
+                    }
+                ]
+            }
+
+    def fake_post(url: str, **kwargs) -> FakeResponse:
+        captured["url"] = url
+        captured["kwargs"] = kwargs
+        return FakeResponse()
+
+    monkeypatch.setattr(gemini_module.httpx, "post", fake_post)
+
+    settings = AppSettings(
+        enable_gemini_fallback=True,
+        llm_provider="openai_compatible",
+        llm_base_url="https://api.vibemakers.kr",
+        llm_api_key="vibe-key",
+        llm_model="gemma-4-31b",
+        gemini_timeout_seconds=15.0,
+        connect_timeout_seconds=5.0,
+    )
+
+    jobs = collection_module._call_gemini_for_html_jobs(
+        {
+            "base_url": "https://example.com/careers",
+            "page_title": "Careers",
+            "page_excerpt": "AI Engineer 채용",
+            "anchors": [{"text": "AI Engineer", "url": "https://example.com/jobs/ai-engineer"}],
+        },
+        settings,
+    )
+
+    assert captured["url"] == "https://api.vibemakers.kr/v1/chat/completions"
+    request_kwargs = captured["kwargs"]
+    assert request_kwargs["headers"]["Authorization"] == "Bearer vibe-key"
+    assert request_kwargs["json"]["model"] == "gemma-4-31b"
+    assert jobs == [{"title": "AI Engineer", "job_url": "https://example.com/jobs/ai-engineer"}]
+
+
+def test_openai_compatible_backend_does_not_reuse_legacy_gemini_key() -> None:
+    settings = AppSettings(
+        llm_provider="openai_compatible",
+        llm_base_url="https://api.vibemakers.kr",
+        llm_model="gemma-4-31b",
+        gemini_api_key="legacy-gemini-key",
+        gemini_model="gemini-2.5-flash",
+    )
+
+    assert gemini_module._active_llm_api_key(settings) == ""
+
+
 def test_get_settings_uses_published_llm_backend_defaults(
     monkeypatch: pytest.MonkeyPatch,
     sandbox_project: Path,
@@ -10441,6 +12212,228 @@ def test_merge_incremental_preserves_unattempted_active_rows_without_hold_downgr
     assert merged.iloc[0]["record_status"] == "유지"
     assert int(merged.iloc[0]["missing_count"]) == 0
     assert bool(merged.iloc[0]["is_active"]) is True
+
+
+def test_merge_incremental_refreshes_carried_forward_role_with_current_classifier() -> None:
+    baseline = pd.DataFrame(
+        [
+            {
+                "job_key": "a",
+                "change_hash": "1",
+                "first_seen_at": "2026-03-29T00:00:00+09:00",
+                "last_seen_at": "2026-03-29T00:00:00+09:00",
+                "is_active": True,
+                "missing_count": 0,
+                "snapshot_date": "2026-03-29",
+                "run_id": "r1",
+                "source_url": "https://a.example/jobs",
+                "source_bucket": "approved",
+                "source_name": "테스트",
+                "company_name": "테스트",
+                "company_tier": "중견/중소",
+                "job_title_raw": "Data Analyst",
+                "experience_level_raw": "경력",
+                "job_role": "인공지능 리서처",
+                "job_url": "https://a.example/jobs/1",
+                "record_status": "유지",
+                "공고제목_표시": "Data Analyst",
+                "주요업무_분석용": "분석 대시보드 구축과 실험 결과 분석",
+                "자격요건_분석용": "SQL, Python 활용 능력",
+                "우대사항_분석용": "",
+                "핵심기술_분석용": "SQL\n파이썬",
+                "상세본문_분석용": "실험 분석과 데이터 기반 의사결정을 지원합니다.",
+            }
+        ]
+    )
+
+    merged = merge_incremental(
+        baseline,
+        pd.DataFrame(columns=baseline.columns),
+        {},
+        "r2",
+        "2026-03-30",
+        "2026-03-30T00:00:00+09:00",
+    )
+
+    assert len(merged) == 1
+    assert merged.iloc[0]["job_role"] == "데이터 분석가"
+    assert merged.iloc[0]["직무명_표시"] == "데이터 분석가"
+
+
+def test_merge_incremental_drops_carried_forward_non_target_role_after_reclassification() -> None:
+    baseline = pd.DataFrame(
+        [
+            {
+                "job_key": "a",
+                "change_hash": "1",
+                "first_seen_at": "2026-03-29T00:00:00+09:00",
+                "last_seen_at": "2026-03-29T00:00:00+09:00",
+                "is_active": True,
+                "missing_count": 0,
+                "snapshot_date": "2026-03-29",
+                "run_id": "r1",
+                "source_url": "https://a.example/jobs",
+                "source_bucket": "approved",
+                "source_name": "테스트",
+                "company_name": "테스트",
+                "company_tier": "중견/중소",
+                "job_title_raw": "Product Manager | 중고거래",
+                "experience_level_raw": "경력",
+                "job_role": "데이터 분석가",
+                "job_url": "https://a.example/jobs/2",
+                "record_status": "유지",
+                "공고제목_표시": "Product Manager | 중고거래",
+                "주요업무_분석용": "중고거래 제품 로드맵을 관리합니다.",
+                "자격요건_분석용": "제품 지표 관리 경험",
+                "우대사항_분석용": "",
+                "핵심기술_분석용": "",
+                "상세본문_분석용": "제품 전략과 운영을 담당합니다.",
+            }
+        ]
+    )
+
+    merged = merge_incremental(
+        baseline,
+        pd.DataFrame(columns=baseline.columns),
+        {},
+        "r2",
+        "2026-03-30",
+        "2026-03-30T00:00:00+09:00",
+    )
+
+    assert merged.empty
+
+
+def test_merge_incremental_drops_carried_forward_strict_non_target_role_after_reclassification() -> None:
+    baseline = pd.DataFrame(
+        [
+            {
+                "job_key": "a",
+                "change_hash": "1",
+                "first_seen_at": "2026-03-29T00:00:00+09:00",
+                "last_seen_at": "2026-03-29T00:00:00+09:00",
+                "is_active": True,
+                "missing_count": 0,
+                "snapshot_date": "2026-03-29",
+                "run_id": "r1",
+                "source_url": "https://a.example/jobs",
+                "source_bucket": "approved",
+                "source_name": "테스트",
+                "company_name": "테스트",
+                "company_tier": "중견/중소",
+                "job_title_raw": "Technical Program Manager",
+                "experience_level_raw": "경력",
+                "job_role": "인공지능 엔지니어",
+                "job_url": "https://a.example/jobs/3",
+                "record_status": "유지",
+                "공고제목_표시": "Technical Program Manager",
+                "주요업무_분석용": "AI 플랫폼 개발 일정을 관리합니다.",
+                "자격요건_분석용": "프로그램 관리 경험",
+                "우대사항_분석용": "",
+                "핵심기술_분석용": "",
+                "상세본문_분석용": "AI 제품 개발의 일정과 협업을 조율합니다.",
+            }
+        ]
+    )
+
+    merged = merge_incremental(
+        baseline,
+        pd.DataFrame(columns=baseline.columns),
+        {},
+        "r2",
+        "2026-03-30",
+        "2026-03-30T00:00:00+09:00",
+    )
+
+    assert merged.empty
+
+
+def test_merge_incremental_drops_carried_forward_title_only_non_target_role_after_reclassification() -> None:
+    baseline = pd.DataFrame(
+        [
+            {
+                "job_key": "a",
+                "change_hash": "1",
+                "first_seen_at": "2026-03-29T00:00:00+09:00",
+                "last_seen_at": "2026-03-29T00:00:00+09:00",
+                "is_active": True,
+                "missing_count": 0,
+                "snapshot_date": "2026-03-29",
+                "run_id": "r1",
+                "source_url": "https://a.example/jobs",
+                "source_bucket": "approved",
+                "source_name": "테스트",
+                "company_name": "테스트",
+                "company_tier": "중견/중소",
+                "job_title_raw": "[CoS] AX Manager",
+                "experience_level_raw": "경력",
+                "job_role": "데이터 사이언티스트",
+                "job_url": "https://a.example/jobs/4",
+                "record_status": "유지",
+                "공고제목_표시": "[CoS] AX Manager",
+                "주요업무_분석용": "전사 AI 전환과 데이터 전략 실행을 담당합니다.",
+                "자격요건_분석용": "AI/ML 프로젝트 리딩 경험",
+                "우대사항_분석용": "",
+                "핵심기술_분석용": "머신러닝\n데이터 분석",
+                "상세본문_분석용": "전사 AI 적용 로드맵과 운영 체계를 설계합니다.",
+            }
+        ]
+    )
+
+    merged = merge_incremental(
+        baseline,
+        pd.DataFrame(columns=baseline.columns),
+        {},
+        "r2",
+        "2026-03-30",
+        "2026-03-30T00:00:00+09:00",
+    )
+
+    assert merged.empty
+
+
+def test_merge_incremental_drops_carried_forward_generic_hiring_page_title_after_reclassification() -> None:
+    baseline = pd.DataFrame(
+        [
+            {
+                "job_key": "a",
+                "change_hash": "1",
+                "first_seen_at": "2026-03-29T00:00:00+09:00",
+                "last_seen_at": "2026-03-29T00:00:00+09:00",
+                "is_active": True,
+                "missing_count": 0,
+                "snapshot_date": "2026-03-29",
+                "run_id": "r1",
+                "source_url": "https://a.example/jobs",
+                "source_bucket": "approved",
+                "source_name": "테스트",
+                "company_name": "테스트",
+                "company_tier": "중견/중소",
+                "job_title_raw": "Talent Pool (R&D)",
+                "experience_level_raw": "경력",
+                "job_role": "인공지능 리서처",
+                "job_url": "https://a.example/jobs/5",
+                "record_status": "유지",
+                "공고제목_표시": "Talent Pool (R&D)",
+                "주요업무_분석용": "일반 인재풀 등록",
+                "자격요건_분석용": "관련 경력",
+                "우대사항_분석용": "",
+                "핵심기술_분석용": "",
+                "상세본문_분석용": "향후 적합 포지션이 생기면 연락드립니다.",
+            }
+        ]
+    )
+
+    merged = merge_incremental(
+        baseline,
+        pd.DataFrame(columns=baseline.columns),
+        {},
+        "r2",
+        "2026-03-30",
+        "2026-03-30T00:00:00+09:00",
+    )
+
+    assert merged.empty
 
 
 def test_merge_incremental_preserves_unattempted_active_rows_without_hold_downgrade() -> None:

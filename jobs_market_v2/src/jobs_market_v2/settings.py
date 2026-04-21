@@ -47,6 +47,10 @@ class ProjectPaths:
     shadow_company_seed_sources_path: Path
     invalid_company_seed_sources_path: Path
     company_evidence_progress_path: Path
+    work24_population_candidates_path: Path
+    work24_population_jobs_path: Path
+    work24_population_shadow_companies_path: Path
+    work24_population_scan_log_path: Path
     staging_jobs_path: Path
     master_jobs_path: Path
     raw_detail_path: Path
@@ -94,6 +98,10 @@ class ProjectPaths:
             shadow_company_seed_sources_path=runtime_dir / "company_seed_sources_shadow.csv",
             invalid_company_seed_sources_path=runtime_dir / "company_seed_sources_invalid.csv",
             company_evidence_progress_path=runtime_dir / "company_evidence_progress.json",
+            work24_population_candidates_path=runtime_dir / "work24_population_candidates.csv",
+            work24_population_jobs_path=runtime_dir / "work24_population_jobs.csv",
+            work24_population_shadow_companies_path=runtime_dir / "work24_population_shadow_companies.csv",
+            work24_population_scan_log_path=runtime_dir / "work24_population_scan_log.csv",
             staging_jobs_path=runtime_dir / "staging_jobs.csv",
             master_jobs_path=runtime_dir / "master_jobs.csv",
             raw_detail_path=runtime_dir / "raw_detail.jsonl",
@@ -138,6 +146,8 @@ class AppSettings(BaseModel):
     enable_fallback_source_guess: bool = False
     google_sheets_spreadsheet_id: str | None = None
     google_service_account_json: str | None = None
+    saramin_api_access_key: str | None = None
+    worknet_api_auth_key: str | None = None
     google_sheets_timeout_seconds: float = Field(default=20.0)
     google_sheets_connect_timeout_seconds: float = Field(default=5.0)
     llm_provider: str | None = None
@@ -175,6 +185,10 @@ class AppSettings(BaseModel):
     company_seed_shadow_batch_size: int = 200
     company_seed_shadow_max_batches_per_run: int = 2
     company_seed_shadow_max_runtime_seconds: float = Field(default=30.0)
+    work24_population_max_pages_per_source: int = 200
+    work24_population_empty_page_stop_count: int = 1
+    work24_population_stale_page_stop_count: int = 2
+    work24_population_page_delay_seconds: float = 0.2
 
 
 def _load_published_llm_backend_config(paths: ProjectPaths) -> dict[str, str]:
@@ -243,6 +257,8 @@ def get_settings(project_root: Path | None = None) -> AppSettings:
         enable_fallback_source_guess=os.getenv("JOBS_MARKET_V2_ENABLE_FALLBACK_SOURCE_GUESS", "false").lower() in {"1", "true", "yes", "y"},
         google_sheets_spreadsheet_id=os.getenv("GOOGLE_SHEETS_SPREADSHEET_ID"),
         google_service_account_json=os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON"),
+        saramin_api_access_key=os.getenv("JOBS_MARKET_V2_SARAMIN_API_ACCESS_KEY"),
+        worknet_api_auth_key=os.getenv("JOBS_MARKET_V2_WORKNET_API_AUTH_KEY"),
         google_sheets_timeout_seconds=float(os.getenv("JOBS_MARKET_V2_GOOGLE_SHEETS_TIMEOUT_SECONDS", "20")),
         google_sheets_connect_timeout_seconds=float(os.getenv("JOBS_MARKET_V2_GOOGLE_SHEETS_CONNECT_TIMEOUT_SECONDS", "5")),
         llm_provider=os.getenv("JOBS_MARKET_V2_LLM_PROVIDER") or llm_defaults.get("provider"),
@@ -287,4 +303,8 @@ def get_settings(project_root: Path | None = None) -> AppSettings:
         company_seed_shadow_max_runtime_seconds=float(
             os.getenv("JOBS_MARKET_V2_COMPANY_SEED_SHADOW_MAX_RUNTIME_SECONDS", "30")
         ),
+        work24_population_max_pages_per_source=int(os.getenv("JOBS_MARKET_V2_WORK24_POPULATION_MAX_PAGES_PER_SOURCE", "200")),
+        work24_population_empty_page_stop_count=int(os.getenv("JOBS_MARKET_V2_WORK24_POPULATION_EMPTY_PAGE_STOP_COUNT", "1")),
+        work24_population_stale_page_stop_count=int(os.getenv("JOBS_MARKET_V2_WORK24_POPULATION_STALE_PAGE_STOP_COUNT", "2")),
+        work24_population_page_delay_seconds=float(os.getenv("JOBS_MARKET_V2_WORK24_POPULATION_PAGE_DELAY_SECONDS", "0.2")),
     )
