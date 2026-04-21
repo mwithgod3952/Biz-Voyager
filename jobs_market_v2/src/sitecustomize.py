@@ -259,6 +259,14 @@ def _install() -> None:
         "채용 페이지",
         "각 부문 신입/경력 모집",
         "역할과 책임을 다합니다",
+        "product researcher",
+        "ux researcher",
+        "user researcher",
+        "market researcher",
+        "research operations",
+        "research ops",
+        "security researcher",
+        "offensive security researcher",
         "product owner",
         "기획자",
         "마케터",
@@ -376,6 +384,37 @@ def _install() -> None:
         "입고 테스트",
         "서비스 매뉴얼",
     )
+    field_support_non_target_titles = (
+        "field application engineer",
+        "field engineer",
+        "field & system engineer",
+        "field and system engineer",
+        "field system engineer",
+    )
+    field_support_non_target_body_terms = (
+        "technical support",
+        "기술 지원",
+        "운영 지원",
+        "유지보수",
+        "고객사",
+        "고객 요청사항",
+        "고객 대응",
+        "현장",
+        "온사이트",
+        "on-site",
+        "onsite",
+        "설치",
+        "설정",
+        "연동",
+        "트러블슈팅",
+        "troubleshooting",
+        "데모",
+        "시연",
+        "매뉴얼",
+        "manual",
+        "사용자 교육",
+        "교육 프로그램",
+    )
     strong_ai_work_terms = (
         "machine learning",
         "ml",
@@ -430,6 +469,11 @@ def _install() -> None:
             return ""
 
         title_has_analyst = has_any(title_corpus, analyst_titles)
+        if (
+            has_any(title_corpus, field_support_non_target_titles)
+            and has_any(body_corpus or corpus, field_support_non_target_body_terms)
+        ):
+            return ""
         if (
             has_any(title_corpus, robot_service_non_target_titles)
             and has_any(corpus, robot_service_non_target_body_terms)

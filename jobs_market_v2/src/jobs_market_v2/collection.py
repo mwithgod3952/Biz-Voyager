@@ -486,6 +486,14 @@ _TITLE_ONLY_NON_TARGET_PHRASES = (
     "project manager",
     "program manager",
     "qa engineering",
+    "product researcher",
+    "ux researcher",
+    "user researcher",
+    "market researcher",
+    "research operations",
+    "research ops",
+    "security researcher",
+    "offensive security researcher",
     "cos manager",
     "ax manager",
     "applied ai project manager",
@@ -581,6 +589,39 @@ _WORK24_TITLE_AI_EXCLUSION_PHRASES = (
     "프론트엔드",
     "backend",
     "백엔드",
+)
+
+_FIELD_SUPPORT_NON_TARGET_TITLE_PHRASES = (
+    "field application engineer",
+    "field engineer",
+    "field & system engineer",
+    "field and system engineer",
+    "field system engineer",
+)
+
+_FIELD_SUPPORT_NON_TARGET_BODY_PHRASES = (
+    "technical support",
+    "기술 지원",
+    "운영 지원",
+    "유지보수",
+    "고객사",
+    "고객 요청사항",
+    "고객 대응",
+    "현장",
+    "온사이트",
+    "on-site",
+    "onsite",
+    "설치",
+    "설정",
+    "연동",
+    "트러블슈팅",
+    "troubleshooting",
+    "데모",
+    "시연",
+    "매뉴얼",
+    "manual",
+    "사용자 교육",
+    "교육 프로그램",
 )
 
 _SERVICE_NON_TARGET_TITLE_PHRASES = (
@@ -1410,6 +1451,11 @@ def classify_job_role(*texts: str | None) -> str:
     if not corpus:
         return ""
     if _is_simple_developer_title(title_corpus, body_corpus):
+        return ""
+    if (
+        _has_any_phrase(title_corpus, _FIELD_SUPPORT_NON_TARGET_TITLE_PHRASES)
+        and _has_any_phrase(body_corpus or corpus, _FIELD_SUPPORT_NON_TARGET_BODY_PHRASES)
+    ):
         return ""
     if (
         _has_any_phrase(title_corpus, _ROBOT_SERVICE_NON_TARGET_TITLE_PHRASES)

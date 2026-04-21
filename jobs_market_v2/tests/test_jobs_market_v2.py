@@ -4010,6 +4010,15 @@ def test_job_role_classification() -> None:
     assert classify_job_role("AI Solution Architect - Cloud", "", "고객 대상 AI 플랫폼 아키텍처 설계와 모델 배포를 담당합니다.") == ""
     assert classify_job_role("AX Consultant", "", "고객 AI 전환 컨설팅과 데이터 전략 수립을 담당합니다.") == ""
     assert classify_job_role("Manager, QA Engineering (Eats Customer)") == ""
+    assert classify_job_role("Product Researcher | 중고거래", "", "사용자 인터뷰와 정성 리서치를 수행합니다.") == ""
+    assert classify_job_role("UX Researcher", "", "정성 사용자 조사와 UX 인사이트 도출을 담당합니다.") == ""
+    assert classify_job_role("User Researcher", "", "사용자 리서치와 인터뷰를 수행합니다.") == ""
+    assert classify_job_role("Market Researcher", "", "시장 조사와 설문 운영을 담당합니다.") == ""
+    assert classify_job_role("Offensive Security Researcher", "", "보안 위협 리서치와 침투 테스트를 수행합니다.") == ""
+    assert classify_job_role("[계약직] Field & System Engineer(기술지원) 모집", "", "고객사 온사이트 설치와 기술 지원, 트러블슈팅을 담당합니다.") == ""
+    assert classify_job_role("Field Application Engineer", "", "고객사 현장 데모와 설치, 연동, 기술 지원을 담당합니다.") == ""
+    assert classify_job_role("[Solution] Senior Software Engineer", "", "백오피스 웹 서비스와 일반 API 개발을 담당합니다.") == ""
+    assert classify_job_role("[Solution] Senior Software Engineer", "", "컴퓨터비전 모델 서빙과 GPU 추론 파이프라인을 개발합니다.") == "인공지능 엔지니어"
     assert classify_job_role("Director of Product Management (Growth Marketing - ML Product)") == ""
     assert classify_job_role("Staff Backend Software Engineer", "machine learning platform") == ""
     assert classify_job_role("Security Engineer | 인프라 (보안, AI Security)") == ""
@@ -12781,6 +12790,198 @@ def test_promote_staging_preserves_master_rows_after_full_scan_shrink(
     assert set(refreshed_master.loc[refreshed_master["job_key"].isin({"job-7", "job-8", "job-9"}), "record_status"]) == {
         "미확인보존"
     }
+
+
+def test_promote_staging_does_not_preserve_previous_non_target_rows(
+    sandbox_project: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    paths = ProjectPaths.from_root(sandbox_project)
+
+    def _job_row(
+        job_key: str,
+        company: str,
+        title: str,
+        role: str,
+        main_tasks: str,
+        requirements: str,
+        body: str,
+    ) -> dict[str, object]:
+        row = {column: "" for column in JOB_COLUMNS}
+        row.update(
+            {
+                "job_key": job_key,
+                "change_hash": f"hash-{job_key}",
+                "first_seen_at": "2026-04-01T00:00:00+09:00",
+                "last_seen_at": "2026-04-01T00:00:00+09:00",
+                "is_active": True,
+                "missing_count": 0,
+                "snapshot_date": "2026-04-07",
+                "run_id": "r1",
+                "source_url": f"https://example.com/source/{job_key}",
+                "source_bucket": "approved",
+                "source_name": f"소스-{job_key}",
+                "company_name": company,
+                "company_tier": "중견/중소",
+                "job_title_raw": title,
+                "experience_level_raw": "경력",
+                "job_role": role,
+                "job_url": f"https://example.com/jobs/{job_key}",
+                "record_status": "유지",
+                "주요업무_분석용": main_tasks,
+                "자격요건_분석용": requirements,
+                "우대사항_분석용": "관련 경험 우대",
+                "핵심기술_분석용": "Python\nSQL",
+                "상세본문_분석용": body,
+                "회사명_표시": company,
+                "소스명_표시": f"소스-{job_key}",
+                "공고제목_표시": title,
+                "경력수준_표시": "경력",
+                "경력근거_표시": "구조화 메타데이터",
+                "채용트랙_표시": "일반채용",
+                "채용트랙근거_표시": "기본추론",
+                "직무초점_표시": "모델개발",
+                "직무초점근거_표시": "공고제목",
+                "구분요약_표시": "경력",
+                "직무명_표시": role,
+                "주요업무_표시": main_tasks,
+                "자격요건_표시": requirements,
+                "우대사항_표시": "관련 경험 우대",
+                "핵심기술_표시": "Python, SQL",
+            }
+        )
+        return row
+
+    valid_rows = [
+        _job_row(
+            "job-ai",
+            "AI회사",
+            "Machine Learning Engineer",
+            "인공지능 엔지니어",
+            "머신러닝 모델 학습과 서빙 파이프라인을 개발합니다.",
+            "Python과 모델 배포 경험이 필요합니다.",
+            "머신러닝 모델 학습과 서빙 파이프라인을 개발합니다. GPU 추론 최적화와 모델 운영 자동화를 수행합니다.",
+        ),
+        _job_row(
+            "job-da",
+            "분석회사",
+            "Data Analyst",
+            "데이터 분석가",
+            "실험 분석과 대시보드 지표 설계를 담당합니다.",
+            "SQL과 실험 분석 경험이 필요합니다.",
+            "제품 지표 분석과 실험 설계를 수행하고 SQL 기반 데이터 분석을 담당합니다.",
+        ),
+        _job_row(
+            "job-ds",
+            "사이언스회사",
+            "Data Scientist",
+            "데이터 사이언티스트",
+            "예측 모델링과 통계 분석을 수행합니다.",
+            "통계 모델링 경험이 필요합니다.",
+            "예측 모델링과 인과 추론 기반 데이터 사이언스 프로젝트를 수행합니다.",
+        ),
+        _job_row(
+            "job-rs",
+            "리서치회사",
+            "Research Scientist",
+            "인공지능 리서처",
+            "멀티모달 모델 연구와 실험을 수행합니다.",
+            "논문 작성 경험이 필요합니다.",
+            "멀티모달 모델 연구, 학회 논문 작성, 벤치마크 실험을 수행합니다.",
+        ),
+    ]
+    invalid_rows = [
+        _job_row(
+            "job-qa",
+            "쿠팡",
+            "Manager, QA Engineering (Eats Customer)",
+            "데이터 분석가",
+            "QA 운영 프로세스를 관리합니다.",
+            "품질 보증 경험이 필요합니다.",
+            "서비스 QA 운영과 테스트 프로세스 개선을 담당합니다.",
+        ),
+        _job_row(
+            "job-pr",
+            "당근",
+            "Product Researcher | 중고거래",
+            "인공지능 리서처",
+            "사용자 인터뷰와 리서치를 수행합니다.",
+            "정성 조사 경험이 필요합니다.",
+            "사용자 인터뷰와 정성 리서치를 수행하고 제품 인사이트를 도출합니다.",
+        ),
+    ]
+
+    master = pd.DataFrame(valid_rows + invalid_rows, columns=list(JOB_COLUMNS))
+    staging = pd.DataFrame(valid_rows, columns=list(JOB_COLUMNS))
+    registry = pd.DataFrame(
+        [
+            {
+                "source_url": row["source_url"],
+                "source_bucket": "approved",
+                "verification_status": "성공",
+            }
+            for row in valid_rows + invalid_rows
+        ],
+        columns=list(SOURCE_REGISTRY_COLUMNS),
+    )
+    runs = pd.DataFrame(
+        [
+            {
+                "run_id": "update-incremental-1",
+                "command": "update-incremental",
+                "status": "성공",
+                "started_at": "2026-04-07T10:00:00+09:00",
+                "finished_at": "2026-04-07T10:01:00+09:00",
+                "summary_json": json.dumps(
+                    {
+                        "staging_job_count": 4,
+                        "completed_full_source_scan": True,
+                        "new_job_count": 0,
+                        "changed_job_count": 4,
+                        "missing_job_count": 2,
+                        "held_job_count": 0,
+                    },
+                    ensure_ascii=False,
+                ),
+            }
+        ]
+    )
+    write_csv(master, paths.master_jobs_path)
+    write_csv(staging, paths.staging_jobs_path)
+    write_csv(registry, paths.source_registry_path)
+    write_csv(runs, paths.runs_path)
+
+    monkeypatch.setattr(pipelines_module, "_PROMOTION_SHRINK_MIN_PREVIOUS_COUNT", 3)
+    monkeypatch.setattr(pipelines_module, "_PROMOTION_SHRINK_MIN_DROP_COUNT", 2)
+    monkeypatch.setattr(pipelines_module, "_PROMOTION_SHRINK_MIN_DROP_RATIO", 0.1)
+    monkeypatch.setattr(pipelines_module, "_PROMOTION_SHRINK_MIN_MISSING_COUNT", 2)
+    monkeypatch.setattr(
+        pipelines_module,
+        "filter_low_quality_jobs",
+        lambda staging_jobs, settings=None, paths=None: (staging_jobs.copy(), staging_jobs.iloc[0:0].copy()),
+    )
+    monkeypatch.setattr(
+        pipelines_module,
+        "evaluate_quality_gate",
+        lambda staging_jobs, registry_frame, settings=None, paths=None, already_filtered=False: GateResult(
+            passed=True,
+            reasons=[],
+            metrics={},
+        ),
+    )
+
+    summary = promote_staging_pipeline(project_root=sandbox_project)
+
+    assert summary["quality_gate_passed"] is True
+    assert summary["publish_shrink_guard_triggered"] is False
+    assert summary["previous_master_raw_count"] == 6
+    assert summary["previous_master_count"] == 4
+    assert summary["previous_master_invalid_role_drop_count"] == 2
+    assert summary["published_master_count"] == 4
+    assert summary["retained_previous_job_count"] == 0
+    refreshed_master = read_csv_or_empty(paths.master_jobs_path, JOB_COLUMNS)
+    assert len(refreshed_master) == 4
+    assert set(refreshed_master["job_key"]) == {"job-ai", "job-da", "job-ds", "job-rs"}
 
 
 def test_filter_low_quality_jobs_drops_empty_or_noisy_analysis_rows() -> None:

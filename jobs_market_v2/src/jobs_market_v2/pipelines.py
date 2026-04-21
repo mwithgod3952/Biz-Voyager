@@ -274,12 +274,36 @@ def _published_row_key(row: dict) -> str:
     return canonicalize_job_key(row)
 
 
+def _normalize_previous_master_for_publish(paths) -> tuple[pd.DataFrame, dict[str, int]]:
+    previous_master_raw = read_csv_or_empty(paths.master_jobs_path, JOB_COLUMNS)
+    raw_count = int(len(previous_master_raw))
+    if previous_master_raw.empty:
+        return previous_master_raw, {
+            "previous_master_raw_count": 0,
+            "previous_master_count": 0,
+            "previous_master_invalid_role_drop_count": 0,
+            "previous_master_low_quality_drop_count": 0,
+        }
+
+    refreshed_previous_master = refresh_job_roles(previous_master_raw)
+    filtered_previous_master, _ = filter_low_quality_jobs(refreshed_previous_master, paths=paths)
+    refreshed_count = int(len(refreshed_previous_master))
+    filtered_count = int(len(filtered_previous_master))
+    metrics = {
+        "previous_master_raw_count": raw_count,
+        "previous_master_count": filtered_count,
+        "previous_master_invalid_role_drop_count": max(raw_count - refreshed_count, 0),
+        "previous_master_low_quality_drop_count": max(refreshed_count - filtered_count, 0),
+    }
+    return filtered_previous_master, metrics
+
+
 def _merge_published_master(candidate_master: pd.DataFrame, paths, run_id: str, snapshot_date: str) -> tuple[pd.DataFrame, dict[str, object]]:
-    previous_master = read_csv_or_empty(paths.master_jobs_path, JOB_COLUMNS)
+    previous_master, previous_master_metrics = _normalize_previous_master_for_publish(paths)
     if previous_master.empty:
         metrics = {
             "applied": False,
-            "previous_master_count": 0,
+            **previous_master_metrics,
             "candidate_master_count": int(len(candidate_master)),
             "published_master_count": int(len(candidate_master)),
             "retained_previous_job_count": 0,
@@ -333,7 +357,7 @@ def _merge_published_master(candidate_master: pd.DataFrame, paths, run_id: str, 
     published_master = pd.DataFrame(published_rows, columns=list(JOB_COLUMNS))
     metrics = {
         "applied": retained_previous_job_count > 0,
-        "previous_master_count": int(len(previous_master)),
+        **previous_master_metrics,
         "candidate_master_count": int(len(candidate_master)),
         "published_master_count": int(len(published_master)),
         "retained_previous_job_count": retained_previous_job_count,
@@ -343,8 +367,8 @@ def _merge_published_master(candidate_master: pd.DataFrame, paths, run_id: str, 
 
 
 def _evaluate_publish_shrink_guard(candidate_master: pd.DataFrame, paths) -> dict[str, object]:
-    previous_master = read_csv_or_empty(paths.master_jobs_path, JOB_COLUMNS)
-    previous_master_count = int(len(previous_master))
+    previous_master, previous_master_metrics = _normalize_previous_master_for_publish(paths)
+    previous_master_count = int(previous_master_metrics["previous_master_count"])
     candidate_master_count = int(len(candidate_master))
     drop_count = max(previous_master_count - candidate_master_count, 0)
     drop_ratio = drop_count / max(previous_master_count, 1)
@@ -363,7 +387,7 @@ def _evaluate_publish_shrink_guard(candidate_master: pd.DataFrame, paths) -> dic
 
     metrics = {
         "triggered": False,
-        "previous_master_count": previous_master_count,
+        **previous_master_metrics,
         "candidate_master_count": candidate_master_count,
         "drop_count": drop_count,
         "drop_ratio": drop_ratio,
@@ -1472,7 +1496,10 @@ def promote_staging_pipeline(project_root: Path | None = None) -> dict:
             "publish_shrink_guard_triggered": bool(shrink_guard["triggered"]),
             "publish_shrink_guard_reason": str(shrink_guard["reason"]),
             "publish_preservation_applied": bool(preservation["applied"]),
+            "previous_master_raw_count": int(preservation["previous_master_raw_count"]),
             "previous_master_count": int(preservation["previous_master_count"]),
+            "previous_master_invalid_role_drop_count": int(preservation["previous_master_invalid_role_drop_count"]),
+            "previous_master_low_quality_drop_count": int(preservation["previous_master_low_quality_drop_count"]),
             "candidate_master_count": int(preservation["candidate_master_count"]),
             "published_master_count": int(preservation["published_master_count"]),
             "retained_previous_job_count": int(preservation["retained_previous_job_count"]),
