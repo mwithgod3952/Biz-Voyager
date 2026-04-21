@@ -110,6 +110,21 @@ _REQUIREMENT_SIGNAL_PATTERNS = (
     re.compile(r"\bqualification", flags=re.IGNORECASE),
 )
 _GENERIC_POOL_TITLE_RE = re.compile(r"talent\s*pool|전문연구요원\s*\(r&d\)", flags=re.IGNORECASE)
+_FORM_NOTICE_RE = re.compile(
+    r"\[필수항목\]|확인용\s*비밀번호|민감정보|보훈사항|장애사항|병역사항",
+    flags=re.IGNORECASE,
+)
+_ACADEMIC_CALL_TITLE_RE = re.compile(r"논문\s*공모|원고\s*모집|원고모집", flags=re.IGNORECASE)
+_EXPLICIT_NON_TARGET_TITLE_RE = re.compile(
+    r"application\s*specialist|field\s*&\s*system\s*engineer|field\s*application\s*engineer|"
+    r"technical\s*support|customer\s*support|solution\s*support|qa\s*engineering",
+    flags=re.IGNORECASE,
+)
+_EXPLICIT_NON_TARGET_BODY_RE = re.compile(
+    r"고객\s*응대|기술\s*지원|교육|홍보|유지보수|트러블슈팅|설치|판매\s*촉진|faq|"
+    r"customer|support|troubleshooting|maintenance|on[- ]site",
+    flags=re.IGNORECASE,
+)
 _TITLE_MAIN_TASK_FALLBACKS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"post[- ]training", flags=re.IGNORECASE), "거대 언어 모델 사후학습과 성능 최적화를 수행합니다."),
     (re.compile(r"\beval\b|evaluation", flags=re.IGNORECASE), "거대 언어 모델 평가 체계를 설계하고 모델 성능을 분석합니다."),
@@ -698,8 +713,13 @@ def _row_has_low_quality_analysis(row: pd.Series) -> bool:
     detail_ok = section_output_is_substantive(detail)
     main_ok = bool(main_tasks) and not section_output_looks_noisy(main_tasks)
     requirements_ok = bool(requirements) and not section_output_looks_noisy(requirements)
+    company = _first_nonempty_text(row.get("company_name"), row.get("회사명_표시"))
 
     if detail and _DETAIL_LEGAL_NOTICE_RE.search(detail):
+        return True
+    if _looks_company_name_only_form_posting(title, company, detail, requirements, main_tasks):
+        return True
+    if _looks_academic_call_notice(title, detail, main_tasks, requirements):
         return True
     if _GENERIC_POOL_TITLE_RE.search(title) and not (main_ok and requirements_ok):
         return True
@@ -1044,7 +1064,49 @@ def _is_work24_runtime_row(row: dict[str, object]) -> bool:
     return "work24.go.kr" in runtime_identity or "고용24" in runtime_identity
 
 
-def _apply_work24_semantic_role_filter(frame: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+def _simplify_identity_text(value: object) -> str:
+    text = sanitize_name_or_title_text(_normalized_cell(value), unknown_name=True, allow_english=True)
+    return re.sub(r"[^0-9a-z가-힣]+", "", normalize_whitespace(text).lower())
+
+
+def _looks_company_name_only_form_posting(
+    title: str,
+    company: str,
+    detail: str,
+    requirements: str,
+    main_tasks: str,
+) -> bool:
+    title_key = _simplify_identity_text(title)
+    company_key = _simplify_identity_text(company)
+    if not title_key or not company_key:
+        return False
+    if not (
+        title_key == company_key
+        or title_key.startswith(company_key)
+        or company_key.startswith(title_key)
+    ):
+        return False
+    notice_corpus = "\n".join(part for part in (detail, requirements) if part)
+    if not _FORM_NOTICE_RE.search(notice_corpus):
+        return False
+    return not section_output_is_substantive(main_tasks)
+
+
+def _looks_academic_call_notice(title: str, detail: str, main_tasks: str, requirements: str) -> bool:
+    corpus = "\n".join(part for part in (title, detail, main_tasks, requirements) if part)
+    return bool(_ACADEMIC_CALL_TITLE_RE.search(corpus))
+
+
+def _has_explicit_semantic_non_target_signal(row: dict[str, object]) -> bool:
+    title = _first_nonempty_text(row.get("job_title_raw"), row.get("job_title_ko"), row.get("공고제목_표시"))
+    body = "\n".join(
+        _normalized_cell(row.get(column))
+        for column in ("주요업무_분석용", "자격요건_분석용", "우대사항_분석용", "핵심기술_분석용", "상세본문_분석용")
+    )
+    return bool(_EXPLICIT_NON_TARGET_TITLE_RE.search(title) and _EXPLICIT_NON_TARGET_BODY_RE.search(body))
+
+
+def _apply_semantic_role_filter(frame: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     if frame.empty:
         return frame.copy(), frame.iloc[0:0].copy()
 
@@ -1053,18 +1115,23 @@ def _apply_work24_semantic_role_filter(frame: pd.DataFrame) -> tuple[pd.DataFram
     kept_rows: list[dict[str, object]] = []
     dropped_rows: list[dict[str, object]] = []
     for row in frame.fillna("").to_dict(orient="records"):
-        if not _is_work24_runtime_row(row):
-            kept_rows.append(row)
-            continue
-
         expected_role = classify_job_role(*[row.get(column, "") for column in _ROLE_AUDIT_INPUT_COLUMNS])
         if expected_role not in ALLOWED_JOB_ROLES:
-            row["semantic_filter_reason"] = "work24_semantic_non_target"
+            if not (_is_work24_runtime_row(row) or _has_explicit_semantic_non_target_signal(row)):
+                kept_rows.append(row)
+                continue
+            row["semantic_filter_reason"] = (
+                "work24_semantic_non_target" if _is_work24_runtime_row(row) else "semantic_non_target"
+            )
             dropped_rows.append(row)
             continue
         current_role = normalize_whitespace(row.get("job_role"))
         if current_role != expected_role:
-            row["semantic_filter_reason"] = f"work24_role_corrected:{current_role}->{expected_role}"
+            row["semantic_filter_reason"] = (
+                f"work24_role_corrected:{current_role}->{expected_role}"
+                if _is_work24_runtime_row(row)
+                else f"role_corrected:{current_role}->{expected_role}"
+            )
             row["job_role"] = expected_role
             if "직무명_표시" in row:
                 row["직무명_표시"] = expected_role
@@ -1396,7 +1463,7 @@ def filter_low_quality_jobs(staging_jobs: pd.DataFrame, *, settings=None, paths=
         return staging_jobs.copy(), staging_jobs.iloc[0:0].copy()
 
     normalized = normalize_job_analysis_fields(staging_jobs)
-    normalized, semantic_dropped = _apply_work24_semantic_role_filter(normalized)
+    normalized, semantic_dropped = _apply_semantic_role_filter(normalized)
     keep_mask = ~normalized.apply(_row_has_low_quality_analysis, axis=1)
     filtered = normalized.loc[keep_mask].reset_index(drop=True)
     dropped = pd.concat(

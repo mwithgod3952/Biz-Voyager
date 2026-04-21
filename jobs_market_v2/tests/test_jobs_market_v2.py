@@ -13595,6 +13595,81 @@ def test_filter_low_quality_jobs_collapses_same_company_job_family_to_one_repres
     }
 
 
+def test_filter_low_quality_jobs_drops_semantic_non_target_rows_across_sources() -> None:
+    staging = pd.DataFrame(
+        [
+            {
+                "is_active": True,
+                "company_name": "노을",
+                "company_tier": "중견/중소",
+                "job_role": "데이터 분석가",
+                "job_title_raw": "학술 담당자(Application Specialist)",
+                "job_url": "https://careers.noul.com/job_posting/5SRw4JL4",
+                "회사명_표시": "노을",
+                "공고제목_표시": "학술 담당자(Application Specialist)",
+                "주요업무_분석용": "판매 촉진 및 고객 긍정 경험 제고를 위해 플랫폼 교육/기술 지원, 학술 및 시장 조사, 그리고 홍보 업무를 수행합니다.",
+                "자격요건_분석용": "비즈니스 영어 커뮤니케이션이 가능하신 분",
+                "우대사항_분석용": "",
+                "핵심기술_분석용": "",
+                "상세본문_분석용": "플랫폼 교육/기술 지원, 학술 및 시장 조사, 홍보 업무를 수행합니다.",
+            },
+            {
+                "is_active": True,
+                "company_name": "케이플러스",
+                "company_tier": "중견/중소",
+                "job_role": "데이터 분석가",
+                "job_title_raw": "케이플러스",
+                "job_url": "https://kplus.biz/incruit/recruit_write",
+                "회사명_표시": "케이플러스",
+                "공고제목_표시": "케이플러스",
+                "주요업무_분석용": "모집분야: 금융리스크관리 및 빅데이터 분석 연구원 채용",
+                "자격요건_분석용": "[필수항목]: 성명, 이메일 주소, 전화번호, 학력사항, 경력사항",
+                "우대사항_분석용": "",
+                "핵심기술_분석용": "",
+                "상세본문_분석용": "[필수항목]: 성명, 이메일 주소, 전화번호, 학력사항, 경력사항, 병역사항, 장애사항",
+            },
+            {
+                "is_active": True,
+                "company_name": "한국법제연구원",
+                "company_tier": "공공·연구기관",
+                "job_role": "인공지능 리서처",
+                "job_title_raw": "한국법제연구원 KLRI",
+                "job_url": "https://klri.re.kr/kor/BBSMSTR_000000000001/7856/view.do",
+                "회사명_표시": "한국법제연구원",
+                "공고제목_표시": "한국법제연구원 KLRI",
+                "주요업무_분석용": "[원고모집] 2026년도 상반기 법제연구 논문 공모",
+                "자격요건_분석용": "학부생, 석사 및 박사과정 재학생, 박사학위 취득 후 3년 이내의 연구자",
+                "우대사항_분석용": "",
+                "핵심기술_분석용": "",
+                "상세본문_분석용": "[원고모집] 2026년도 상반기 법제연구 논문 공모. 투고 논문 심사 후 게재 여부가 결정됩니다.",
+            },
+            {
+                "is_active": True,
+                "company_name": "고위드",
+                "company_tier": "스타트업",
+                "job_role": "데이터 사이언티스트",
+                "job_title_raw": "Data Scientist",
+                "job_url": "https://example.com/gowid/data-scientist",
+                "회사명_표시": "고위드",
+                "공고제목_표시": "Data Scientist",
+                "주요업무_분석용": "예측 모델링과 실험 분석을 수행합니다.",
+                "자격요건_분석용": "통계 모델링과 SQL 경험이 필요합니다.",
+                "우대사항_분석용": "핀테크 도메인 경험 우대",
+                "핵심기술_분석용": "Python\nSQL\nModeling",
+                "상세본문_분석용": "예측 모델링과 실험 분석을 수행하고 서비스 지표를 개선합니다.",
+            },
+        ]
+    )
+
+    filtered, dropped = filter_low_quality_jobs(staging)
+
+    assert len(filtered) == 1
+    assert filtered.iloc[0]["company_name"] == "고위드"
+    assert len(dropped) == 3
+    assert set(dropped["company_name"]) == {"노을", "케이플러스", "한국법제연구원"}
+    assert "semantic_non_target" in set(dropped.get("semantic_filter_reason", pd.Series(dtype=str)).fillna(""))
+
+
 def test_filter_low_quality_jobs_uses_gemini_duplicate_adjudication_for_borderline_pairs(
     sandbox_project: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
