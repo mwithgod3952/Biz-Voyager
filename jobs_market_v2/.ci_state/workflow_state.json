@@ -1,9 +1,9 @@
 {
-  "updated_at": "2026-04-22T18:26:40.017392+00:00",
+  "updated_at": "2026-04-22T18:44:12.217998+00:00",
   "consecutive_failures": 0,
   "last_result": "success",
   "hold_reason": "",
-  "run_url": "local-manual-baseline://2026-04-23-207",
+  "run_url": "https://github.com/mwithgod3952/Biz-Voyager/actions/runs/24795446031",
   "seeded_from": "local_validated_runtime_284",
   "automation_status": {
     "timestamp": "2026-04-23T03:26:12+09:00",
