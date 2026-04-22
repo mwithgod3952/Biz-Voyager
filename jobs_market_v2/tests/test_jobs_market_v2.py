@@ -8590,12 +8590,14 @@ def test_run_daily_tracking_pipeline_uses_published_registry_for_incremental_onl
             "quality_gate_reasons": [],
         }
 
-    def fake_build_coverage_report_pipeline(project_root=None):
+    def fake_build_coverage_report_pipeline(project_root=None, source_registry_frame=None):
         called["coverage"] = True
+        called["coverage_registry_frame"] = source_registry_frame.copy() if source_registry_frame is not None else None
         return {"활성 공고 수": 5}
 
-    def fake_promote_staging_pipeline(project_root=None):
+    def fake_promote_staging_pipeline(project_root=None, registry_frame=None):
         called["promote"] = True
+        called["promote_registry_frame"] = registry_frame.copy() if registry_frame is not None else None
         return {
             "quality_gate_passed": True,
             "quality_gate_reasons": [],
@@ -8614,11 +8616,102 @@ def test_run_daily_tracking_pipeline_uses_published_registry_for_incremental_onl
     summary = run_daily_tracking_pipeline(project_root=sandbox_project)
 
     assert called["update_kwargs"]["allow_source_discovery_fallback"] is False
+    assert str(called["update_kwargs"]["registry_output_path"]) == str(paths.source_registry_path)
+    registry_frame = called["update_kwargs"]["registry_frame"]
+    assert registry_frame is not None
+    assert list(registry_frame["source_url"]) == ["https://example.com/jobs"]
+    assert list(called["coverage_registry_frame"]["source_url"]) == ["https://example.com/jobs"]
+    assert list(called["promote_registry_frame"]["source_url"]) == ["https://example.com/jobs"]
     assert summary["run_mode"] == "incremental"
     assert summary["published_state"]["published_source_registry_ready"] is True
+    assert summary["published_state"]["published_company_state"] is True
     assert summary["published_state"]["allow_source_discovery_fallback"] is False
     assert summary["promotion"]["promoted_job_count"] == 5
     assert called["sync_targets"] == ["staging", "master"]
+
+
+def test_run_daily_tracking_pipeline_uses_in_progress_registry_during_partial_company_scan(
+    monkeypatch: pytest.MonkeyPatch,
+    sandbox_project: Path,
+) -> None:
+    paths = ProjectPaths.from_root(sandbox_project)
+    in_progress_registry_path = paths.runtime_dir / "source_registry_in_progress.csv"
+    write_csv(
+        pd.DataFrame(
+            [
+                {
+                    "company_name": "알파",
+                    "company_tier": "중견/중소",
+                    "source_name": "알파 채용",
+                    "source_url": "https://alpha.example/jobs",
+                    "source_type": "greenhouse",
+                    "official_domain": "alpha.example",
+                    "is_official_hint": True,
+                    "structure_hint": "html",
+                    "discovery_method": "test",
+                    "source_bucket": "candidate",
+                    "screening_reason": "",
+                    "verification_status": "성공",
+                    "verification_note": "",
+                    "last_checked_at": "",
+                    "last_success_at": "",
+                    "failure_count": 0,
+                    "last_active_job_count": 1,
+                    "source_quality_score": 0,
+                    "quarantine_reason": "",
+                    "is_quarantined": False,
+                }
+            ]
+        ),
+        in_progress_registry_path,
+    )
+
+    called: dict[str, object] = {}
+
+    def fake_update_incremental_pipeline(project_root=None, **kwargs):
+        called["update_kwargs"] = kwargs
+        return {
+            "collection_mode": "live",
+            "collected_job_count": 1,
+            "verified_source_success_count": 1,
+            "verified_source_failure_count": 0,
+            "staging_job_count": 1,
+            "quality_gate_passed": True,
+            "quality_gate_reasons": [],
+        }
+
+    monkeypatch.setattr(pipelines_module, "update_incremental_pipeline", fake_update_incremental_pipeline)
+    def fake_build_coverage_report_pipeline(project_root=None, source_registry_frame=None):
+        called["coverage_registry_frame"] = source_registry_frame.copy() if source_registry_frame is not None else None
+        return {"활성 공고 수": 1}
+
+    def fake_promote_staging_pipeline(project_root=None, registry_frame=None):
+        called["promote_registry_frame"] = registry_frame.copy() if registry_frame is not None else None
+        return {
+            "quality_gate_passed": True,
+            "quality_gate_reasons": [],
+            "promoted_job_count": 1,
+        }
+
+    monkeypatch.setattr(
+        pipelines_module,
+        "build_coverage_report_pipeline",
+        fake_build_coverage_report_pipeline,
+    )
+    monkeypatch.setattr(pipelines_module, "promote_staging_pipeline", fake_promote_staging_pipeline)
+
+    summary = run_daily_tracking_pipeline(sync_sheets=False, project_root=sandbox_project)
+
+    assert called["update_kwargs"]["allow_source_discovery_fallback"] is False
+    assert str(called["update_kwargs"]["registry_output_path"]) == str(in_progress_registry_path)
+    registry_frame = called["update_kwargs"]["registry_frame"]
+    assert registry_frame is not None
+    assert list(registry_frame["source_url"]) == ["https://alpha.example/jobs"]
+    assert list(called["coverage_registry_frame"]["source_url"]) == ["https://alpha.example/jobs"]
+    assert list(called["promote_registry_frame"]["source_url"]) == ["https://alpha.example/jobs"]
+    assert summary["published_state"]["published_company_state"] is False
+    assert summary["published_state"]["collection_ready_reason"] == "reuse_in_progress_source_registry_during_partial_company_scan"
+    assert summary["promotion"]["promoted_job_count"] == 1
 
 
 def test_run_daily_tracking_pipeline_skips_promotion_and_sync_when_quality_gate_fails(
@@ -8659,9 +8752,13 @@ def test_run_daily_tracking_pipeline_skips_promotion_and_sync_when_quality_gate_
             "quality_gate_reasons": ["quality_gate_failed"],
         },
     )
-    monkeypatch.setattr(pipelines_module, "build_coverage_report_pipeline", lambda project_root=None: {"활성 공고 수": 4})
+    monkeypatch.setattr(
+        pipelines_module,
+        "build_coverage_report_pipeline",
+        lambda project_root=None, source_registry_frame=None: {"활성 공고 수": 4},
+    )
 
-    def fake_promote_staging_pipeline(project_root=None):
+    def fake_promote_staging_pipeline(project_root=None, registry_frame=None):
         called["promote"] += 1
         return {}
 
@@ -11919,11 +12016,34 @@ def test_run_collection_cycle_pipeline_uses_in_progress_registry_during_partial_
         }
 
     monkeypatch.setattr(pipelines_module, "collect_jobs_pipeline", fake_collect_jobs_pipeline)
-    monkeypatch.setattr(pipelines_module, "build_coverage_report_pipeline", lambda *args, **kwargs: {"report": "ok"})
+    monkeypatch.setattr(
+        pipelines_module,
+        "build_coverage_report_pipeline",
+        lambda *args, **kwargs: {
+            "report": "ok",
+            "coverage_source_urls": list(
+                (
+                    kwargs.get("source_registry_frame")
+                    if kwargs.get("source_registry_frame") is not None
+                    else pd.DataFrame(columns=["source_url"])
+                )["source_url"]
+            ),
+        },
+    )
     monkeypatch.setattr(
         pipelines_module,
         "promote_staging_pipeline",
-        lambda *args, **kwargs: {"promoted_job_count": 0, "promotion_skipped": False},
+        lambda *args, **kwargs: {
+            "promoted_job_count": 0,
+            "promotion_skipped": False,
+            "promotion_source_urls": list(
+                (
+                    kwargs.get("registry_frame")
+                    if kwargs.get("registry_frame") is not None
+                    else pd.DataFrame(columns=["source_url"])
+                )["source_url"]
+            ),
+        },
     )
 
     summary = run_collection_cycle_pipeline(sync_sheets=False, project_root=sandbox_project)
@@ -11937,6 +12057,8 @@ def test_run_collection_cycle_pipeline_uses_in_progress_registry_during_partial_
     registry_frame = captured["registry_frame"]
     assert registry_frame is not None
     assert list(registry_frame["source_url"]) == ["https://alpha.example/jobs"]
+    assert summary["coverage"]["coverage_source_urls"] == ["https://alpha.example/jobs"]
+    assert summary["promotion"]["promotion_source_urls"] == ["https://alpha.example/jobs"]
 
 
 def test_missing_count_increments_only_for_verified_sources() -> None:

@@ -1255,7 +1255,10 @@ def run_collection_cycle_pipeline(*, sync_sheets: bool = True, project_root: Pat
                     registry_frame=published_registry,
                     registry_output_path=registry_output_path,
                 )
-            coverage_summary = build_coverage_report_pipeline(project_root)
+            coverage_summary = build_coverage_report_pipeline(
+                project_root,
+                source_registry_frame=published_registry,
+            )
             promotion_allowed = not (
                 collection_mode in {"bootstrap", "bootstrap_resume"}
                 and not bool(collection_summary.get("completed_full_source_scan", False))
@@ -1270,7 +1273,7 @@ def run_collection_cycle_pipeline(*, sync_sheets: bool = True, project_root: Pat
                     quality_gate_reasons=list(collection_summary.get("quality_gate_reasons", [])),
                 )
             else:
-                promote_summary = promote_staging_pipeline(project_root)
+                promote_summary = promote_staging_pipeline(project_root, registry_frame=published_registry)
         else:
             collection_summary = _skipped_collection_summary(paths, collection_ready_reason)
             coverage_summary = {"skipped": True, "reason": collection_ready_reason}
@@ -1350,16 +1353,39 @@ def run_daily_tracking_pipeline(*, sync_sheets: bool = True, project_root: Path 
     started_at = _now()
     run_id = _run_id("run-daily-tracking")
     try:
-        published_registry = read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
-        collection_ready = not published_registry.empty
-        collection_ready_reason = "published_source_registry" if collection_ready else "published_source_registry_unavailable"
+        partial_state = _load_partial_company_scan_state(paths)
+        using_in_progress_registry = bool(partial_state["using_in_progress_registry"])
+        registry_frame = (
+            partial_state["registry"]
+            if using_in_progress_registry
+            else read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
+        )
+        registry_output_path = (
+            Path(partial_state["registry_output_path"])
+            if using_in_progress_registry
+            else paths.source_registry_path
+        )
+        collection_ready = not registry_frame.empty
+        if using_in_progress_registry:
+            collection_ready_reason = (
+                "reuse_in_progress_source_registry_during_partial_company_scan"
+                if collection_ready
+                else "in_progress_source_registry_unavailable_during_partial_company_scan"
+            )
+        else:
+            collection_ready_reason = "published_source_registry" if collection_ready else "published_source_registry_unavailable"
 
         if collection_ready:
             collection_summary = update_incremental_pipeline(
                 project_root,
                 allow_source_discovery_fallback=False,
+                registry_frame=registry_frame,
+                registry_output_path=registry_output_path,
             )
-            coverage_summary = build_coverage_report_pipeline(project_root)
+            coverage_summary = build_coverage_report_pipeline(
+                project_root,
+                source_registry_frame=registry_frame,
+            )
         else:
             collection_summary = _skipped_collection_summary(paths, collection_ready_reason)
             coverage_summary = {"skipped": True, "reason": collection_ready_reason}
@@ -1382,7 +1408,7 @@ def run_daily_tracking_pipeline(*, sync_sheets: bool = True, project_root: Path 
                 quality_gate_reasons=list(collection_summary.get("quality_gate_reasons", [])),
             )
         else:
-            promote_summary = promote_staging_pipeline(project_root)
+            promote_summary = promote_staging_pipeline(project_root, registry_frame=registry_frame)
             promotion_allowed = bool(promote_summary.get("quality_gate_passed", False)) and int(
                 promote_summary.get("promoted_job_count", 0)
             ) > 0
@@ -1423,7 +1449,7 @@ def run_daily_tracking_pipeline(*, sync_sheets: bool = True, project_root: Path 
             "checklist": checklist,
             "automation_ready": all(checklist.values()),
             "published_state": {
-                "published_company_state": True,
+                "published_company_state": not using_in_progress_registry,
                 "published_source_registry_ready": bool(collection_ready),
                 "collection_ready": bool(collection_ready),
                 "collection_ready_reason": collection_ready_reason,
@@ -1444,7 +1470,11 @@ def run_daily_tracking_pipeline(*, sync_sheets: bool = True, project_root: Path 
         raise
 
 
-def promote_staging_pipeline(project_root: Path | None = None) -> dict:
+def promote_staging_pipeline(
+    project_root: Path | None = None,
+    *,
+    registry_frame: pd.DataFrame | None = None,
+) -> dict:
     paths = get_paths(project_root)
     settings = get_settings(project_root)
     started_at = _now()
@@ -1455,7 +1485,11 @@ def promote_staging_pipeline(project_root: Path | None = None) -> dict:
         staging = refresh_job_roles(staging)
         role_refresh_dropped_job_count = max(staging_count_before_role_refresh - int(len(staging)), 0)
         filtered_staging, dropped_jobs = filter_low_quality_jobs(staging, settings=settings, paths=paths)
-        registry = read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
+        registry = (
+            registry_frame.copy()
+            if registry_frame is not None
+            else read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
+        )
         gate = evaluate_quality_gate(filtered_staging, registry, settings=settings, paths=paths, already_filtered=True)
         write_csv(filtered_staging, paths.staging_jobs_path)
         shrink_guard = _evaluate_publish_shrink_guard(filtered_staging, paths)
@@ -1541,13 +1575,21 @@ def quarantine_bad_sources_pipeline(project_root: Path | None = None) -> dict:
         raise
 
 
-def build_coverage_report_pipeline(project_root: Path | None = None) -> dict:
+def build_coverage_report_pipeline(
+    project_root: Path | None = None,
+    *,
+    source_registry_frame: pd.DataFrame | None = None,
+) -> dict:
     paths = get_paths(project_root)
     started_at = _now()
     run_id = _run_id("build-coverage-report")
     try:
         companies = read_csv_or_empty(paths.companies_registry_path)
-        source_registry = read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
+        source_registry = (
+            source_registry_frame.copy()
+            if source_registry_frame is not None
+            else read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
+        )
         jobs = read_csv_or_empty(paths.staging_jobs_path, JOB_COLUMNS)
         discover_summary = _latest_run_summary(paths, "discover-companies")
         report = build_coverage_report(
