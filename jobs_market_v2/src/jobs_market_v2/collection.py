@@ -1222,9 +1222,22 @@ def _select_incremental_collectable_positions(
         cursor_positions = collectable_positions[start_offset:]
         return cursor_positions, cursor_positions, []
 
+    priority_seed_limit = min(max(process_limit // 4, 1), _SOURCE_COLLECTION_ACTIVE_PIN_LIMIT)
+    priority_seed_positions: list[int] = []
+    priority_seed_seen: set[int] = set()
+    for position in collectable_positions:
+        if len(priority_seed_positions) >= priority_seed_limit:
+            break
+        if not coerce_bool(rows[position].get("_priority_seed_source")):
+            continue
+        if position in priority_seed_seen:
+            continue
+        priority_seed_seen.add(position)
+        priority_seed_positions.append(position)
+
     forced_limit = min(max(process_limit // 10, 1), _SOURCE_COLLECTION_ACTIVE_PIN_LIMIT)
     forced_positions: list[int] = []
-    forced_seen: set[int] = set()
+    forced_seen: set[int] = set(priority_seed_seen)
     for position in collectable_positions:
         if len(forced_positions) >= forced_limit:
             break
@@ -1276,7 +1289,7 @@ def _select_incremental_collectable_positions(
             continue
         trimmed_cursor_positions.append(position)
     cursor_selected_positions = scout_positions + trimmed_cursor_positions
-    pinned_selected_positions = forced_positions + pinned_positions
+    pinned_selected_positions = priority_seed_positions + forced_positions + pinned_positions
     return pinned_selected_positions + cursor_selected_positions, cursor_selected_positions, pinned_selected_positions
 
 

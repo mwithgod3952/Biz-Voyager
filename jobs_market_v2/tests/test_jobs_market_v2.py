@@ -11278,6 +11278,169 @@ def test_select_incremental_collectable_positions_always_include_forced_refresh_
     assert pinned_positions == [1]
 
 
+def test_select_incremental_collectable_positions_prioritize_verified_active_seed_sources() -> None:
+    rows = [
+        {
+            "source_url": "https://first.example/jobs",
+            "source_bucket": "approved",
+            "source_type": "html_page",
+            "_priority_seed_source": False,
+            "_always_refresh_source": False,
+        },
+        {
+            "source_url": "https://seed.example/jobs",
+            "source_bucket": "candidate",
+            "source_type": "work24_public_html",
+            "_priority_seed_source": True,
+            "_always_refresh_source": False,
+        },
+        {
+            "source_url": "https://third.example/jobs",
+            "source_bucket": "approved",
+            "source_type": "html_page",
+            "_priority_seed_source": False,
+            "_always_refresh_source": False,
+        },
+    ]
+
+    selected_positions, cursor_positions, pinned_positions = collection_module._select_incremental_collectable_positions(
+        [0, 1, 2],
+        rows,
+        start_offset=2,
+        process_limit=1,
+    )
+
+    assert selected_positions[0] == 1
+    assert cursor_positions == [2]
+    assert pinned_positions == [1]
+
+
+def test_update_incremental_prioritizes_verified_active_seed_sources(
+    monkeypatch: pytest.MonkeyPatch,
+    sandbox_project: Path,
+) -> None:
+    paths = ProjectPaths.from_root(sandbox_project)
+    baseline = pd.DataFrame(
+        [
+            {
+                "job_key": "active",
+                "change_hash": "hash-active",
+                "first_seen_at": "2026-04-20T00:00:00+09:00",
+                "last_seen_at": "2026-04-20T00:00:00+09:00",
+                "is_active": True,
+                "missing_count": 0,
+                "snapshot_date": "2026-04-20",
+                "run_id": "baseline",
+                "source_url": "https://active.example/jobs",
+                "source_bucket": "approved",
+                "source_name": "Active",
+                "company_name": "액티브",
+                "company_tier": "스타트업",
+                "job_title_raw": "Machine Learning Engineer",
+                "experience_level_raw": "경력",
+                "job_role": "인공지능 엔지니어",
+                "job_url": "https://active.example/jobs/1",
+                "record_status": "유지",
+                "회사명_표시": "액티브",
+                "소스명_표시": "Active",
+                "공고제목_표시": "Machine Learning Engineer",
+                "경력수준_표시": "경력",
+                "직무명_표시": "인공지능 엔지니어",
+                "주요업무_표시": "모델 개발",
+                "자격요건_표시": "Python",
+                "우대사항_표시": "",
+                "핵심기술_표시": "Python",
+            }
+        ],
+        columns=list(JOB_COLUMNS),
+    )
+    write_csv(baseline, paths.master_jobs_path)
+    write_csv(
+        pd.DataFrame(
+            [
+                {
+                    "company_name": "액티브",
+                    "company_tier": "스타트업",
+                    "source_name": "Active",
+                    "source_url": "https://active.example/jobs",
+                    "source_type": "html_page",
+                    "source_bucket": "approved",
+                    "official_domain": "active.example",
+                    "official_domain_confidence": "높음",
+                    "structure_hint": "html",
+                    "discovery_method": "seed",
+                    "is_official_hint": True,
+                    "verification_status": "성공",
+                    "last_checked_at": "",
+                    "last_success_at": "2026-04-20T00:00:00+09:00",
+                    "failure_count": 0,
+                    "last_active_job_count": 1,
+                    "source_quality_score": 0,
+                    "quarantine_reason": "",
+                    "is_quarantined": False,
+                },
+                {
+                    "company_name": "워크24후보",
+                    "company_tier": "중견/중소",
+                    "source_name": "고용24 제한 공개보드 - 워크24후보",
+                    "source_url": "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=%EC%9B%8C%ED%81%AC24",
+                    "source_type": "work24_public_html",
+                    "source_bucket": "candidate",
+                    "official_domain": "",
+                    "official_domain_confidence": "",
+                    "structure_hint": "json",
+                    "discovery_method": "work24_limited_public_board_fallback",
+                    "is_official_hint": False,
+                    "verification_status": "성공",
+                    "last_checked_at": "",
+                    "last_success_at": "2026-04-23T03:10:37+09:00",
+                    "failure_count": 0,
+                    "last_active_job_count": 2,
+                    "source_quality_score": 0,
+                    "quarantine_reason": "",
+                    "is_quarantined": False,
+                },
+            ],
+            columns=list(SOURCE_REGISTRY_COLUMNS),
+        ),
+        paths.source_registry_path,
+    )
+
+    captured: dict[str, pd.DataFrame] = {}
+
+    def fake_collect_jobs_from_sources(
+        source_registry: pd.DataFrame,
+        *args,
+        **kwargs,
+    ):
+        captured["registry"] = source_registry.copy()
+        return (
+            pd.DataFrame(columns=list(JOB_COLUMNS)),
+            [],
+            source_registry.reindex(columns=list(SOURCE_REGISTRY_COLUMNS)).copy(),
+            {
+                "collection_mode": "live",
+                "collected_job_count": 0,
+                "verified_source_success_count": 0,
+                "verified_source_failure_count": 0,
+                "completed_full_source_scan": True,
+            },
+        )
+
+    monkeypatch.setattr(pipelines_module, "collect_jobs_from_sources", fake_collect_jobs_from_sources)
+
+    summary = update_incremental_pipeline(project_root=sandbox_project, allow_source_discovery_fallback=False)
+
+    registry = captured["registry"]
+    seed_row = registry.loc[registry["source_url"].str.contains("work24", na=False)].iloc[0]
+    active_row = registry.loc[registry["source_url"] == "https://active.example/jobs"].iloc[0]
+
+    assert bool(seed_row["_priority_seed_source"]) is True
+    assert bool(seed_row["_always_refresh_source"]) is False
+    assert bool(active_row["_always_refresh_source"]) is True
+    assert summary["priority_seed_source_count"] == 1
+
+
 def _no_search_refresh_summary() -> dict[str, int | list]:
     return {
         "search_query_count": 0,

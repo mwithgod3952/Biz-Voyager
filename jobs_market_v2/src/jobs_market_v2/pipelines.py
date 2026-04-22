@@ -1043,9 +1043,24 @@ def update_incremental_pipeline(
         snapshot_date = _today()
         prioritized_registry = registry.copy()
         active_source_urls = _active_source_urls(baseline)
-        if active_source_urls and "source_url" in prioritized_registry.columns:
-            prioritized_registry["_always_refresh_source"] = (
-                prioritized_registry["source_url"].fillna("").astype(str).map(normalize_whitespace).isin(active_source_urls)
+        if "source_url" in prioritized_registry.columns:
+            normalized_source_urls = prioritized_registry["source_url"].fillna("").astype(str).map(normalize_whitespace)
+            prioritized_registry["_always_refresh_source"] = normalized_source_urls.isin(active_source_urls)
+            verification_success_mask = (
+                prioritized_registry["verification_status"].fillna("").astype(str).eq("성공")
+                if "verification_status" in prioritized_registry.columns
+                else pd.Series(False, index=prioritized_registry.index)
+            )
+            seed_active_mask = (
+                pd.to_numeric(prioritized_registry["last_active_job_count"], errors="coerce").fillna(0).gt(0)
+                if "last_active_job_count" in prioritized_registry.columns
+                else pd.Series(False, index=prioritized_registry.index)
+            )
+            prioritized_registry["_priority_seed_source"] = (
+                normalized_source_urls.ne("")
+                & ~normalized_source_urls.isin(active_source_urls)
+                & verification_success_mask
+                & seed_active_mask
             )
         new_jobs, raw_records, updated_registry, summary = collect_jobs_from_sources(
             prioritized_registry,
@@ -1079,6 +1094,9 @@ def update_incremental_pipeline(
             {
                 "incremental_baseline_mode": baseline_mode,
                 "collection_run_mode": "incremental_merge",
+                "priority_seed_source_count": int(
+                    prioritized_registry.get("_priority_seed_source", pd.Series(False, index=prioritized_registry.index)).sum()
+                ),
                 "staging_job_count": int(len(filtered_jobs)),
                 "dropped_low_quality_job_count": int(len(dropped_jobs)),
                 "quality_gate_passed": gate.passed,
