@@ -1,8 +1,24 @@
 {
-  "updated_at": "2026-04-22T17:47:34.172618+00:00",
+  "updated_at": "2026-04-22T18:26:40.017392+00:00",
   "consecutive_failures": 0,
   "last_result": "success",
   "hold_reason": "",
-  "run_url": "https://github.com/mwithgod3952/Biz-Voyager/actions/runs/24792574844",
-  "seeded_from": "local_validated_runtime_284"
+  "run_url": "local-manual-baseline://2026-04-23-207",
+  "seeded_from": "local_validated_runtime_284",
+  "automation_status": {
+    "timestamp": "2026-04-23T03:26:12+09:00",
+    "last_successful_run_id": "sync-sheets-20260423032448231921-9a5f4f01",
+    "quality_gate_passed": true,
+    "quality_score_100": 99.72,
+    "quality_score_target": 98.5,
+    "master_rows": 207,
+    "staging_rows": 207,
+    "approved_companies": 145,
+    "verified_source_success_count": 589,
+    "quality_reasons": [],
+    "mode": "end",
+    "phase": "manual_baseline_publish",
+    "result": "success",
+    "resume_next_step": "Next daily run should continue from the published 207-row baseline"
+  }
 }
