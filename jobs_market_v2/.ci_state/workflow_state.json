@@ -1,24 +1,23 @@
 {
-  "updated_at": "2026-04-22T18:44:12.217998+00:00",
+  "updated_at": "2026-04-22T19:02:26.341426+00:00",
   "consecutive_failures": 0,
   "last_result": "success",
   "hold_reason": "",
-  "run_url": "https://github.com/mwithgod3952/Biz-Voyager/actions/runs/24795446031",
-  "seeded_from": "local_validated_runtime_284",
+  "run_url": "local-manual-work24-seed://2026-04-23-248",
   "automation_status": {
-    "timestamp": "2026-04-23T03:26:12+09:00",
-    "last_successful_run_id": "sync-sheets-20260423032448231921-9a5f4f01",
+    "timestamp": "2026-04-23T04:00:02+09:00",
+    "last_successful_run_id": "build-coverage-report-20260423035900733973-cde09224",
     "quality_gate_passed": true,
-    "quality_score_100": 99.72,
+    "quality_score_100": 99.7,
     "quality_score_target": 98.5,
-    "master_rows": 207,
-    "staging_rows": 207,
+    "master_rows": 248,
+    "staging_rows": 247,
     "approved_companies": 145,
-    "verified_source_success_count": 589,
+    "verified_source_success_count": 599,
     "quality_reasons": [],
     "mode": "end",
-    "phase": "manual_baseline_publish",
+    "phase": "manual_work24_seed_publish",
     "result": "success",
-    "resume_next_step": "Next daily run should continue from the published 207-row baseline"
+    "resume_next_step": "Next daily run should continue from the published 248-row baseline with Work24 seed rows included"
   }
 }
