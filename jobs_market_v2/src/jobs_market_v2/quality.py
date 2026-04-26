@@ -702,6 +702,9 @@ def _row_has_low_quality_analysis(row: pd.Series) -> bool:
     preferred = _normalized_cell(row.get("우대사항_분석용"))
     core_skills = _normalized_cell(row.get("핵심기술_분석용"))
     title = _first_nonempty_text(row.get("job_title_raw"), row.get("job_title_ko"), row.get("공고제목_표시"))
+    title_only_main = bool(title) and main_tasks == title
+    title_only_detail = bool(title) and detail == title
+    preferred_blankish = preferred in {"", _DEFAULT_PREFERRED_DISPLAY}
     if core_skills and section_output_looks_noisy(core_skills):
         return True
     if main_tasks and section_output_looks_noisy(main_tasks):
@@ -713,10 +716,14 @@ def _row_has_low_quality_analysis(row: pd.Series) -> bool:
     detail_ok = section_output_is_substantive(detail)
     main_ok = bool(main_tasks) and not section_output_looks_noisy(main_tasks)
     requirements_ok = bool(requirements) and not section_output_looks_noisy(requirements)
+    core_skills_ok = bool(core_skills) and not section_output_looks_noisy(core_skills)
     company = _first_nonempty_text(row.get("company_name"), row.get("회사명_표시"))
 
     if detail and _DETAIL_LEGAL_NOTICE_RE.search(detail):
         return True
+    if (title_only_main or title_only_detail) and not requirements_ok and not core_skills_ok and preferred_blankish:
+        if title_only_detail or not detail_ok:
+            return True
     if _looks_company_name_only_form_posting(title, company, detail, requirements, main_tasks):
         return True
     if _looks_academic_call_notice(title, detail, main_tasks, requirements):

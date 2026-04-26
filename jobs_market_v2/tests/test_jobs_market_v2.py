@@ -13876,6 +13876,38 @@ def test_filter_low_quality_jobs_drops_empty_or_noisy_analysis_rows() -> None:
     assert set(filtered["company_name"]) == {"회사1", "회사3"}
 
 
+def test_filter_low_quality_jobs_drops_title_only_detail_missing_official_posting() -> None:
+    title = "(한국생산기술연구원) 2026년 제1차 정규직(연구직) 공개채용 [출연(연) 공동채용 2026년 03월]"
+    staging = pd.DataFrame(
+        [
+            {
+                "is_active": True,
+                "company_name": "한국생산기술연구원",
+                "company_tier": "공공·연구기관",
+                "job_role": "인공지능 엔지니어",
+                "job_title_raw": title,
+                "record_status": "유지",
+                "source_name": "KITECH",
+                "source_url": "https://www.kitech.re.kr/communication/recruitment",
+                "job_url": "https://recruit.kitech.re.kr/announcement/detail/89",
+                "회사명_표시": "한국생산기술연구원",
+                "공고제목_표시": title,
+                "주요업무_분석용": title,
+                "자격요건_분석용": "",
+                "우대사항_분석용": "",
+                "핵심기술_분석용": "",
+                "상세본문_분석용": title,
+            }
+        ]
+    )
+
+    filtered, dropped = filter_low_quality_jobs(staging)
+
+    assert filtered.empty
+    assert len(dropped) == 1
+    assert dropped.iloc[0]["company_name"] == "한국생산기술연구원"
+
+
 def test_filter_low_quality_jobs_collapses_practical_duplicates_with_identical_content() -> None:
     staging = pd.DataFrame(
         [
