@@ -12,6 +12,7 @@ import sys
 import fcntl
 
 from .pipelines import (
+    audit_work24_population_pipeline,
     build_coverage_report_pipeline,
     collect_company_seed_records_pipeline,
     collect_jobs_pipeline,
@@ -27,6 +28,8 @@ from .pipelines import (
     promote_shadow_seed_sources_pipeline,
     promote_staging_pipeline,
     quarantine_bad_sources_pipeline,
+    run_work24_convergence_pipeline,
+    run_work24_improvement_pipeline,
     run_daily_tracking_pipeline,
     run_collection_cycle_pipeline,
     run_weekly_expansion_pipeline,
@@ -44,6 +47,7 @@ _LOCKED_COMMANDS = {
     "promote-shadow-seed-sources",
     "collect-company-seed-records",
     "discover-work24-population",
+    "audit-work24-population",
     "expand-company-candidates",
     "collect-company-evidence",
     "screen-companies",
@@ -59,6 +63,8 @@ _LOCKED_COMMANDS = {
     "promote-staging",
     "quarantine-bad-sources",
     "build-coverage-report",
+    "run-work24-convergence",
+    "run-work24-improvement",
     "sync-sheets",
 }
 
@@ -77,6 +83,12 @@ def _summary_exit_code(command: str, summary: dict) -> int:
         return 0
     if command in {"update-incremental", "collect-jobs"}:
         return 0 if summary.get("quality_gate_passed", False) else 1
+    if command == "audit-work24-population":
+        return 0 if int(summary.get("work24_suspicious_positive_count", 0)) == 0 else 1
+    if command == "run-work24-convergence":
+        return 0 if summary.get("converged", False) else 1
+    if command == "run-work24-improvement":
+        return 0 if summary.get("completed", False) else 1
     if command == "promote-staging":
         return 0 if summary.get("quality_gate_passed", False) and int(summary.get("promoted_job_count", 0)) > 0 else 1
     if command == "sync-sheets":
@@ -131,6 +143,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("promote-shadow-seed-sources")
     subparsers.add_parser("collect-company-seed-records")
     subparsers.add_parser("discover-work24-population")
+    subparsers.add_parser("audit-work24-population")
     subparsers.add_parser("expand-company-candidates")
     collect_company_evidence_parser = subparsers.add_parser("collect-company-evidence")
     collect_company_evidence_parser.add_argument("--batch-size", type=int, default=None)
@@ -148,6 +161,16 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("promote-staging")
     subparsers.add_parser("quarantine-bad-sources")
     subparsers.add_parser("build-coverage-report")
+    run_work24_convergence_parser = subparsers.add_parser("run-work24-convergence")
+    run_work24_convergence_parser.add_argument(
+        "--metric-name",
+        choices=["work24_suspicious_positive_count", "work24_strong_target_blank_count"],
+        default="work24_suspicious_positive_count",
+    )
+    run_work24_convergence_parser.add_argument("--max-iterations", type=int, default=4)
+    run_work24_convergence_parser.add_argument("--stable-passes", type=int, default=1)
+    run_work24_convergence_parser.add_argument("--sleep-seconds", type=float, default=0.0)
+    subparsers.add_parser("run-work24-improvement")
     subparsers.add_parser("doctor")
 
     import_companies_parser = subparsers.add_parser("import-companies")
@@ -191,6 +214,10 @@ def main(argv: list[str] | None = None) -> int:
                 summary = discover_work24_population_candidates_pipeline()
                 _print(summary)
                 return _summary_exit_code(args.command, summary)
+            elif args.command == "audit-work24-population":
+                summary = audit_work24_population_pipeline()
+                _print(summary)
+                return _summary_exit_code(args.command, summary)
             elif args.command == "expand-company-candidates":
                 summary = expand_company_candidates_pipeline()
                 _print(summary)
@@ -225,6 +252,19 @@ def main(argv: list[str] | None = None) -> int:
                 return _summary_exit_code(args.command, summary)
             elif args.command == "run-weekly-expansion":
                 summary = run_weekly_expansion_pipeline()
+                _print(summary)
+                return _summary_exit_code(args.command, summary)
+            elif args.command == "run-work24-convergence":
+                summary = run_work24_convergence_pipeline(
+                    metric_name=args.metric_name,
+                    max_iterations=args.max_iterations,
+                    stable_passes=args.stable_passes,
+                    sleep_seconds=args.sleep_seconds,
+                )
+                _print(summary)
+                return _summary_exit_code(args.command, summary)
+            elif args.command == "run-work24-improvement":
+                summary = run_work24_improvement_pipeline()
                 _print(summary)
                 return _summary_exit_code(args.command, summary)
             elif args.command == "import-companies":

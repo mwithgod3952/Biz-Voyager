@@ -214,6 +214,8 @@ jobs:
             jobs_market_v2/runtime/master_jobs.csv
             jobs_market_v2/runtime/staging_jobs.csv
             jobs_market_v2/runtime/source_registry.csv
+            jobs_market_v2/runtime/work24_population_audit.json
+            jobs_market_v2/runtime/work24_improvement_report.json
             jobs_market_v2/runtime/github_workflow_cycle_summary.json
             jobs_market_v2/runtime/github_workflow_cycle_status.json
             jobs_market_v2/runtime/github_workflow_finalize_result.json

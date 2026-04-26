@@ -124,12 +124,55 @@ def derive_cycle_status(summary: dict[str, Any], exit_code: int, quality_gate_fa
     )
 
 
+def derive_work24_improvement_status(report: dict[str, Any], exit_code: int) -> WorkflowCycleStatus:
+    activation = report.get("activation", {}) if isinstance(report, dict) else {}
+    promotion = report.get("promotion", {}) if isinstance(report, dict) else {}
+    completed = bool(report.get("completed", False)) if isinstance(report, dict) else False
+
+    activation_gate_passed = bool(activation.get("quality_gate_passed", False)) if isinstance(activation, dict) else False
+    promotion_gate_passed = bool(promotion.get("quality_gate_passed", False)) if isinstance(promotion, dict) else False
+    quality_gate_passed = bool(activation_gate_passed and promotion_gate_passed)
+
+    promotion_reasons = []
+    if isinstance(promotion, dict):
+        promotion_reasons = [str(reason) for reason in promotion.get("quality_gate_reasons", []) if str(reason)]
+    activation_reasons = []
+    if isinstance(activation, dict):
+        activation_reasons = [str(reason) for reason in activation.get("quality_gate_reasons", []) if str(reason)]
+
+    report_present = bool(report)
+    hold_reason = "work24_improvement_incomplete" if report_present and not completed else ""
+    promotion_block_reason = ""
+    if not completed:
+        promotion_block_reason = (
+            promotion_reasons[0]
+            if promotion_reasons
+            else activation_reasons[0]
+            if activation_reasons
+            else hold_reason
+        )
+
+    return WorkflowCycleStatus(
+        exit_code=exit_code,
+        quality_gate_passed=quality_gate_passed,
+        hold_reason=hold_reason,
+        promotion_block_reason=promotion_block_reason,
+        automation_ready=completed,
+    )
+
+
 def capture_cycle_status(project_root: Path, summary_path: Path, status_path: Path, exit_code: int) -> WorkflowCycleStatus:
     project_root = project_root.resolve()
     summary = _load_json(summary_path)
     quality_gate_path = project_root / "runtime/quality_gate.json"
     quality_gate_fallback = bool(_load_json(quality_gate_path).get("passed", False))
     status = derive_cycle_status(summary, exit_code=exit_code, quality_gate_fallback=quality_gate_fallback)
+    _write_json(status_path, status.to_json())
+    return status
+
+
+def capture_work24_improvement_status(report_path: Path, status_path: Path, exit_code: int) -> WorkflowCycleStatus:
+    status = derive_work24_improvement_status(_load_json(report_path), exit_code=exit_code)
     _write_json(status_path, status.to_json())
     return status
 

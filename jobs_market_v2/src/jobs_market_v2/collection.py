@@ -187,84 +187,6 @@ _AI_ENGINEER_EXCLUSION_PHRASES = (
     "data engineer",
 )
 
-_NON_TARGET_TITLE_ONLY_PHRASES = (
-    "전문연구요원 및 산업기능요원",
-    "산업기능요원",
-    "전문연구요원 대규모",
-    "대규모 채용",
-    "멘토풀",
-    "강사",
-    "교육 전문",
-    "process innovation",
-    "it ax 전략",
-    "ax 전략",
-    "ax팀",
-    "ax tech leader",
-    "기술 리더",
-    "sw검증",
-    "software engineer launching platform",
-)
-_SERVICE_HARD_EXCLUSION_TITLE_PHRASES = (
-    "software engineer system",
-    "soc design verification",
-    "design verification engineer",
-    "verification engineer",
-    "firmware",
-    "펌웨어",
-    "fe junior",
-    "fe developer",
-    "fe 개발자",
-)
-_SERVICE_SOFT_EXCLUSION_TITLE_PHRASES = (
-    "software engineer system",
-    "software engineer",
-    "software developer",
-    "system software engineer",
-    "platform software engineer",
-)
-_SERVICE_ALLOW_TITLE_PHRASES = (
-    "software engineer machine learning",
-    "software engineer, machine learning",
-    "machine learning software engineer",
-    "machine learning platform engineer",
-    "machine learning engineer",
-    "ml engineer",
-    "mlops engineer",
-    "ai engineer",
-    "ai system software engineer",
-    "ai compiler engineer",
-    "deep learning engineer",
-)
-_SERVICE_TARGET_WORK_PHRASES = (
-    "machine learning",
-    "ml",
-    "mlops",
-    "llm",
-    "rag",
-    "foundation model",
-    "computer vision",
-    "model training",
-    "model serving",
-    "model optimization",
-    "inference",
-    "ai 반도체",
-    "npu",
-    "gpu",
-    "머신러닝",
-    "딥러닝",
-    "엘엘엠",
-    "브이엘엠",
-    "컴퓨터 비전",
-    "컴퓨터비전",
-    "모델 학습",
-    "모델 훈련",
-    "모델 서빙",
-    "추론",
-    "엔피유",
-    "지피유",
-    "인공지능 반도체",
-)
-
 _AI_ENGINEER_DELIVERY_PHRASES = (
     "engineer",
     "developer",
@@ -486,14 +408,6 @@ _TITLE_ONLY_NON_TARGET_PHRASES = (
     "project manager",
     "program manager",
     "qa engineering",
-    "product researcher",
-    "ux researcher",
-    "user researcher",
-    "market researcher",
-    "research operations",
-    "research ops",
-    "security researcher",
-    "offensive security researcher",
     "cos manager",
     "ax manager",
     "applied ai project manager",
@@ -589,39 +503,6 @@ _WORK24_TITLE_AI_EXCLUSION_PHRASES = (
     "프론트엔드",
     "backend",
     "백엔드",
-)
-
-_FIELD_SUPPORT_NON_TARGET_TITLE_PHRASES = (
-    "field application engineer",
-    "field engineer",
-    "field & system engineer",
-    "field and system engineer",
-    "field system engineer",
-)
-
-_FIELD_SUPPORT_NON_TARGET_BODY_PHRASES = (
-    "technical support",
-    "기술 지원",
-    "운영 지원",
-    "유지보수",
-    "고객사",
-    "고객 요청사항",
-    "고객 대응",
-    "현장",
-    "온사이트",
-    "on-site",
-    "onsite",
-    "설치",
-    "설정",
-    "연동",
-    "트러블슈팅",
-    "troubleshooting",
-    "데모",
-    "시연",
-    "매뉴얼",
-    "manual",
-    "사용자 교육",
-    "교육 프로그램",
 )
 
 _SERVICE_NON_TARGET_TITLE_PHRASES = (
@@ -1222,22 +1103,9 @@ def _select_incremental_collectable_positions(
         cursor_positions = collectable_positions[start_offset:]
         return cursor_positions, cursor_positions, []
 
-    priority_seed_limit = min(max(process_limit // 4, 1), _SOURCE_COLLECTION_ACTIVE_PIN_LIMIT)
-    priority_seed_positions: list[int] = []
-    priority_seed_seen: set[int] = set()
-    for position in collectable_positions:
-        if len(priority_seed_positions) >= priority_seed_limit:
-            break
-        if not coerce_bool(rows[position].get("_priority_seed_source")):
-            continue
-        if position in priority_seed_seen:
-            continue
-        priority_seed_seen.add(position)
-        priority_seed_positions.append(position)
-
     forced_limit = min(max(process_limit // 10, 1), _SOURCE_COLLECTION_ACTIVE_PIN_LIMIT)
     forced_positions: list[int] = []
-    forced_seen: set[int] = set(priority_seed_seen)
+    forced_seen: set[int] = set()
     for position in collectable_positions:
         if len(forced_positions) >= forced_limit:
             break
@@ -1248,13 +1116,27 @@ def _select_incremental_collectable_positions(
         forced_seen.add(position)
         forced_positions.append(position)
 
+    priority_seed_limit = max(process_limit - len(forced_positions), 0)
+    priority_seed_positions: list[int] = []
+    priority_seed_seen: set[int] = set(forced_seen)
+    if priority_seed_limit > 0:
+        for position in collectable_positions:
+            if len(priority_seed_positions) >= priority_seed_limit:
+                break
+            if not coerce_bool(rows[position].get("_priority_seed_source")):
+                continue
+            if position in priority_seed_seen:
+                continue
+            priority_seed_seen.add(position)
+            priority_seed_positions.append(position)
+
     cursor_positions = collectable_positions[start_offset : start_offset + process_limit]
-    if not cursor_positions and not forced_positions:
+    if not cursor_positions and not forced_positions and not priority_seed_positions:
         return cursor_positions, cursor_positions, forced_positions
 
     pinned_limit = min(process_limit // 5, _SOURCE_COLLECTION_ACTIVE_PIN_LIMIT)
     pinned_positions: list[int] = []
-    pinned_seen: set[int] = set(forced_seen)
+    pinned_seen: set[int] = set(priority_seed_seen)
     if pinned_limit > 0 and start_offset > 0:
         for position in collectable_positions[:start_offset]:
             if _source_last_active_job_count(rows[position]) <= 0:
@@ -1280,7 +1162,10 @@ def _select_incremental_collectable_positions(
             if len(scout_positions) >= scout_limit:
                 break
 
-    remaining_capacity = max(process_limit - len(forced_positions) - len(pinned_positions) - len(scout_positions), 0)
+    remaining_capacity = max(
+        process_limit - len(forced_positions) - len(priority_seed_positions) - len(pinned_positions) - len(scout_positions),
+        0,
+    )
     trimmed_cursor_positions: list[int] = []
     for position in cursor_positions:
         if len(trimmed_cursor_positions) >= remaining_capacity:
@@ -1289,7 +1174,7 @@ def _select_incremental_collectable_positions(
             continue
         trimmed_cursor_positions.append(position)
     cursor_selected_positions = scout_positions + trimmed_cursor_positions
-    pinned_selected_positions = priority_seed_positions + forced_positions + pinned_positions
+    pinned_selected_positions = forced_positions + priority_seed_positions + pinned_positions
     return pinned_selected_positions + cursor_selected_positions, cursor_selected_positions, pinned_selected_positions
 
 
@@ -1464,11 +1349,6 @@ def classify_job_role(*texts: str | None) -> str:
     if not corpus:
         return ""
     if _is_simple_developer_title(title_corpus, body_corpus):
-        return ""
-    if (
-        _has_any_phrase(title_corpus, _FIELD_SUPPORT_NON_TARGET_TITLE_PHRASES)
-        and _has_any_phrase(body_corpus or corpus, _FIELD_SUPPORT_NON_TARGET_BODY_PHRASES)
-    ):
         return ""
     if (
         _has_any_phrase(title_corpus, _ROBOT_SERVICE_NON_TARGET_TITLE_PHRASES)
@@ -1987,44 +1867,6 @@ def normalize_job_payload(
     }
     raw_detail = {column: raw_detail.get(column, "") for column in RAW_DETAIL_COLUMNS}
     return record, raw_detail
-
-
-def refresh_job_roles(frame: pd.DataFrame) -> pd.DataFrame:
-    """Re-apply the current role taxonomy to previously collected job rows."""
-    if frame.empty:
-        return pd.DataFrame(columns=list(JOB_COLUMNS))
-
-    refreshed_rows: list[dict[str, Any]] = []
-    analysis_columns = (
-        "주요업무_분석용",
-        "자격요건_분석용",
-        "우대사항_분석용",
-        "핵심기술_분석용",
-        "상세본문_분석용",
-    )
-    for row in frame.fillna("").to_dict(orient="records"):
-        analysis_fields = {column: normalize_whitespace(row.get(column)) for column in analysis_columns}
-        if not any(analysis_fields.values()):
-            analysis_fields = build_analysis_fields(row)
-
-        role = classify_job_role(
-            row.get("job_title_raw"),
-            row.get("공고제목_표시"),
-            analysis_fields.get("주요업무_분석용", ""),
-            analysis_fields.get("자격요건_분석용", ""),
-            analysis_fields.get("우대사항_분석용", ""),
-            analysis_fields.get("핵심기술_분석용", ""),
-            analysis_fields.get("상세본문_분석용", ""),
-        )
-        if role not in ALLOWED_JOB_ROLES:
-            continue
-
-        row["job_role"] = role
-        row.update(analysis_fields)
-        row.update(build_display_fields(row, analysis_fields=analysis_fields))
-        refreshed_rows.append({column: row.get(column, "") for column in JOB_COLUMNS})
-
-    return pd.DataFrame(refreshed_rows, columns=list(JOB_COLUMNS))
 
 
 def _gemini_priority_score(job: dict) -> int:

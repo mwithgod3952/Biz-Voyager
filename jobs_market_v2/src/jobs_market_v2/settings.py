@@ -51,6 +51,8 @@ class ProjectPaths:
     work24_population_jobs_path: Path
     work24_population_shadow_companies_path: Path
     work24_population_scan_log_path: Path
+    work24_population_audit_path: Path
+    work24_improvement_report_path: Path
     staging_jobs_path: Path
     master_jobs_path: Path
     raw_detail_path: Path
@@ -102,6 +104,8 @@ class ProjectPaths:
             work24_population_jobs_path=runtime_dir / "work24_population_jobs.csv",
             work24_population_shadow_companies_path=runtime_dir / "work24_population_shadow_companies.csv",
             work24_population_scan_log_path=runtime_dir / "work24_population_scan_log.csv",
+            work24_population_audit_path=runtime_dir / "work24_population_audit.json",
+            work24_improvement_report_path=runtime_dir / "work24_improvement_report.json",
             staging_jobs_path=runtime_dir / "staging_jobs.csv",
             master_jobs_path=runtime_dir / "master_jobs.csv",
             raw_detail_path=runtime_dir / "raw_detail.jsonl",
@@ -189,6 +193,8 @@ class AppSettings(BaseModel):
     work24_population_empty_page_stop_count: int = 1
     work24_population_stale_page_stop_count: int = 2
     work24_population_page_delay_seconds: float = 0.2
+    work24_population_keyword_fanout_max_terms: int = 16
+    work24_population_keyword_fanout_max_pages_per_term: int = 5
 
 
 def _load_published_llm_backend_config(paths: ProjectPaths) -> dict[str, str]:
@@ -307,4 +313,10 @@ def get_settings(project_root: Path | None = None) -> AppSettings:
         work24_population_empty_page_stop_count=int(os.getenv("JOBS_MARKET_V2_WORK24_POPULATION_EMPTY_PAGE_STOP_COUNT", "1")),
         work24_population_stale_page_stop_count=int(os.getenv("JOBS_MARKET_V2_WORK24_POPULATION_STALE_PAGE_STOP_COUNT", "2")),
         work24_population_page_delay_seconds=float(os.getenv("JOBS_MARKET_V2_WORK24_POPULATION_PAGE_DELAY_SECONDS", "0.2")),
+        work24_population_keyword_fanout_max_terms=int(
+            os.getenv("JOBS_MARKET_V2_WORK24_POPULATION_KEYWORD_FANOUT_MAX_TERMS", "16")
+        ),
+        work24_population_keyword_fanout_max_pages_per_term=int(
+            os.getenv("JOBS_MARKET_V2_WORK24_POPULATION_KEYWORD_FANOUT_MAX_PAGES_PER_TERM", "5")
+        ),
     )

@@ -5,12 +5,13 @@ from __future__ import annotations
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
+import time
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 import pandas as pd
 
-from .collection import canonicalize_job_key, collect_jobs_from_sources, merge_incremental, refresh_job_roles
+from .collection import canonicalize_job_key, collect_jobs_from_sources, merge_incremental
 from .company_screening import collect_company_evidence, split_company_buckets
 from .company_seed_sources import (
     CATALOG_SOURCE_TYPES,
@@ -24,6 +25,8 @@ from .company_seed_sources import (
 )
 from .constants import COMPANY_CANDIDATE_COLUMNS, IMPORT_COMPANY_COLUMNS, JOB_COLUMNS, RUN_COLUMNS, SOURCE_REGISTRY_COLUMNS
 from .discovery import (
+    WORK24_LIMITED_PUBLIC_BOARD_DISCOVERY_METHOD,
+    audit_work24_population,
     discover_companies,
     discover_source_candidates,
     discover_work24_population,
@@ -43,7 +46,6 @@ _PROMOTION_SHRINK_MIN_PREVIOUS_COUNT = 50
 _PROMOTION_SHRINK_MIN_DROP_COUNT = 5
 _PROMOTION_SHRINK_MIN_DROP_RATIO = 0.03
 _PROMOTION_SHRINK_MIN_MISSING_COUNT = 10
-_PUBLISHED_PRESERVED_STATUS = "미확인보존"
 
 
 def _run_id(command: str) -> str:
@@ -261,114 +263,139 @@ def _active_source_urls(frame: pd.DataFrame) -> set[str]:
     return {url for url in urls.tolist() if url}
 
 
+def _work24_priority_seed_source_urls(registry: pd.DataFrame) -> set[str]:
+    if registry.empty or "source_url" not in registry.columns:
+        return set()
+
+    source_type = registry.get("source_type", pd.Series("", index=registry.index)).fillna("").astype(str).map(normalize_whitespace)
+    discovery_method = registry.get("discovery_method", pd.Series("", index=registry.index)).fillna("").astype(str).map(normalize_whitespace)
+    verification_status = registry.get("verification_status", pd.Series("", index=registry.index)).fillna("").astype(str).map(normalize_whitespace)
+    urls = registry.get("source_url", pd.Series("", index=registry.index)).fillna("").astype(str).map(normalize_whitespace)
+
+    priority_mask = (
+        source_type.eq("work24_public_html")
+        & discovery_method.eq(WORK24_LIMITED_PUBLIC_BOARD_DISCOVERY_METHOD)
+        & verification_status.ne("성공")
+    )
+    return {url for url in urls.loc[priority_mask].tolist() if url}
+
+
+def _work24_registry_frame(registry: pd.DataFrame) -> pd.DataFrame:
+    if registry.empty or "source_type" not in registry.columns:
+        return pd.DataFrame(columns=list(SOURCE_REGISTRY_COLUMNS))
+    work24 = registry[
+        registry["source_type"].fillna("").astype(str).map(normalize_whitespace).eq("work24_public_html")
+    ].copy()
+    for column in SOURCE_REGISTRY_COLUMNS:
+        if column not in work24.columns:
+            work24[column] = ""
+    return work24[list(SOURCE_REGISTRY_COLUMNS)]
+
+
+def _work24_registry_summary(registry: pd.DataFrame) -> dict[str, object]:
+    work24 = _work24_registry_frame(registry)
+    if work24.empty:
+        return {
+            "work24_source_count": 0,
+            "work24_verified_source_success_count": 0,
+            "work24_verified_source_failure_count": 0,
+            "work24_unverified_source_count": 0,
+            "work24_active_source_count": 0,
+            "work24_active_job_sum": 0,
+            "work24_source_bucket_counts": {},
+        }
+    verification = work24["verification_status"].fillna("").astype(str).map(normalize_whitespace)
+    active_job_counts = pd.to_numeric(work24["last_active_job_count"], errors="coerce").fillna(0)
+    return {
+        "work24_source_count": int(len(work24)),
+        "work24_verified_source_success_count": int(verification.eq("성공").sum()),
+        "work24_verified_source_failure_count": int(verification.eq("실패").sum()),
+        "work24_unverified_source_count": int(verification.eq("미검증").sum()),
+        "work24_active_source_count": int(active_job_counts.gt(0).sum()),
+        "work24_active_job_sum": int(active_job_counts.sum()),
+        "work24_source_bucket_counts": {
+            str(key): int(value)
+            for key, value in work24["source_bucket"].fillna("").astype(str).map(normalize_whitespace).value_counts().to_dict().items()
+        },
+    }
+
+
+def _work24_population_source_urls(paths) -> set[str]:
+    jobs = read_csv_or_empty(paths.work24_population_jobs_path)
+    if jobs.empty or "population_source_url" not in jobs.columns:
+        return set()
+    urls = jobs["population_source_url"].fillna("").astype(str).map(normalize_whitespace)
+    return {url for url in urls.tolist() if url}
+
+
+def _work24_registry_source_urls(registry: pd.DataFrame) -> set[str]:
+    work24 = _work24_registry_frame(registry)
+    if work24.empty or "source_url" not in work24.columns:
+        return set()
+    urls = work24["source_url"].fillna("").astype(str).map(normalize_whitespace)
+    return {url for url in urls.tolist() if url}
+
+
+def _work24_source_discovery_gap(paths, registry: pd.DataFrame) -> dict[str, object]:
+    expected_urls = _work24_population_source_urls(paths)
+    registry_urls = _work24_registry_source_urls(registry)
+    missing_urls = sorted(expected_urls - registry_urls)
+    return {
+        "work24_expected_source_count": int(len(expected_urls)),
+        "work24_registry_source_count": int(len(registry_urls)),
+        "work24_missing_source_count": int(len(missing_urls)),
+        "work24_missing_source_urls_sample": missing_urls[:5],
+    }
+
+
+def _work24_job_frame(frame: pd.DataFrame) -> pd.DataFrame:
+    if frame.empty or "source_url" not in frame.columns:
+        return pd.DataFrame(columns=list(JOB_COLUMNS))
+    work24 = frame[
+        frame["source_url"].fillna("").astype(str).str.contains("work24.go.kr", regex=False)
+    ].copy()
+    for column in JOB_COLUMNS:
+        if column not in work24.columns:
+            work24[column] = ""
+    return work24[list(JOB_COLUMNS)]
+
+
+def _work24_job_summary(frame: pd.DataFrame) -> dict[str, object]:
+    work24 = _work24_job_frame(frame)
+    if work24.empty:
+        return {
+            "work24_job_count": 0,
+            "work24_active_job_count": 0,
+            "work24_role_counts": {},
+            "work24_company_count": 0,
+        }
+    active_count = (
+        int(work24["is_active"].map(coerce_bool).sum())
+        if "is_active" in work24.columns
+        else int(len(work24))
+    )
+    return {
+        "work24_job_count": int(len(work24)),
+        "work24_active_job_count": int(active_count),
+        "work24_role_counts": {
+            str(key): int(value)
+            for key, value in work24["job_role"].fillna("").astype(str).map(normalize_whitespace).replace("", pd.NA).dropna().value_counts().to_dict().items()
+        },
+        "work24_company_count": int(
+            work24["company_name"].fillna("").astype(str).map(normalize_whitespace).replace("", pd.NA).dropna().nunique()
+        ),
+    }
+
+
 def _active_job_count(frame: pd.DataFrame) -> int:
     if frame.empty or "is_active" not in frame.columns:
         return int(len(frame))
     return int(frame["is_active"].map(coerce_bool).sum())
 
 
-def _published_row_key(row: dict) -> str:
-    explicit_key = normalize_whitespace(row.get("job_key"))
-    if explicit_key:
-        return explicit_key
-    return canonicalize_job_key(row)
-
-
-def _normalize_previous_master_for_publish(paths) -> tuple[pd.DataFrame, dict[str, int]]:
-    previous_master_raw = read_csv_or_empty(paths.master_jobs_path, JOB_COLUMNS)
-    raw_count = int(len(previous_master_raw))
-    if previous_master_raw.empty:
-        return previous_master_raw, {
-            "previous_master_raw_count": 0,
-            "previous_master_count": 0,
-            "previous_master_invalid_role_drop_count": 0,
-            "previous_master_low_quality_drop_count": 0,
-        }
-
-    refreshed_previous_master = refresh_job_roles(previous_master_raw)
-    filtered_previous_master, _ = filter_low_quality_jobs(refreshed_previous_master, paths=paths)
-    refreshed_count = int(len(refreshed_previous_master))
-    filtered_count = int(len(filtered_previous_master))
-    metrics = {
-        "previous_master_raw_count": raw_count,
-        "previous_master_count": filtered_count,
-        "previous_master_invalid_role_drop_count": max(raw_count - refreshed_count, 0),
-        "previous_master_low_quality_drop_count": max(refreshed_count - filtered_count, 0),
-    }
-    return filtered_previous_master, metrics
-
-
-def _merge_published_master(candidate_master: pd.DataFrame, paths, run_id: str, snapshot_date: str) -> tuple[pd.DataFrame, dict[str, object]]:
-    previous_master, previous_master_metrics = _normalize_previous_master_for_publish(paths)
-    if previous_master.empty:
-        metrics = {
-            "applied": False,
-            **previous_master_metrics,
-            "candidate_master_count": int(len(candidate_master)),
-            "published_master_count": int(len(candidate_master)),
-            "retained_previous_job_count": 0,
-            "retained_active_previous_job_count": 0,
-        }
-        return candidate_master.copy(), metrics
-
-    previous_rows_by_key: dict[str, dict] = {}
-    for row in previous_master.fillna("").to_dict(orient="records"):
-        key = _published_row_key(row)
-        if key:
-            row["job_key"] = key
-            previous_rows_by_key[key] = row
-
-    candidate_rows_by_key: dict[str, dict] = {}
-    ordered_candidate_keys: list[str] = []
-    for row in candidate_master.fillna("").to_dict(orient="records"):
-        key = _published_row_key(row)
-        if not key:
-            continue
-        row["job_key"] = key
-        previous = previous_rows_by_key.get(key)
-        if previous is not None:
-            row["first_seen_at"] = row.get("first_seen_at") or previous.get("first_seen_at")
-        if key not in candidate_rows_by_key:
-            ordered_candidate_keys.append(key)
-        candidate_rows_by_key[key] = row
-
-    published_rows: list[dict] = []
-    for key in ordered_candidate_keys:
-        row = candidate_rows_by_key[key]
-        published_rows.append({column: row.get(column, "") for column in JOB_COLUMNS})
-
-    retained_previous_job_count = 0
-    retained_active_previous_job_count = 0
-    for key, previous in previous_rows_by_key.items():
-        if key in candidate_rows_by_key:
-            continue
-        retained = previous.copy()
-        retained["run_id"] = run_id
-        retained["snapshot_date"] = snapshot_date
-        if coerce_bool(retained.get("is_active")):
-            retained["record_status"] = _PUBLISHED_PRESERVED_STATUS
-            retained["is_active"] = True
-            retained_active_previous_job_count += 1
-        else:
-            retained["record_status"] = normalize_whitespace(retained.get("record_status")) or _PUBLISHED_PRESERVED_STATUS
-        retained_previous_job_count += 1
-        published_rows.append({column: retained.get(column, "") for column in JOB_COLUMNS})
-
-    published_master = pd.DataFrame(published_rows, columns=list(JOB_COLUMNS))
-    metrics = {
-        "applied": retained_previous_job_count > 0,
-        **previous_master_metrics,
-        "candidate_master_count": int(len(candidate_master)),
-        "published_master_count": int(len(published_master)),
-        "retained_previous_job_count": retained_previous_job_count,
-        "retained_active_previous_job_count": retained_active_previous_job_count,
-    }
-    return published_master, metrics
-
-
 def _evaluate_publish_shrink_guard(candidate_master: pd.DataFrame, paths) -> dict[str, object]:
-    previous_master, previous_master_metrics = _normalize_previous_master_for_publish(paths)
-    previous_master_count = int(previous_master_metrics["previous_master_count"])
+    previous_master = read_csv_or_empty(paths.master_jobs_path, JOB_COLUMNS)
+    previous_master_count = int(len(previous_master))
     candidate_master_count = int(len(candidate_master))
     drop_count = max(previous_master_count - candidate_master_count, 0)
     drop_ratio = drop_count / max(previous_master_count, 1)
@@ -387,7 +414,7 @@ def _evaluate_publish_shrink_guard(candidate_master: pd.DataFrame, paths) -> dic
 
     metrics = {
         "triggered": False,
-        **previous_master_metrics,
+        "previous_master_count": previous_master_count,
         "candidate_master_count": candidate_master_count,
         "drop_count": drop_count,
         "drop_ratio": drop_ratio,
@@ -755,6 +782,264 @@ def discover_work24_population_candidates_pipeline(project_root: Path | None = N
         raise
 
 
+def audit_work24_population_pipeline(project_root: Path | None = None) -> dict:
+    paths = get_paths(project_root)
+    started_at = _now()
+    run_id = _run_id("audit-work24-population")
+    try:
+        summary = audit_work24_population(paths)
+        _record_run(paths, "audit-work24-population", run_id, started_at, summary)
+        return summary
+    except Exception as exc:  # noqa: BLE001
+        _record_error(paths, "audit-work24-population", run_id, exc)
+        raise
+
+
+def run_work24_convergence_pipeline(
+    project_root: Path | None = None,
+    *,
+    metric_name: str = "work24_suspicious_positive_count",
+    max_iterations: int = 4,
+    stable_passes: int = 1,
+    sleep_seconds: float = 0.0,
+) -> dict:
+    paths = get_paths(project_root)
+    started_at = _now()
+    run_id = _run_id("run-work24-convergence")
+    max_iterations = max(1, int(max_iterations))
+    stable_passes = max(1, int(stable_passes))
+    sleep_seconds = max(0.0, float(sleep_seconds))
+    metric_name = normalize_whitespace(metric_name) or "work24_suspicious_positive_count"
+
+    iterations: list[dict[str, object]] = []
+    consecutive_zero_passes = 0
+    final_metric_value = 0
+
+    try:
+        for iteration in range(1, max_iterations + 1):
+            discover_summary = discover_work24_population_candidates_pipeline(project_root)
+            audit_summary = audit_work24_population_pipeline(project_root)
+            final_metric_value = int(audit_summary.get(metric_name, 0))
+            if final_metric_value == 0:
+                consecutive_zero_passes += 1
+            else:
+                consecutive_zero_passes = 0
+            iterations.append(
+                {
+                    "iteration": iteration,
+                    "candidate_count": int(discover_summary.get("stored_work24_population_candidate_count", 0)),
+                    "job_count": int(discover_summary.get("stored_work24_population_job_count", 0)),
+                    "metric_value": final_metric_value,
+                    "metric_name": metric_name,
+                    "reason_counts": dict(audit_summary.get("work24_suspicious_positive_reason_counts", {})),
+                    "blank_role_counts": dict(audit_summary.get("work24_strong_target_blank_role_counts", {})),
+                }
+            )
+            if consecutive_zero_passes >= stable_passes:
+                break
+            if sleep_seconds and iteration < max_iterations:
+                time.sleep(sleep_seconds)
+
+        converged = final_metric_value == 0 and consecutive_zero_passes >= stable_passes
+        latest_audit = audit_work24_population(paths)
+        summary = {
+            "converged": converged,
+            "work24_convergence_metric_name": metric_name,
+            "work24_convergence_metric_value": int(latest_audit.get(metric_name, final_metric_value)),
+            "work24_convergence_required_stable_passes": stable_passes,
+            "work24_convergence_zero_passes": consecutive_zero_passes,
+            "work24_convergence_iteration_count": int(len(iterations)),
+            "work24_convergence_iterations": iterations,
+            "work24_population_candidate_count": int(latest_audit.get("work24_population_candidate_count", 0)),
+            "work24_population_job_count": int(latest_audit.get("work24_population_job_count", 0)),
+            "work24_population_role_hint_job_count": int(latest_audit.get("work24_population_role_hint_job_count", 0)),
+            "work24_suspicious_positive_count": int(latest_audit.get("work24_suspicious_positive_count", 0)),
+            "work24_candidate_noise_count": int(latest_audit.get("work24_candidate_noise_count", 0)),
+            "work24_strong_target_blank_count": int(latest_audit.get("work24_strong_target_blank_count", 0)),
+            "work24_strong_target_blank_role_counts": dict(
+                latest_audit.get("work24_strong_target_blank_role_counts", {})
+            ),
+            "work24_suspicious_positive_reason_counts": dict(
+                latest_audit.get("work24_suspicious_positive_reason_counts", {})
+            ),
+            "work24_population_audit_artifact": latest_audit.get("work24_population_audit_artifact", ""),
+        }
+        _record_run(
+            paths,
+            "run-work24-convergence",
+            run_id,
+            started_at,
+            summary,
+            status="성공" if converged else "보류",
+        )
+        return summary
+    except Exception as exc:  # noqa: BLE001
+        _record_error(paths, "run-work24-convergence", run_id, exc)
+        raise
+
+
+def run_work24_improvement_pipeline(project_root: Path | None = None) -> dict:
+    paths = get_paths(project_root)
+    started_at = _now()
+    run_id = _run_id("run-work24-improvement")
+    try:
+        reuse_existing_population = (
+            _has_nonempty_csv(paths.work24_population_candidates_path)
+            and _has_nonempty_csv(paths.work24_population_jobs_path)
+        )
+        if reuse_existing_population:
+            initial_audit_summary = audit_work24_population_pipeline(project_root)
+            shadow_companies = read_csv_or_empty(paths.work24_population_shadow_companies_path)
+            work24_population_summary = {
+                "stored_work24_population_candidate_count": int(initial_audit_summary.get("work24_population_candidate_count", 0)),
+                "stored_work24_population_job_count": int(initial_audit_summary.get("work24_population_job_count", 0)),
+                "stored_work24_population_shadow_company_count": int(len(shadow_companies)),
+                "new_work24_population_candidate_count": int(initial_audit_summary.get("work24_population_candidate_count", 0)),
+                "new_work24_population_job_count": int(initial_audit_summary.get("work24_population_job_count", 0)),
+                "new_work24_population_shadow_company_count": int(len(shadow_companies)),
+                "work24_population_artifact": str(paths.work24_population_candidates_path),
+                "work24_population_jobs_artifact": str(paths.work24_population_jobs_path),
+                "work24_population_shadow_companies_artifact": str(paths.work24_population_shadow_companies_path),
+                "work24_population_audit_artifact": initial_audit_summary.get("work24_population_audit_artifact", str(paths.work24_population_audit_path)),
+                "work24_population_reuse_mode": "existing_artifacts",
+            }
+        else:
+            work24_population_summary = discover_work24_population_candidates_pipeline(project_root)
+            initial_audit_summary = audit_work24_population_pipeline(project_root)
+
+        convergence_summary = {}
+        for label, metric_name in (
+            ("suspicious_positive", "work24_suspicious_positive_count"),
+            ("strong_target_blank", "work24_strong_target_blank_count"),
+        ):
+            metric_value = int(initial_audit_summary.get(metric_name, 0))
+            if metric_value == 0:
+                convergence_summary[label] = {
+                    "converged": True,
+                    "work24_convergence_metric_name": metric_name,
+                    "work24_convergence_metric_value": 0,
+                    "work24_convergence_required_stable_passes": 1,
+                    "work24_convergence_zero_passes": 1,
+                    "work24_convergence_iteration_count": 0,
+                    "work24_convergence_iterations": [],
+                    "work24_population_candidate_count": int(initial_audit_summary.get("work24_population_candidate_count", 0)),
+                    "work24_population_job_count": int(initial_audit_summary.get("work24_population_job_count", 0)),
+                    "work24_population_role_hint_job_count": int(initial_audit_summary.get("work24_population_role_hint_job_count", 0)),
+                    "work24_suspicious_positive_count": int(initial_audit_summary.get("work24_suspicious_positive_count", 0)),
+                    "work24_candidate_noise_count": int(initial_audit_summary.get("work24_candidate_noise_count", 0)),
+                    "work24_strong_target_blank_count": int(initial_audit_summary.get("work24_strong_target_blank_count", 0)),
+                    "work24_strong_target_blank_role_counts": dict(
+                        initial_audit_summary.get("work24_strong_target_blank_role_counts", {})
+                    ),
+                    "work24_suspicious_positive_reason_counts": dict(
+                        initial_audit_summary.get("work24_suspicious_positive_reason_counts", {})
+                    ),
+                    "work24_population_audit_artifact": initial_audit_summary.get("work24_population_audit_artifact", ""),
+                }
+            else:
+                convergence_summary[label] = run_work24_convergence_pipeline(
+                    project_root,
+                    metric_name=metric_name,
+                    max_iterations=3,
+                    stable_passes=1,
+                )
+        published_registry = read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
+        published_work24_summary = _work24_registry_summary(published_registry)
+        source_discovery_gap = _work24_source_discovery_gap(paths, published_registry)
+        target_work24_source_count = int(work24_population_summary.get("stored_work24_population_candidate_count", 0))
+        needs_source_discovery = bool(source_discovery_gap.get("work24_missing_source_count", 0))
+        if not needs_source_discovery and int(source_discovery_gap.get("work24_expected_source_count", 0)) == 0:
+            needs_source_discovery = int(published_work24_summary.get("work24_source_count", 0)) < target_work24_source_count
+
+        if _has_nonempty_csv(paths.companies_registry_path):
+            existing_companies = read_csv_or_empty(paths.companies_registry_path)
+            company_expansion_summary = {
+                "discovered_company_count": int(len(existing_companies)),
+                "candidate_input_mode": "existing_companies_registry",
+            }
+        else:
+            company_expansion_summary = discover_companies_pipeline(project_root)
+
+        if needs_source_discovery:
+            source_discovery_summary = discover_sources_pipeline(project_root)
+            refreshed_registry = read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
+            source_discovery_gap = _work24_source_discovery_gap(paths, refreshed_registry)
+        else:
+            source_discovery_summary = {
+                **_summarize_source_bucket_frame(published_registry, mode="published_source_registry"),
+                **source_discovery_gap,
+                "work24_registry_reuse_mode": "published_source_registry",
+            }
+            refreshed_registry = published_registry
+
+        work24_registry = _work24_registry_frame(refreshed_registry)
+        activation_summary = update_incremental_pipeline(
+            project_root,
+            allow_source_discovery_fallback=False,
+            enable_source_scan_progress=False,
+            registry_frame=work24_registry,
+        )
+        promotion_summary = promote_staging_pipeline(project_root)
+
+        refreshed_registry = read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
+        staging = read_csv_or_empty(paths.staging_jobs_path, JOB_COLUMNS)
+        master = read_csv_or_empty(paths.master_jobs_path, JOB_COLUMNS)
+
+        report = {
+            "completed": bool(
+                convergence_summary["suspicious_positive"].get("converged")
+                and convergence_summary["strong_target_blank"].get("converged")
+                and bool(activation_summary.get("quality_gate_passed", False))
+                and bool(promotion_summary.get("quality_gate_passed", False))
+                and int(promotion_summary.get("promoted_job_count", 0)) > 0
+            ),
+            "run_id": run_id,
+            "started_at": started_at,
+            "completed_at": _now(),
+            "convergence": convergence_summary,
+            "work24_population": work24_population_summary,
+            "company_expansion": {
+                "expanded_candidate_company_count": int(company_expansion_summary.get("discovered_company_count", 0)),
+                "candidate_input_mode": company_expansion_summary.get("candidate_input_mode", ""),
+            },
+            "source_discovery": {
+                **source_discovery_summary,
+                **source_discovery_gap,
+                **_work24_registry_summary(refreshed_registry),
+            },
+            "activation": activation_summary,
+            "promotion": promotion_summary,
+            "staging": _work24_job_summary(staging),
+            "master": _work24_job_summary(master),
+            "artifacts": {
+                "work24_population_audit": str(paths.work24_population_audit_path),
+                "work24_population_candidates": str(paths.work24_population_candidates_path),
+                "work24_population_jobs": str(paths.work24_population_jobs_path),
+                "work24_population_shadow_companies": str(paths.work24_population_shadow_companies_path),
+                "source_registry": str(paths.source_registry_path),
+                "staging_jobs": str(paths.staging_jobs_path),
+                "master_jobs": str(paths.master_jobs_path),
+                "work24_improvement_report": str(paths.work24_improvement_report_path),
+            },
+        }
+        paths.work24_improvement_report_path.write_text(
+            json.dumps(report, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        _record_run(
+            paths,
+            "run-work24-improvement",
+            run_id,
+            started_at,
+            report,
+            status="성공" if report["completed"] else "보류",
+        )
+        return report
+    except Exception as exc:  # noqa: BLE001
+        _record_error(paths, "run-work24-improvement", run_id, exc)
+        raise
+
+
 def expand_company_candidates_pipeline(project_root: Path | None = None) -> dict:
     paths = get_paths(project_root)
     started_at = _now()
@@ -988,9 +1273,6 @@ def collect_jobs_pipeline(
             registry_to_write = _merge_updated_source_registry(existing_registry, updated_registry)
         if not dry_run:
             write_csv(registry_to_write, registry_output_path or paths.source_registry_path)
-            jobs_before_role_refresh = len(jobs)
-            jobs = refresh_job_roles(jobs)
-            summary["role_refresh_dropped_job_count"] = int(jobs_before_role_refresh - len(jobs))
             filtered_jobs, dropped_jobs = filter_low_quality_jobs(jobs, settings=settings, paths=paths)
             write_csv(filtered_jobs, paths.staging_jobs_path)
             write_parquet(filtered_jobs, paths.first_snapshot_path)
@@ -1043,25 +1325,11 @@ def update_incremental_pipeline(
         snapshot_date = _today()
         prioritized_registry = registry.copy()
         active_source_urls = _active_source_urls(baseline)
+        priority_seed_urls = _work24_priority_seed_source_urls(prioritized_registry)
         if "source_url" in prioritized_registry.columns:
             normalized_source_urls = prioritized_registry["source_url"].fillna("").astype(str).map(normalize_whitespace)
             prioritized_registry["_always_refresh_source"] = normalized_source_urls.isin(active_source_urls)
-            verification_success_mask = (
-                prioritized_registry["verification_status"].fillna("").astype(str).eq("성공")
-                if "verification_status" in prioritized_registry.columns
-                else pd.Series(False, index=prioritized_registry.index)
-            )
-            seed_active_mask = (
-                pd.to_numeric(prioritized_registry["last_active_job_count"], errors="coerce").fillna(0).gt(0)
-                if "last_active_job_count" in prioritized_registry.columns
-                else pd.Series(False, index=prioritized_registry.index)
-            )
-            prioritized_registry["_priority_seed_source"] = (
-                normalized_source_urls.ne("")
-                & ~normalized_source_urls.isin(active_source_urls)
-                & verification_success_mask
-                & seed_active_mask
-            )
+            prioritized_registry["_priority_seed_source"] = normalized_source_urls.isin(priority_seed_urls)
         new_jobs, raw_records, updated_registry, summary = collect_jobs_from_sources(
             prioritized_registry,
             paths,
@@ -1079,9 +1347,6 @@ def update_incremental_pipeline(
             existing_registry = read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
             registry_to_write = _merge_updated_source_registry(existing_registry, updated_registry)
         write_csv(registry_to_write, registry_output_path or paths.source_registry_path)
-        merged_before_role_refresh = len(merged)
-        merged = refresh_job_roles(merged)
-        summary["role_refresh_dropped_job_count"] = int(merged_before_role_refresh - len(merged))
         filtered_jobs, dropped_jobs = filter_low_quality_jobs(merged, settings=settings, paths=paths)
         write_csv(filtered_jobs, paths.staging_jobs_path)
         write_jsonl(raw_records, paths.raw_detail_path)
@@ -1094,9 +1359,6 @@ def update_incremental_pipeline(
             {
                 "incremental_baseline_mode": baseline_mode,
                 "collection_run_mode": "incremental_merge",
-                "priority_seed_source_count": int(
-                    prioritized_registry.get("_priority_seed_source", pd.Series(False, index=prioritized_registry.index)).sum()
-                ),
                 "staging_job_count": int(len(filtered_jobs)),
                 "dropped_low_quality_job_count": int(len(dropped_jobs)),
                 "quality_gate_passed": gate.passed,
@@ -1273,10 +1535,7 @@ def run_collection_cycle_pipeline(*, sync_sheets: bool = True, project_root: Pat
                     registry_frame=published_registry,
                     registry_output_path=registry_output_path,
                 )
-            coverage_summary = build_coverage_report_pipeline(
-                project_root,
-                source_registry_frame=published_registry,
-            )
+            coverage_summary = build_coverage_report_pipeline(project_root)
             promotion_allowed = not (
                 collection_mode in {"bootstrap", "bootstrap_resume"}
                 and not bool(collection_summary.get("completed_full_source_scan", False))
@@ -1291,7 +1550,7 @@ def run_collection_cycle_pipeline(*, sync_sheets: bool = True, project_root: Pat
                     quality_gate_reasons=list(collection_summary.get("quality_gate_reasons", [])),
                 )
             else:
-                promote_summary = promote_staging_pipeline(project_root, registry_frame=published_registry)
+                promote_summary = promote_staging_pipeline(project_root)
         else:
             collection_summary = _skipped_collection_summary(paths, collection_ready_reason)
             coverage_summary = {"skipped": True, "reason": collection_ready_reason}
@@ -1371,39 +1630,16 @@ def run_daily_tracking_pipeline(*, sync_sheets: bool = True, project_root: Path 
     started_at = _now()
     run_id = _run_id("run-daily-tracking")
     try:
-        partial_state = _load_partial_company_scan_state(paths)
-        using_in_progress_registry = bool(partial_state["using_in_progress_registry"])
-        registry_frame = (
-            partial_state["registry"]
-            if using_in_progress_registry
-            else read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
-        )
-        registry_output_path = (
-            Path(partial_state["registry_output_path"])
-            if using_in_progress_registry
-            else paths.source_registry_path
-        )
-        collection_ready = not registry_frame.empty
-        if using_in_progress_registry:
-            collection_ready_reason = (
-                "reuse_in_progress_source_registry_during_partial_company_scan"
-                if collection_ready
-                else "in_progress_source_registry_unavailable_during_partial_company_scan"
-            )
-        else:
-            collection_ready_reason = "published_source_registry" if collection_ready else "published_source_registry_unavailable"
+        published_registry = read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
+        collection_ready = not published_registry.empty
+        collection_ready_reason = "published_source_registry" if collection_ready else "published_source_registry_unavailable"
 
         if collection_ready:
             collection_summary = update_incremental_pipeline(
                 project_root,
                 allow_source_discovery_fallback=False,
-                registry_frame=registry_frame,
-                registry_output_path=registry_output_path,
             )
-            coverage_summary = build_coverage_report_pipeline(
-                project_root,
-                source_registry_frame=registry_frame,
-            )
+            coverage_summary = build_coverage_report_pipeline(project_root)
         else:
             collection_summary = _skipped_collection_summary(paths, collection_ready_reason)
             coverage_summary = {"skipped": True, "reason": collection_ready_reason}
@@ -1426,7 +1662,7 @@ def run_daily_tracking_pipeline(*, sync_sheets: bool = True, project_root: Path 
                 quality_gate_reasons=list(collection_summary.get("quality_gate_reasons", [])),
             )
         else:
-            promote_summary = promote_staging_pipeline(project_root, registry_frame=registry_frame)
+            promote_summary = promote_staging_pipeline(project_root)
             promotion_allowed = bool(promote_summary.get("quality_gate_passed", False)) and int(
                 promote_summary.get("promoted_job_count", 0)
             ) > 0
@@ -1467,7 +1703,7 @@ def run_daily_tracking_pipeline(*, sync_sheets: bool = True, project_root: Path 
             "checklist": checklist,
             "automation_ready": all(checklist.values()),
             "published_state": {
-                "published_company_state": not using_in_progress_registry,
+                "published_company_state": True,
                 "published_source_registry_ready": bool(collection_ready),
                 "collection_ready": bool(collection_ready),
                 "collection_ready_reason": collection_ready_reason,
@@ -1488,35 +1724,18 @@ def run_daily_tracking_pipeline(*, sync_sheets: bool = True, project_root: Path 
         raise
 
 
-def promote_staging_pipeline(
-    project_root: Path | None = None,
-    *,
-    registry_frame: pd.DataFrame | None = None,
-) -> dict:
+def promote_staging_pipeline(project_root: Path | None = None) -> dict:
     paths = get_paths(project_root)
     settings = get_settings(project_root)
     started_at = _now()
     run_id = _run_id("promote-staging")
     try:
         staging = read_csv_or_empty(paths.staging_jobs_path, JOB_COLUMNS)
-        staging_count_before_role_refresh = int(len(staging))
-        staging = refresh_job_roles(staging)
-        role_refresh_dropped_job_count = max(staging_count_before_role_refresh - int(len(staging)), 0)
         filtered_staging, dropped_jobs = filter_low_quality_jobs(staging, settings=settings, paths=paths)
-        registry = (
-            registry_frame.copy()
-            if registry_frame is not None
-            else read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
-        )
+        registry = read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
         gate = evaluate_quality_gate(filtered_staging, registry, settings=settings, paths=paths, already_filtered=True)
         write_csv(filtered_staging, paths.staging_jobs_path)
         shrink_guard = _evaluate_publish_shrink_guard(filtered_staging, paths)
-        published_master, preservation = _merge_published_master(
-            filtered_staging,
-            paths,
-            run_id=run_id,
-            snapshot_date=_today(),
-        )
         if shrink_guard["triggered"]:
             gate = gate.model_copy(
                 update={
@@ -1525,7 +1744,6 @@ def promote_staging_pipeline(
                     "metrics": {
                         **gate.metrics,
                         "publish_shrink_guard": shrink_guard,
-                        "publish_preservation": preservation,
                     },
                 }
             )
@@ -1535,7 +1753,6 @@ def promote_staging_pipeline(
                     "metrics": {
                         **gate.metrics,
                         "publish_shrink_guard": shrink_guard,
-                        "publish_preservation": preservation,
                     },
                 }
             )
@@ -1543,23 +1760,13 @@ def promote_staging_pipeline(
         summary = {
             "quality_gate_passed": gate.passed,
             "quality_gate_reasons": gate.reasons,
-            "role_refresh_dropped_job_count": role_refresh_dropped_job_count,
             "dropped_low_quality_job_count": int(len(dropped_jobs)),
             "publish_shrink_guard_triggered": bool(shrink_guard["triggered"]),
             "publish_shrink_guard_reason": str(shrink_guard["reason"]),
-            "publish_preservation_applied": bool(preservation["applied"]),
-            "previous_master_raw_count": int(preservation["previous_master_raw_count"]),
-            "previous_master_count": int(preservation["previous_master_count"]),
-            "previous_master_invalid_role_drop_count": int(preservation["previous_master_invalid_role_drop_count"]),
-            "previous_master_low_quality_drop_count": int(preservation["previous_master_low_quality_drop_count"]),
-            "candidate_master_count": int(preservation["candidate_master_count"]),
-            "published_master_count": int(preservation["published_master_count"]),
-            "retained_previous_job_count": int(preservation["retained_previous_job_count"]),
-            "retained_active_previous_job_count": int(preservation["retained_active_previous_job_count"]),
         }
         if gate.passed:
-            write_csv(published_master, paths.master_jobs_path)
-            summary["promoted_job_count"] = int(len(published_master))
+            write_csv(filtered_staging, paths.master_jobs_path)
+            summary["promoted_job_count"] = int(len(filtered_staging))
         else:
             summary["promoted_job_count"] = 0
         _record_run(paths, "promote-staging", run_id, started_at, summary, status="성공" if gate.passed else "보류")
@@ -1593,21 +1800,13 @@ def quarantine_bad_sources_pipeline(project_root: Path | None = None) -> dict:
         raise
 
 
-def build_coverage_report_pipeline(
-    project_root: Path | None = None,
-    *,
-    source_registry_frame: pd.DataFrame | None = None,
-) -> dict:
+def build_coverage_report_pipeline(project_root: Path | None = None) -> dict:
     paths = get_paths(project_root)
     started_at = _now()
     run_id = _run_id("build-coverage-report")
     try:
         companies = read_csv_or_empty(paths.companies_registry_path)
-        source_registry = (
-            source_registry_frame.copy()
-            if source_registry_frame is not None
-            else read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
-        )
+        source_registry = read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
         jobs = read_csv_or_empty(paths.staging_jobs_path, JOB_COLUMNS)
         discover_summary = _latest_run_summary(paths, "discover-companies")
         report = build_coverage_report(

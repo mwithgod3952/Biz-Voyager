@@ -102,6 +102,274 @@ WORK24_REGIONAL_LOCATION_RE = re.compile(
 WORK24_PUBLIC_RESEARCH_COMPANY_RE = re.compile(
     r"대학교|과학기술원|고등과학원|산학협력단|연구원|연구소|재단법인|공사|공단|진흥원|테크노파크"
 )
+WORK24_POPULATION_QUERY_ROLE_FAMILIES: dict[str, tuple[str, ...]] = {
+    "데이터 분석가": (
+        "데이터 분석가",
+        "데이터 분석",
+        "통계분석",
+        "BI",
+        "SQL",
+        "대시보드",
+        "데이터 시각화",
+        "예측분석",
+    ),
+    "데이터 사이언티스트": (
+        "데이터 사이언티스트",
+        "데이터사이언티스트",
+        "데이터사이언스",
+        "머신러닝",
+        "딥러닝",
+        "예측모델",
+        "추천모델",
+        "ML",
+    ),
+    "인공지능 리서처": (
+        "인공지능 연구원",
+        "AI 연구원",
+        "AI 리서처",
+        "인공지능 리서처",
+        "Research Scientist",
+        "딥러닝 연구",
+        "머신러닝 연구",
+    ),
+    "인공지능 엔지니어": (
+        "AI 엔지니어",
+        "인공지능 엔지니어",
+        "ML 엔지니어",
+        "MLOps",
+        "LLM",
+        "RAG",
+        "생성형AI",
+        "AI 서비스",
+        "AI 플랫폼",
+        "데이터 엔지니어",
+        "데이터 파이프라인",
+    ),
+}
+WORK24_POPULATION_HARD_NON_TARGET_TITLE_PHRASES = (
+    "마케팅",
+    "브랜딩",
+    "영업",
+    "세일즈",
+    "컨설턴트",
+    "사무",
+    "행정",
+    "고객응대",
+    "cs",
+    "회계",
+    "경리",
+    "재무",
+    "세무",
+    "총무",
+    "인사",
+    "디자이너",
+    "디자인",
+    "qa",
+    "품질",
+    "안전관리",
+    "관제",
+    "pm",
+    "project manager",
+    "기획",
+    "운영지원",
+    "교수",
+    "훈련교사",
+    "교사",
+    "기술영업",
+    "서비스 제공인력",
+    "냉동공조",
+    "하드웨어 전문가",
+    "hardware expert",
+)
+WORK24_POPULATION_AI_SPECIALIST_PHRASES = (
+    "ai",
+    "인공지능",
+    "machine learning",
+    "ml",
+    "딥러닝",
+    "머신러닝",
+    "llm",
+    "rag",
+    "agentic ai",
+    "computer vision",
+    "vision",
+    "비전",
+    "알고리즘",
+    "algorithm",
+    "model",
+    "모델",
+    "robot",
+    "robotics",
+    "로봇",
+    "ros",
+    "rpa",
+    "컴퓨터 비전",
+    "자율주행",
+)
+WORK24_POPULATION_AI_STRONG_SPECIALIST_PHRASES = (
+    "machine learning",
+    "ml",
+    "딥러닝",
+    "머신러닝",
+    "llm",
+    "rag",
+    "agentic ai",
+    "computer vision",
+    "vision",
+    "비전",
+    "알고리즘",
+    "algorithm",
+    "model",
+    "모델",
+    "robot",
+    "robotics",
+    "로봇",
+    "ros",
+    "rpa",
+    "컴퓨터 비전",
+    "자율주행",
+)
+WORK24_POPULATION_AI_DELIVERY_PHRASES = (
+    "개발",
+    "개발자",
+    "엔지니어",
+    "software",
+    "소프트웨어",
+    "sw",
+    "시스템",
+    "system",
+    "플랫폼",
+    "platform",
+    "java",
+    "python",
+    "c++",
+    "앱개발",
+    "앱 개발",
+    "program",
+    "프로그램",
+    "펌웨어",
+    "서비스개발",
+    "서비스 개발",
+    "구현",
+    "설계",
+)
+WORK24_POPULATION_AI_RESEARCHER_EXPLICIT_TITLE_PHRASES = (
+    "ai 연구원",
+    "ai연구원",
+    "인공지능 연구원",
+    "ai 리서처",
+    "인공지능 리서처",
+    "ai 펠로우",
+    "인공지능 펠로우",
+)
+WORK24_POPULATION_AI_ENGINEER_RESCUE_TITLE_PHRASES = (
+    "ai 서비스 개발자",
+    "인공지능 모델 개발",
+    "인공지능 응용 서비스 기획 및 개발",
+    "rpa 및 agentic ai 전문가",
+    "agentic ai 전문가",
+)
+WORK24_POPULATION_STRONG_TARGET_BLANK_EXCLUSION_TITLE_PHRASES = (
+    "매니저",
+    "manager",
+    "센터 운영",
+    "운영 매니저",
+    "robot sw 엔지니어",
+    "robotics sw engineer",
+    "ros기반 robot sw 엔지니어",
+)
+WORK24_POPULATION_GENERIC_DEV_STACK_PHRASES = (
+    "web developer",
+    "웹개발자",
+    "웹 개발자",
+    "frontend",
+    "프론트엔드",
+    "backend",
+    "백엔드",
+    "ui",
+    "ux",
+    "ui ux",
+    "ux ui",
+    "fullstack",
+    "full stack",
+    "풀스택",
+    "보안엔지니어",
+    "security",
+)
+WORK24_POPULATION_RESEARCH_TITLE_PHRASES = (
+    "연구원",
+    "선임연구원",
+    "책임연구원",
+    "researcher",
+    "scientist",
+    "research scientist",
+    "연구개발",
+    "r&d",
+    "펠로우",
+    "fellow",
+)
+WORK24_POPULATION_ANALYST_SIGNAL_PHRASES = (
+    "데이터 분석가",
+    "데이터분석가",
+    "데이터 분석",
+    "데이터분석",
+    "통계분석",
+    "빅데이터",
+    "sql",
+    "bi",
+    "대시보드",
+    "시각화",
+    "예측분석",
+    "analytics",
+    "analyst",
+)
+WORK24_POPULATION_ANALYST_TITLE_PHRASES = (
+    "분석가",
+    "분석",
+    "애널리스트",
+    "analytics",
+    "analyst",
+    "통계",
+)
+WORK24_POPULATION_ANALYST_EXCLUSION_PHRASES = (
+    "대기질",
+    "환경",
+    "원가",
+    "품질",
+    "재무",
+    "회계",
+    "세무",
+    "마케팅",
+    "영업",
+    "생산",
+    "물류",
+    "실험보조",
+    "경영지원",
+    "자가측정",
+)
+WORK24_POPULATION_SCIENTIST_SIGNAL_PHRASES = (
+    "데이터 사이언티스트",
+    "데이터사이언티스트",
+    "데이터사이언스",
+    "data science",
+    "data scientist",
+    "applied scientist",
+    "머신러닝",
+    "딥러닝",
+    "예측모델",
+    "추천모델",
+    "모델 개발",
+    "모델링",
+    "computer vision",
+    "컴퓨터 비전",
+)
+WORK24_POPULATION_SCIENTIST_ROLE_PHRASES = (
+    "scientist",
+    "연구원",
+    "엔지니어",
+    "개발자",
+    "모델",
+)
 
 HIRING_URL_HINTS = (
     "career",
@@ -642,6 +910,238 @@ def _work24_population_query_int(source_url: str, key: str, default: int, *, min
     return max(min(parsed, maximum), minimum)
 
 
+def _work24_population_query_terms(source_url: str) -> list[str]:
+    keyword = _work24_population_query_value(source_url, "srcKeyword") or _work24_population_query_value(source_url, "keyword")
+    seen: set[str] = set()
+    terms: list[str] = []
+    for raw_term in keyword.split("|"):
+        term = normalize_whitespace(raw_term)
+        if not term or term in seen:
+            continue
+        seen.add(term)
+        terms.append(term)
+    return terms
+
+
+def _work24_population_variant_sources(source_url: str, settings) -> list[tuple[str, str]]:
+    normalized_source_url = normalize_whitespace(source_url)
+    terms = _work24_population_query_terms(normalized_source_url)
+    if len(terms) <= 1:
+        return [(normalized_source_url, terms[0] if terms else "")]
+
+    max_terms = max(
+        1,
+        int(getattr(settings, "work24_population_keyword_fanout_max_terms", len(terms)) or len(terms)),
+    )
+    original_page_limit = _work24_population_query_int(normalized_source_url, "pageLimit", 5, minimum=1, maximum=50)
+    original_scan_depth = _work24_population_query_int(
+        normalized_source_url,
+        "scanDepth",
+        original_page_limit,
+        minimum=1,
+        maximum=1000,
+    )
+    max_pages_per_source = max(
+        1,
+        int(getattr(settings, "work24_population_max_pages_per_source", original_scan_depth) or original_scan_depth),
+    )
+    per_term_pages = max(
+        1,
+        int(
+            getattr(
+                settings,
+                "work24_population_keyword_fanout_max_pages_per_term",
+                original_scan_depth,
+            )
+            or original_scan_depth
+        ),
+    )
+    per_term_pages = min(per_term_pages, original_scan_depth, max_pages_per_source)
+    parsed = urlparse(normalized_source_url)
+    original_query = parse_qs(parsed.query, keep_blank_values=True)
+
+    variants: list[tuple[str, str]] = []
+    for term in terms[:max_terms]:
+        query = {key: list(values) for key, values in original_query.items()}
+        query["srcKeyword"] = [term]
+        query["keyword"] = [term]
+        query["scanDepth"] = [str(per_term_pages)]
+        query["pageLimit"] = [str(per_term_pages)]
+        variant_url = parsed._replace(query=urlencode(query, doseq=True)).geturl()
+        variants.append((variant_url, term))
+    return variants
+
+
+def _work24_population_query_role_family(query: str) -> str:
+    normalized_query = normalize_whitespace(query)
+    if not normalized_query:
+        return ""
+    for role, phrases in WORK24_POPULATION_QUERY_ROLE_FAMILIES.items():
+        if normalized_query in phrases:
+            return role
+    return ""
+
+
+def _work24_population_role_signals(source_record: dict, job: dict) -> dict[str, object]:
+    from .collection import _has_any_phrase, _has_attached_phrase, _normalize_role_text
+
+    query = normalize_whitespace(job.get("work24_population_query")) or _work24_population_query_value(
+        normalize_whitespace(source_record.get("source_url")),
+        "srcKeyword",
+    )
+    query_role = _work24_population_query_role_family(query)
+    title = normalize_whitespace(job.get("title") or job.get("job_title_raw") or "")
+    listing_context = normalize_whitespace(job.get("listing_context"))
+    company_name = normalize_whitespace(
+        job.get("company_name_hint")
+        or job.get("company_name")
+        or job.get("company")
+        or ""
+    )
+    title_corpus = _normalize_role_text(title)
+    title_body_corpus = _normalize_role_text(" ".join(value for value in (title, listing_context) if value))
+    evidence_corpus = _normalize_role_text(" ".join(value for value in (title, listing_context, company_name) if value))
+    has_ai_delivery = _has_attached_phrase(title_body_corpus, WORK24_POPULATION_AI_DELIVERY_PHRASES)
+    has_planning_and_development = _has_attached_phrase(title_body_corpus, ("기획 및 개발", "기획·개발", "기획/개발"))
+    has_hard_non_target_title = _has_attached_phrase(title_corpus, WORK24_POPULATION_HARD_NON_TARGET_TITLE_PHRASES)
+    if has_planning_and_development:
+        has_hard_non_target_title = False
+    return {
+        "query": query,
+        "query_role": query_role,
+        "title": title,
+        "listing_context": listing_context,
+        "company_name": company_name,
+        "title_corpus": title_corpus,
+        "title_body_corpus": title_body_corpus,
+        "evidence_corpus": evidence_corpus,
+        "has_hard_non_target_title": has_hard_non_target_title,
+        "has_ai_signal": _has_any_phrase(evidence_corpus, WORK24_POPULATION_AI_SPECIALIST_PHRASES),
+        "has_strong_ai_signal": _has_any_phrase(evidence_corpus, WORK24_POPULATION_AI_STRONG_SPECIALIST_PHRASES),
+        "has_ai_delivery": has_ai_delivery,
+        "has_research_title": _has_any_phrase(title_body_corpus, WORK24_POPULATION_RESEARCH_TITLE_PHRASES),
+        "has_generic_dev_stack": _has_any_phrase(title_body_corpus, WORK24_POPULATION_GENERIC_DEV_STACK_PHRASES),
+        "has_blank_role_exclusion_title": _has_any_phrase(
+            title_corpus,
+            WORK24_POPULATION_STRONG_TARGET_BLANK_EXCLUSION_TITLE_PHRASES,
+        ),
+        "has_explicit_ai_researcher_title": _has_attached_phrase(
+            title_body_corpus,
+            WORK24_POPULATION_AI_RESEARCHER_EXPLICIT_TITLE_PHRASES,
+        ),
+        "has_explicit_ai_engineer_rescue_title": _has_attached_phrase(
+            title_body_corpus,
+            WORK24_POPULATION_AI_ENGINEER_RESCUE_TITLE_PHRASES,
+        ),
+        "has_planning_and_development": has_planning_and_development,
+        "has_analyst_signal": _has_attached_phrase(evidence_corpus, WORK24_POPULATION_ANALYST_SIGNAL_PHRASES),
+        "has_analyst_title": _has_attached_phrase(title_corpus, WORK24_POPULATION_ANALYST_TITLE_PHRASES),
+        "has_analyst_exclusion": _has_any_phrase(evidence_corpus, WORK24_POPULATION_ANALYST_EXCLUSION_PHRASES),
+        "has_scientist_signal": _has_any_phrase(evidence_corpus, WORK24_POPULATION_SCIENTIST_SIGNAL_PHRASES),
+        "has_scientist_role": _has_any_phrase(title_body_corpus, WORK24_POPULATION_SCIENTIST_ROLE_PHRASES),
+    }
+
+
+def _work24_population_role_violation_reason(signals: dict[str, object], role: str) -> str:
+    normalized_role = normalize_whitespace(role)
+    if normalized_role not in ALLOWED_JOB_ROLES:
+        return ""
+
+    if bool(signals["has_hard_non_target_title"]):
+        return "hard_non_target_title"
+
+    if normalized_role == "인공지능 엔지니어":
+        if bool(signals["has_research_title"]) and not bool(signals["has_strong_ai_signal"]):
+            return "research_without_strong_ai"
+        if (
+            bool(signals["has_generic_dev_stack"])
+            and not bool(signals["has_strong_ai_signal"])
+            and not bool(signals["has_explicit_ai_engineer_rescue_title"])
+        ):
+            return "generic_dev_without_strong_ai"
+        if not bool(signals["has_ai_signal"]):
+            return "missing_explicit_ai_signal"
+        return ""
+
+    if normalized_role == "인공지능 리서처":
+        if not (bool(signals["has_ai_signal"]) and bool(signals["has_research_title"])):
+            return "researcher_missing_ai_or_research_signal"
+        return ""
+
+    if normalized_role == "데이터 분석가":
+        if not bool(signals["has_analyst_signal"]) or bool(signals["has_analyst_exclusion"]):
+            return "analyst_signal_missing_or_excluded"
+        return ""
+
+    if normalized_role == "데이터 사이언티스트":
+        if not bool(signals["has_scientist_signal"]):
+            return "scientist_signal_missing"
+        return ""
+
+    return ""
+
+
+def _work24_population_salvage_role(source_record: dict, job: dict) -> str:
+    signals = _work24_population_role_signals(source_record, job)
+    query_role = str(signals["query_role"])
+    if not query_role:
+        return ""
+
+    if query_role == "인공지능 엔지니어":
+        if bool(signals["has_ai_signal"]) and bool(signals["has_explicit_ai_researcher_title"]):
+            return "인공지능 리서처"
+        if bool(signals["has_ai_signal"]) and bool(signals["has_explicit_ai_engineer_rescue_title"]):
+            return "인공지능 엔지니어"
+        if bool(signals["has_ai_signal"]) and bool(signals["has_ai_delivery"]):
+            return "인공지능 엔지니어"
+        return ""
+
+    if query_role == "인공지능 리서처":
+        if bool(signals["has_ai_signal"]) and (
+            bool(signals["has_research_title"]) or bool(signals["has_explicit_ai_researcher_title"])
+        ):
+            return "인공지능 리서처"
+        return ""
+
+    if query_role == "데이터 분석가":
+        if bool(signals["has_analyst_signal"]) and bool(signals["has_analyst_title"]) and not bool(
+            signals["has_analyst_exclusion"]
+        ):
+            return "데이터 분석가"
+        return ""
+
+    if query_role == "데이터 사이언티스트":
+        if bool(signals["has_scientist_signal"]) and bool(signals["has_scientist_role"]):
+            return "데이터 사이언티스트"
+        return ""
+
+    return ""
+
+
+def _work24_population_normalize_role(source_record: dict, job: dict, role: str) -> str:
+    normalized_role = normalize_whitespace(role)
+    if normalized_role not in ALLOWED_JOB_ROLES:
+        return normalized_role
+    signals = _work24_population_role_signals(source_record, job)
+    normalized_candidate_role = normalized_role
+
+    if normalized_role == "인공지능 엔지니어":
+        if bool(signals["has_ai_signal"]) and bool(signals["has_explicit_ai_researcher_title"]):
+            normalized_candidate_role = "인공지능 리서처"
+        else:
+            normalized_candidate_role = normalized_role
+    elif normalized_role == "데이터 분석가":
+        if str(signals["query_role"]) == "인공지능 엔지니어" and bool(signals["has_ai_signal"]) and bool(
+            signals["has_ai_delivery"]
+        ):
+            normalized_candidate_role = "인공지능 엔지니어"
+
+    violation_reason = _work24_population_role_violation_reason(signals, normalized_candidate_role)
+    if violation_reason:
+        return ""
+    return normalized_candidate_role
+
+
 def _work24_population_role_hint(source_record: dict, job: dict) -> str:
     target_hint = normalize_whitespace(job.get("work24_llm_target_hint")).lower()
     if target_hint == "false":
@@ -656,10 +1156,11 @@ def _work24_population_role_hint(source_record: dict, job: dict) -> str:
         normalize_whitespace(job.get("requirements")),
     )
     if role in ALLOWED_JOB_ROLES:
-        return role
+        return _work24_population_normalize_role(source_record, job, role)
     if suggested_role in ALLOWED_JOB_ROLES:
-        return suggested_role
-    return ""
+        return _work24_population_normalize_role(source_record, job, suggested_role)
+    salvaged_role = _work24_population_salvage_role(source_record, job)
+    return _work24_population_normalize_role(source_record, job, salvaged_role)
 
 
 def _track_work24_population_listings_with_llm(listings: list[dict], settings, paths=None) -> list[dict]:
@@ -702,90 +1203,93 @@ def _fetch_work24_population_source_jobs(source_url: str, settings, paths=None, 
         _work24_public_auth_no,
     )
 
-    requested_scan_depth = _work24_population_query_int(
-        source_url,
-        "scanDepth",
-        int(getattr(settings, "work24_population_max_pages_per_source", 200) or 200),
-        minimum=1,
-        maximum=1000,
-    )
-    max_pages_per_source = max(1, int(getattr(settings, "work24_population_max_pages_per_source", 200) or 200))
-    max_pages = min(requested_scan_depth, max_pages_per_source)
-    empty_page_stop_count = max(1, int(getattr(settings, "work24_population_empty_page_stop_count", 1) or 1))
-    stale_page_stop_count = max(1, int(getattr(settings, "work24_population_stale_page_stop_count", 2) or 2))
-    delay_seconds = max(0.0, float(getattr(settings, "work24_population_page_delay_seconds", 0.0) or 0.0))
-    population_query = _work24_population_query_value(source_url, "srcKeyword") or _work24_population_query_value(source_url, "keyword")
     scanned_at = datetime.now(timezone.utc).isoformat()
 
     jobs: list[dict] = []
     seen_keys: set[str] = set()
     scan_log_rows: list[dict] = []
-    empty_pages = 0
-    stale_pages = 0
-    for page in range(1, max_pages + 1):
-        form_data = _build_work24_public_search_form(source_url, page)
-        list_html = _fetch_work24_public_html(_WORK24_PUBLIC_SEARCH_POST_URL, settings, data=form_data)
-        listings = _parse_work24_public_list_jobs(list_html, base_url=_WORK24_PUBLIC_SEARCH_BASE_URL)
-        page_new_count = 0
-        stopped_reason = ""
-        if not listings:
-            empty_pages += 1
-            stale_pages = 0
-            if empty_pages >= empty_page_stop_count:
-                stopped_reason = "empty_page_stop"
+    empty_page_stop_count = max(1, int(getattr(settings, "work24_population_empty_page_stop_count", 1) or 1))
+    stale_page_stop_count = max(1, int(getattr(settings, "work24_population_stale_page_stop_count", 2) or 2))
+    delay_seconds = max(0.0, float(getattr(settings, "work24_population_page_delay_seconds", 0.0) or 0.0))
+    max_pages_per_source = max(1, int(getattr(settings, "work24_population_max_pages_per_source", 200) or 200))
+
+    for variant_source_url, population_query in _work24_population_variant_sources(source_url, settings):
+        requested_scan_depth = _work24_population_query_int(
+            variant_source_url,
+            "scanDepth",
+            max_pages_per_source,
+            minimum=1,
+            maximum=1000,
+        )
+        max_pages = min(requested_scan_depth, max_pages_per_source)
+        empty_pages = 0
+        stale_pages = 0
+        for page in range(1, max_pages + 1):
+            form_data = _build_work24_public_search_form(variant_source_url, page)
+            list_html = _fetch_work24_public_html(_WORK24_PUBLIC_SEARCH_POST_URL, settings, data=form_data)
+            listings = _parse_work24_public_list_jobs(list_html, base_url=_WORK24_PUBLIC_SEARCH_BASE_URL)
+            page_new_count = 0
+            stopped_reason = ""
+            if not listings:
+                empty_pages += 1
+                stale_pages = 0
+                if empty_pages >= empty_page_stop_count:
+                    stopped_reason = "empty_page_stop"
+                scan_log_rows.append(
+                    {
+                        "scanned_at": scanned_at,
+                        "population_source_name": normalize_whitespace(source_name),
+                        "population_source_url": variant_source_url,
+                        "population_query": population_query,
+                        "page": page,
+                        "listing_count": 0,
+                        "new_listing_count": 0,
+                        "cumulative_unique_job_count": len(jobs),
+                        "stopped_reason": stopped_reason,
+                    }
+                )
+                if empty_pages >= empty_page_stop_count:
+                    break
+                continue
+            empty_pages = 0
+            for listing in listings:
+                auth_no = _work24_public_auth_no(listing)
+                key = auth_no or normalize_whitespace(listing.get("job_url"))
+                if not key or key in seen_keys:
+                    continue
+                seen_keys.add(key)
+                listing = listing.copy()
+                listing["work24_public_page"] = str(page)
+                listing["work24_public_tracking_signal"] = "new"
+                listing["work24_population_query"] = population_query
+                listing["work24_population_source_url"] = variant_source_url
+                jobs.append(listing)
+                page_new_count += 1
+            if page_new_count == 0:
+                stale_pages += 1
+                if stale_pages >= stale_page_stop_count:
+                    stopped_reason = "stale_page_stop"
+            else:
+                stale_pages = 0
+            if page >= max_pages and not stopped_reason:
+                stopped_reason = "max_page_safety_cap"
             scan_log_rows.append(
                 {
                     "scanned_at": scanned_at,
                     "population_source_name": normalize_whitespace(source_name),
-                    "population_source_url": source_url,
+                    "population_source_url": variant_source_url,
                     "population_query": population_query,
                     "page": page,
-                    "listing_count": 0,
-                    "new_listing_count": 0,
+                    "listing_count": len(listings),
+                    "new_listing_count": page_new_count,
                     "cumulative_unique_job_count": len(jobs),
                     "stopped_reason": stopped_reason,
                 }
             )
-            if empty_pages >= empty_page_stop_count:
+            if stopped_reason:
                 break
-            continue
-        empty_pages = 0
-        for listing in listings:
-            auth_no = _work24_public_auth_no(listing)
-            key = auth_no or normalize_whitespace(listing.get("job_url"))
-            if not key or key in seen_keys:
-                continue
-            seen_keys.add(key)
-            listing = listing.copy()
-            listing["work24_public_page"] = str(page)
-            listing["work24_public_tracking_signal"] = "new"
-            jobs.append(listing)
-            page_new_count += 1
-        if page_new_count == 0:
-            stale_pages += 1
-            if stale_pages >= stale_page_stop_count:
-                stopped_reason = "stale_page_stop"
-        else:
-            stale_pages = 0
-        if page >= max_pages and not stopped_reason:
-            stopped_reason = "max_page_safety_cap"
-        scan_log_rows.append(
-            {
-                "scanned_at": scanned_at,
-                "population_source_name": normalize_whitespace(source_name),
-                "population_source_url": source_url,
-                "population_query": population_query,
-                "page": page,
-                "listing_count": len(listings),
-                "new_listing_count": page_new_count,
-                "cumulative_unique_job_count": len(jobs),
-                "stopped_reason": stopped_reason,
-            }
-        )
-        if stopped_reason:
-            break
-        if delay_seconds and page < max_pages:
-            time.sleep(delay_seconds)
+            if delay_seconds and page < max_pages:
+                time.sleep(delay_seconds)
     _append_work24_population_scan_log(paths, scan_log_rows)
     return _track_work24_population_listings_with_llm(jobs, settings, paths=paths)
 
@@ -793,8 +1297,8 @@ def _fetch_work24_population_source_jobs(source_url: str, settings, paths=None, 
 def _work24_population_job_row(source_record: dict, job: dict) -> dict:
     from .collection import _work24_public_auth_no
 
-    source_url = normalize_whitespace(source_record.get("source_url"))
-    population_query = _work24_population_query_value(source_url, "srcKeyword") or _work24_population_query_value(source_url, "keyword")
+    source_url = normalize_whitespace(job.get("work24_population_source_url") or source_record.get("source_url"))
+    population_query = normalize_whitespace(job.get("work24_population_query")) or _work24_population_query_value(source_url, "srcKeyword") or _work24_population_query_value(source_url, "keyword")
     auth_no = _work24_public_auth_no(job)
     company_name = normalize_whitespace(
         job.get("company_name_hint")
@@ -842,6 +1346,8 @@ def _work24_population_refresh_job_row(record: dict) -> dict:
         "work24_llm_reason": normalize_whitespace(record.get("work24_llm_reason")),
         "experience_level": normalize_whitespace(record.get("experience_level")),
         "work24_public_page": normalize_whitespace(record.get("population_page")),
+        "work24_population_query": normalize_whitespace(record.get("population_query")),
+        "work24_population_source_url": normalize_whitespace(record.get("population_source_url")),
     }
     return _work24_population_job_row(source_record, job)
 
@@ -1048,6 +1554,157 @@ def _work24_population_shadow_company_rows(job_frame: pd.DataFrame, company_fram
         ascending=[False, False, True],
     ).drop(columns=["_promoted_sort"])
     return frame[list(WORK24_POPULATION_SHADOW_COMPANY_COLUMNS)].reset_index(drop=True)
+
+
+def _work24_population_audit_sample(record: dict, violation_reason: str, *, is_candidate: bool) -> dict[str, str]:
+    return {
+        "company_name": normalize_whitespace(record.get("company_name")),
+        "title": normalize_whitespace(record.get("title")),
+        "population_query": normalize_whitespace(record.get("population_query")),
+        "population_role_hint": normalize_whitespace(record.get("population_role_hint")),
+        "job_url": normalize_whitespace(record.get("job_url")),
+        "violation_reason": violation_reason,
+        "candidate_noise": "true" if is_candidate else "false",
+    }
+
+
+def _work24_population_strong_target_blank_role(source_record: dict, job: dict) -> str:
+    signals = _work24_population_role_signals(source_record, job)
+    query_role = str(signals["query_role"])
+
+    if query_role == "인공지능 엔지니어":
+        if bool(signals["has_blank_role_exclusion_title"]):
+            return ""
+        if bool(signals["has_ai_signal"]) and bool(signals["has_explicit_ai_researcher_title"]):
+            return "인공지능 리서처"
+        if bool(signals["has_ai_signal"]) and bool(signals["has_explicit_ai_engineer_rescue_title"]):
+            return "인공지능 엔지니어"
+        if bool(signals["has_generic_dev_stack"]) and not bool(signals["has_explicit_ai_engineer_rescue_title"]):
+            return ""
+        if bool(signals["has_ai_signal"]) and bool(signals["has_ai_delivery"]) and not bool(
+            signals["has_hard_non_target_title"]
+        ):
+            return "인공지능 엔지니어"
+        return ""
+
+    if query_role == "인공지능 리서처":
+        if bool(signals["has_ai_signal"]) and (
+            bool(signals["has_research_title"]) or bool(signals["has_explicit_ai_researcher_title"])
+        ) and not bool(signals["has_hard_non_target_title"]):
+            return "인공지능 리서처"
+        return ""
+
+    if query_role == "데이터 분석가":
+        if bool(signals["has_analyst_signal"]) and bool(signals["has_analyst_title"]) and not bool(
+            signals["has_analyst_exclusion"]
+        ):
+            return "데이터 분석가"
+        return ""
+
+    if query_role == "데이터 사이언티스트":
+        if bool(signals["has_scientist_signal"]) and bool(signals["has_scientist_role"]) and not bool(
+            signals["has_hard_non_target_title"]
+        ):
+            return "데이터 사이언티스트"
+        return ""
+
+    return ""
+
+
+def audit_work24_population(paths) -> dict[str, object]:
+    jobs_path = getattr(paths, "work24_population_jobs_path", None)
+    candidates_path = getattr(paths, "work24_population_candidates_path", None)
+    audit_path = getattr(paths, "work24_population_audit_path", None)
+
+    jobs = read_csv_or_empty(jobs_path, WORK24_POPULATION_JOB_COLUMNS) if jobs_path else pd.DataFrame()
+    candidates = read_csv_or_empty(candidates_path, IMPORT_COMPANY_COLUMNS) if candidates_path else pd.DataFrame()
+    candidate_urls = (
+        set(candidates["candidate_seed_url"].fillna("").astype(str).map(normalize_whitespace))
+        if not candidates.empty and "candidate_seed_url" in candidates.columns
+        else set()
+    )
+
+    suspicious_samples: list[dict[str, str]] = []
+    candidate_noise_samples: list[dict[str, str]] = []
+    suspicious_count = 0
+    candidate_noise_count = 0
+    reason_counts: dict[str, int] = {}
+    role_hint_job_count = 0
+    role_counts: dict[str, int] = {}
+    strong_target_blank_count = 0
+    strong_target_blank_role_counts: dict[str, int] = {}
+    strong_target_blank_samples: list[dict[str, str]] = []
+
+    for record in jobs.fillna("").to_dict(orient="records"):
+        role_hint = normalize_whitespace(record.get("population_role_hint"))
+        source_record = {
+            "source_name": normalize_whitespace(record.get("population_source_name")),
+            "source_url": normalize_whitespace(record.get("population_source_url")),
+        }
+        job = {
+            "company_name_hint": normalize_whitespace(record.get("company_name")),
+            "company_name": normalize_whitespace(record.get("company_name")),
+            "title": normalize_whitespace(record.get("title")),
+            "job_url": normalize_whitespace(record.get("job_url")),
+            "worknet_wanted_auth_no": normalize_whitespace(record.get("worknet_wanted_auth_no")),
+            "listing_context": normalize_whitespace(record.get("listing_context")),
+            "work24_population_query": normalize_whitespace(record.get("population_query")),
+            "work24_population_source_url": normalize_whitespace(record.get("population_source_url")),
+        }
+        if not role_hint:
+            expected_role = _work24_population_strong_target_blank_role(source_record, job)
+            if expected_role:
+                strong_target_blank_count += 1
+                strong_target_blank_role_counts[expected_role] = int(
+                    strong_target_blank_role_counts.get(expected_role, 0)
+                ) + 1
+                if len(strong_target_blank_samples) < 10:
+                    sample = _work24_population_audit_sample(record, expected_role, is_candidate=False)
+                    sample["expected_role"] = expected_role
+                    strong_target_blank_samples.append(sample)
+            continue
+        role_hint_job_count += 1
+        role_counts[role_hint] = int(role_counts.get(role_hint, 0)) + 1
+        violation_reason = _work24_population_role_violation_reason(
+            _work24_population_role_signals(source_record, job),
+            role_hint,
+        )
+        if not violation_reason:
+            continue
+
+        suspicious_count += 1
+        reason_counts[violation_reason] = int(reason_counts.get(violation_reason, 0)) + 1
+        is_candidate = normalize_whitespace(record.get("job_url")) in candidate_urls
+        sample = _work24_population_audit_sample(record, violation_reason, is_candidate=is_candidate)
+        if len(suspicious_samples) < 10:
+            suspicious_samples.append(sample)
+        if is_candidate:
+            candidate_noise_count += 1
+            if len(candidate_noise_samples) < 10:
+                candidate_noise_samples.append(sample)
+
+    summary: dict[str, object] = {
+        "work24_population_job_count": int(len(jobs)),
+        "work24_population_candidate_count": int(len(candidates)),
+        "work24_population_role_hint_job_count": int(role_hint_job_count),
+        "work24_population_role_counts": {str(key): int(value) for key, value in role_counts.items()},
+        "work24_suspicious_positive_count": int(suspicious_count),
+        "work24_candidate_noise_count": int(candidate_noise_count),
+        "work24_strong_target_blank_count": int(strong_target_blank_count),
+        "work24_strong_target_blank_role_counts": {
+            str(key): int(value) for key, value in strong_target_blank_role_counts.items()
+        },
+        "work24_suspicious_positive_reason_counts": {str(key): int(value) for key, value in reason_counts.items()},
+        "work24_suspicious_positive_samples": suspicious_samples,
+        "work24_candidate_noise_samples": candidate_noise_samples,
+        "work24_strong_target_blank_samples": strong_target_blank_samples,
+        "work24_convergence_metric_name": "work24_suspicious_positive_count",
+        "work24_convergence_metric_value": int(suspicious_count),
+    }
+    if audit_path:
+        summary["work24_population_audit_artifact"] = str(audit_path)
+        audit_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    return summary
 
 
 def discover_work24_population(paths, settings=None) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, dict]:

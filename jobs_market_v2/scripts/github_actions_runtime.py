@@ -19,6 +19,7 @@ for candidate in (SRC_ROOT, PROJECT_ROOT):
 from jobs_market_v2.github_actions_runtime import (
     append_github_output,
     capture_cycle_status,
+    capture_work24_improvement_status,
     close_incident_issue,
     finalize_cycle,
     open_or_update_incident_issue,
@@ -44,6 +45,12 @@ def _build_parser() -> argparse.ArgumentParser:
     capture_status.add_argument("--status-path", required=True)
     capture_status.add_argument("--exit-code", required=True, type=int)
     capture_status.add_argument("--github-output")
+
+    capture_work24_status = subparsers.add_parser("capture-work24-improvement-status")
+    capture_work24_status.add_argument("--report-path", required=True)
+    capture_work24_status.add_argument("--status-path", required=True)
+    capture_work24_status.add_argument("--exit-code", required=True, type=int)
+    capture_work24_status.add_argument("--github-output")
 
     write_status = subparsers.add_parser("write-cycle-status")
     write_status.add_argument("--status-path", required=True)
@@ -127,6 +134,17 @@ def main() -> int:
         status = capture_cycle_status(
             project_root=Path(args.project_root),
             summary_path=Path(args.summary_path),
+            status_path=Path(args.status_path),
+            exit_code=int(args.exit_code),
+        )
+        if args.github_output:
+            append_github_output(Path(args.github_output), status.github_output_values())
+        print(json.dumps(status.to_json(), ensure_ascii=False))
+        return 0
+
+    if args.command == "capture-work24-improvement-status":
+        status = capture_work24_improvement_status(
+            report_path=Path(args.report_path),
             status_path=Path(args.status_path),
             exit_code=int(args.exit_code),
         )

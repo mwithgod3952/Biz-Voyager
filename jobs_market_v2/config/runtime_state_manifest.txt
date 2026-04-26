@@ -29,4 +29,6 @@ runtime/work24_population_candidates.csv
 runtime/work24_population_jobs.csv
 runtime/work24_population_shadow_companies.csv
 runtime/work24_population_scan_log.csv
+runtime/work24_population_audit.json
+runtime/work24_improvement_report.json
 runtime/work24_public_progress.json
