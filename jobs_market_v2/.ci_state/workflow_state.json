@@ -1,9 +1,9 @@
 {
-  "updated_at": "2026-05-01T19:54:37.874423+00:00",
-  "consecutive_failures": 0,
-  "last_result": "success",
+  "updated_at": "2026-05-01T21:31:16.916340+00:00",
+  "consecutive_failures": 1,
+  "last_result": "failure",
   "hold_reason": "",
-  "run_url": "https://github.com/mwithgod3952/Biz-Voyager/actions/runs/25229826945",
+  "run_url": "https://github.com/mwithgod3952/Biz-Voyager/actions/runs/25233176379",
   "automation_status": {
     "timestamp": "2026-04-23T04:00:02+09:00",
     "last_successful_run_id": "build-coverage-report-20260423035900733973-cde09224",
