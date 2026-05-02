@@ -1414,11 +1414,11 @@ def _work24_limited_public_board_source_url(company_name: str) -> str:
     query = {
         "srcKeyword": company_name,
         "siteClcd": "WORK",
-        "resultCnt": "20",
-        "pageLimit": "1",
-        "hotPageLimit": "1",
-        "scanDepth": "3",
-        "detailLimit": "5",
+        "resultCnt": "50",
+        "pageLimit": "3",
+        "hotPageLimit": "2",
+        "scanDepth": "10",
+        "detailLimit": "10",
         "keywordWantedTitle": "N",
         "keywordJobCont": "N",
         "keywordBusiNm": "Y",
@@ -2079,13 +2079,19 @@ def discover_source_candidates(companies: pd.DataFrame, paths, settings=None) ->
     rows: list[dict] = []
     companies_with_manual_sources: set[str] = set()
     for record in manual_sources.fillna("").to_dict(orient="records"):
-        if _is_population_discovery_source(record):
+        is_population_source = _is_population_discovery_source(record)
+        is_collectable_work24_public_seed = (
+            normalize_whitespace(record.get("source_type")).casefold() == "work24_public_html"
+            and normalize_whitespace(record.get("discovery_method")) == "manual_seed_public_jobboard"
+        )
+        if is_population_source and not is_collectable_work24_public_seed:
             continue
         company_key = _normalize_company_name(str(record.get("company_name") or "")).casefold()
-        if company_lookup and company_key not in company_lookup:
+        if company_lookup and company_key not in company_lookup and not is_collectable_work24_public_seed:
             continue
         company_row = company_lookup.get(company_key, {})
-        companies_with_manual_sources.add(company_key)
+        if company_key:
+            companies_with_manual_sources.add(company_key)
         rows.append(
             {
                 **record,

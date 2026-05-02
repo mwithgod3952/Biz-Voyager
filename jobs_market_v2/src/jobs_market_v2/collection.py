@@ -285,7 +285,12 @@ _DATA_ENGINEER_TITLE_PHRASES = (
 
 _DATA_SCIENTIST_TITLE_PHRASES = (
     "data scientist",
+    "data science",
     "데이터 사이언티스트",
+    "데이터 사이어티스트",
+    "데이터 사이언티스",
+    "데이터 사이언스",
+    "데이터사이언스",
     "applied scientist",
     "머신러닝 사이언티스트",
 )
@@ -298,8 +303,299 @@ _ATTACHED_DATA_ANALYST_TITLE_PHRASES = (
 _ATTACHED_DATA_SCIENTIST_TITLE_PHRASES = (
     "데이터 사이언티스트",
     "데이터사이언티스트",
+    "데이터 사이어티스트",
+    "데이터사이어티스트",
+    "데이터 사이언티스",
+    "데이터사이언티스",
     "데이터 사이언스",
     "데이터사이언스",
+)
+
+_ANALYTICS_FOCUS_ANALYST_REMAP_PHRASES = (
+    "data analyst",
+    "analytics analyst",
+    "데이터 분석가",
+    "데이터분석가",
+    "analytics engineer",
+    "data analytics engineer",
+    "data engineer",
+    "data platform",
+    "bi/dw",
+    "business intelligence",
+    "빅데이터 분석",
+    "통계분석",
+    "데이터 분석",
+    "데이터분석",
+    "data analysis",
+    "insight",
+    "cad 데이터 분석",
+    "데이터 모델링",
+    "data modeling",
+)
+
+_ANALYTICS_FOCUS_SCIENTIST_REMAP_PHRASES = (
+    "data scientist",
+    "데이터 사이언티스트",
+    "데이터사이언티스트",
+    "data science",
+    "데이터 사이언스",
+    "데이터사이언스",
+    "applied scientist",
+    "research scientist",
+    "clinical research scientist",
+    "machine learning",
+    "머신러닝",
+    "딥러닝",
+    "deep learning",
+    "llm",
+    "rag",
+    "mlops",
+    "computer vision",
+    "vision language",
+    "multimodal",
+    "nlp",
+    "recommend",
+    "추천",
+    "slam",
+    "localization",
+    "foundation model",
+    "model serving",
+    "quantization",
+    "ai research engineer",
+    "research engineer",
+    "ai researcher",
+    "ml researcher",
+    "algorithm",
+    "algorithm engineer",
+    "ai model",
+    "모델 개발",
+    "인공지능 모델",
+    "data scientist intern",
+)
+
+_ANALYTICS_FOCUS_EXCLUDED_TITLE_PHRASES = (
+    "product researcher",
+    "ux researcher",
+    "offensive security",
+    "security research",
+    "security engineer",
+    "marketing",
+    "marketer",
+    "sales",
+    "영업",
+    "마케팅",
+    "인사",
+    "hr",
+    "recruiter",
+    "designer",
+    "uiux",
+    "md",
+    "merchandiser",
+    "travel",
+    "여행사",
+    "품질팀 qc",
+    "qc",
+    "경영지원",
+    "사업 운영",
+    "파트너쉽 영업",
+    "퍼포먼스 마케팅",
+    "그로스 마케팅",
+    "내부감사",
+)
+
+_ANALYTICS_FOCUS_STRICT_ANALYST_TITLE_PHRASES = (
+    "data analyst",
+    "analytics analyst",
+    "bi analyst",
+    "insight analyst",
+    "데이터 애널리스트",
+    "데이터애널리스트",
+    "데이터 분석가",
+    "데이터분석가",
+    "통계분석",
+    "리서치 통계분석",
+)
+
+_ANALYTICS_FOCUS_STRICT_ANALYST_BODY_PHRASES = (
+    "dashboard",
+    "reporting",
+    "business intelligence",
+    "sql",
+    "통계분석",
+    "지표 분석",
+    "핵심 지표",
+    "분석 리포트",
+    "리포팅",
+    "가설 검증",
+    "인사이트 도출",
+    "대시보드",
+    "세그먼트",
+    "crm",
+    "ltv",
+    "cac",
+    "a/b test",
+    "ab test",
+    "cohort",
+    "funnel",
+    "데이터 시각화",
+)
+
+_ANALYTICS_FOCUS_STRICT_ANALYST_DENY_TITLE_PHRASES = (
+    "operations",
+    "operation",
+    "business operation",
+    "business operations",
+    "사업 운영",
+    "사업운영",
+    "cx",
+    "ae",
+    "account executive",
+    "marketing",
+    "marketer",
+    "광고",
+    "온라인광고",
+    "키워드광고",
+    "홍보",
+    "sales",
+    "영업",
+    "partnership",
+    "파트너십",
+    "파트너쉽",
+    "제휴",
+    "financial",
+    "finance",
+    "fpa",
+    "fp&a",
+    "controlling",
+    "재무",
+    "회계",
+    "원가",
+    "risk",
+    "리스크",
+    "internal audit",
+    "감사",
+    "pmo",
+    "hr",
+    "qc",
+    "quality control",
+    "품질",
+    "rpa",
+    "mes",
+    "응용소프트웨어개발자",
+)
+
+_ANALYTICS_FOCUS_STRICT_SCIENTIST_TITLE_PHRASES = (
+    "data scientist",
+    "data science",
+    "applied scientist",
+    "research scientist",
+    "machine learning scientist",
+    "clinical research scientist",
+    "데이터 사이언티스트",
+    "데이터사이언티스트",
+    "데이터 사이어티스트",
+    "데이터사이어티스트",
+    "데이터 사이언티스",
+    "데이터사이언티스",
+    "데이터 사이언스",
+    "데이터사이언스",
+    "머신러닝 사이언티스트",
+)
+
+_ANALYTICS_FOCUS_STRICT_SCIENTIST_BODY_PHRASES = (
+    "data science",
+    "machine learning model",
+    "머신러닝 모델",
+    "모델링",
+    "예측모델",
+    "prediction model",
+    "feature engineering",
+    "causal inference",
+    "인과추론",
+    "recommendation model",
+    "ranking model",
+    "personalization",
+    "statistical model",
+    "통계모델",
+    "실험 설계",
+    "experiment design",
+    "시계열",
+    "forecast",
+    "survival analysis",
+    "clustering",
+    "딥러닝 모델",
+    "deep learning model",
+)
+
+_ANALYTICS_FOCUS_STRICT_SCIENTIST_DENY_TITLE_PHRASES = (
+    "engineer",
+    "developer",
+    "개발자",
+    "엔지니어",
+    "backend",
+    "frontend",
+    "platform",
+    "sdk",
+    "kernel",
+    "compiler",
+    "driver",
+    "runtime",
+    "infra",
+    "infrastructure",
+    "mlops",
+    "data engineer",
+    "analytics engineer",
+    "ml engineer",
+    "software engineer",
+)
+
+_ANALYTICS_FOCUS_STRICT_EXCLUDED_PHRASES = (
+    "engineer",
+    "developer",
+    "개발자",
+    "엔지니어",
+    "backend",
+    "frontend",
+    "platform",
+    "sdk",
+    "kernel",
+    "compiler",
+    "driver",
+    "runtime",
+    "infra",
+    "infrastructure",
+    "field",
+    "forward deployed",
+    "framework software",
+    "library software",
+    "service developer",
+    "서비스 개발자",
+    "marketing",
+    "marketer",
+    "마케팅",
+    "홍보",
+    "sales",
+    "영업",
+    "ae",
+    "cx",
+    "사업 운영",
+    "운영 인턴",
+    "hr",
+    "recruit",
+    "qa",
+    "uiux",
+    "product manager",
+    "제품 디자인",
+    "교구재",
+    "훈련교사",
+    "기술영업지원",
+    "internal audit",
+    "내부감사",
+    "financial planning",
+    "finance",
+    "controlling",
+    "capex",
+    "pmo",
 )
 
 _ANALYST_CONTEXT_PHRASES = (
@@ -747,6 +1043,80 @@ _RESEARCH_WORK_PHRASES = (
     "ablation",
     "evaluate",
     "evaluation",
+)
+
+_RESEARCH_ENGINEER_TRACK_PHRASES = (
+    "research div",
+    "ai research div",
+    "foundation model",
+    "foundation models",
+    "파운데이션 모델",
+    "vision language",
+    "vision-language",
+    "vision language action",
+    "vla",
+    "멀티모달",
+    "multimodal",
+    "post-training",
+    "post training",
+    "모델 해석",
+    "scaling law",
+    "스케일링 법칙",
+)
+
+_RESEARCH_ENGINEER_OUTPUT_PHRASES = _RESEARCH_ACADEMIC_PHRASES + (
+    "top-tier",
+    "탑티어",
+    "최신 논문",
+    "논문 게재",
+    "저명 학회",
+    "학회 논문",
+    "연구 결과",
+    "research result",
+    "벤치마크",
+)
+
+_RESEARCH_ENGINEER_DELIVERY_BLOCKLIST_PHRASES = (
+    "고객 문제",
+    "customer problem",
+    "고객 대응",
+    "고객사",
+    "field application",
+    "solution architect",
+    "sales",
+    "영업",
+    "workflow",
+    "workflows",
+    "agent",
+    "agents",
+)
+
+_RESEARCHER_NON_TARGET_TITLE_PHRASES = (
+    "ux researcher",
+    "product researcher",
+    "offensive security",
+    "security researcher",
+    "security research",
+    "기획사원",
+)
+
+_RESEARCHER_NON_TARGET_CORPUS_PHRASES = (
+    "기획 사무원",
+    "경영 기획 사무원",
+)
+
+_RESEARCHER_REQUIRED_SIGNAL_PHRASES = _RESEARCH_SIGNAL_PHRASES + (
+    "research scientist",
+    "applied scientist",
+    "clinical research",
+    "medical ai",
+    "medical artificial intelligence",
+    "의료 인공지능",
+    "알고리즘",
+    "algorithm",
+    "최적화",
+    "optimization",
+    "모델링",
 )
 
 _ENGINEER_DELIVERY_PHRASES = _AI_ENGINEER_DELIVERY_PHRASES + (
@@ -1253,6 +1623,13 @@ def _classify_ambiguous_research_engineer(
     if prefer_title_researcher and _has_any_phrase(title_corpus, ("research scientist", "scientist", "researcher", "리서처")):
         return "인공지능 리서처"
 
+    if (
+        _has_any_phrase(corpus, _RESEARCH_ENGINEER_TRACK_PHRASES)
+        and _has_any_phrase(corpus, _RESEARCH_ENGINEER_OUTPUT_PHRASES)
+        and not _has_any_phrase(corpus, _RESEARCH_ENGINEER_DELIVERY_BLOCKLIST_PHRASES)
+    ):
+        return "인공지능 리서처"
+
     academic_score = _count_phrase_hits(corpus, _RESEARCH_ACADEMIC_PHRASES)
     academic_score += _count_phrase_hits(body_corpus, _RESEARCH_WORK_PHRASES)
     delivery_score = _count_phrase_hits(corpus, _ENGINEER_DELIVERY_PHRASES)
@@ -1301,6 +1678,12 @@ def _classify_mixed_researcher_title(
     corpus: str,
 ) -> str:
     if _has_any_phrase(title_corpus, _NON_TARGET_TITLE_PHRASES):
+        return ""
+    if _has_any_phrase(title_corpus, _RESEARCHER_NON_TARGET_TITLE_PHRASES):
+        return ""
+    if _has_any_phrase(corpus, _RESEARCHER_NON_TARGET_CORPUS_PHRASES):
+        return ""
+    if not _has_any_phrase(corpus, _RESEARCHER_REQUIRED_SIGNAL_PHRASES):
         return ""
     if _has_any_phrase(title_corpus, _MIXED_RESEARCHER_TITLE_PHRASES):
         mixed_delivery_score = _count_phrase_hits(corpus, _ENGINEER_DELIVERY_PHRASES)
@@ -1362,6 +1745,39 @@ def classify_job_role(*texts: str | None) -> str:
         return "데이터 사이언티스트"
     if _has_attached_phrase(primary_title, _ATTACHED_DATA_ANALYST_TITLE_PHRASES):
         return "데이터 분석가"
+    if (
+        _has_any_phrase(
+            title_corpus,
+            (
+                "data science",
+                "데이터 사이언스",
+                "데이터사이언스",
+                "데이터 사이어티스트",
+                "데이터사이어티스트",
+                "데이터 사이언티스",
+                "데이터사이언티스",
+            ),
+        )
+        and not _has_any_phrase(
+            title_corpus,
+            (
+                "engineer",
+                "developer",
+                "엔지니어",
+                "개발자",
+                "platform",
+                "infra",
+                "infrastructure",
+                "backend",
+                "frontend",
+                "sdk",
+                "kernel",
+                "compiler",
+                "driver",
+            ),
+        )
+    ):
+        return "데이터 사이언티스트"
     title_has_analyst_signal = _has_any_phrase(title_corpus, _ANALYST_TITLE_PHRASES)
     corpus_has_target_signal = _has_any_phrase(
         corpus,
@@ -1448,6 +1864,8 @@ def classify_job_role(*texts: str | None) -> str:
         return _classify_ambiguous_research_engineer(title_corpus, body_corpus, corpus)
     if _has_phrase(primary_title, "postdoctoral researcher") and _has_any_phrase(corpus, _RESEARCH_SIGNAL_PHRASES):
         return "인공지능 리서처"
+    if _has_any_phrase(title_corpus, _RESEARCHER_NON_TARGET_TITLE_PHRASES):
+        return ""
     if (
         _has_any_phrase(title_corpus, _RESEARCHER_TITLE_PHRASES)
         and _has_any_phrase(corpus, _RESEARCH_SIGNAL_PHRASES)
@@ -1515,6 +1933,78 @@ def classify_job_role(*texts: str | None) -> str:
     return ""
 
 
+def _compress_role_to_analytics_focus(existing_role: str | None, *texts: str | None) -> str:
+    role = normalize_whitespace(existing_role)
+    if role in {"데이터 분석가", "데이터 사이언티스트"}:
+        return role
+    if role not in {"인공지능 엔지니어", "인공지능 리서처"}:
+        return role
+
+    normalized_texts = [normalize_whitespace(text) for text in texts if normalize_whitespace(text)]
+    if not normalized_texts:
+        return ""
+    title_corpus = _normalize_role_text(" ".join(normalized_texts[:2]))
+    corpus = _normalize_role_text(" ".join(normalized_texts))
+
+    if _has_any_phrase(title_corpus, _ANALYTICS_FOCUS_EXCLUDED_TITLE_PHRASES):
+        return ""
+    if _has_any_phrase(corpus, _ANALYTICS_FOCUS_ANALYST_REMAP_PHRASES):
+        return "데이터 분석가"
+    if _has_any_phrase(corpus, _ANALYTICS_FOCUS_SCIENTIST_REMAP_PHRASES):
+        return "데이터 사이언티스트"
+    return ""
+
+
+def _refresh_existing_job_role_for_analytics_focus(row: dict[str, Any]) -> tuple[str, dict[str, str]]:
+    refreshed_role, analysis_fields = _refresh_existing_job_role(row)
+    refreshed_role = _compress_role_to_analytics_focus(
+        refreshed_role,
+        row.get("job_title_raw"),
+        row.get("공고제목_표시"),
+        analysis_fields.get("주요업무_분석용", ""),
+        analysis_fields.get("자격요건_분석용", ""),
+        analysis_fields.get("우대사항_분석용", ""),
+        analysis_fields.get("핵심기술_분석용", ""),
+        analysis_fields.get("상세본문_분석용", ""),
+    )
+    return refreshed_role, analysis_fields
+
+
+def _published_analytics_focus_role(role: str | None, *texts: str | None) -> str:
+    normalized_role = normalize_whitespace(role)
+    if normalized_role not in {"데이터 분석가", "데이터 사이언티스트"}:
+        return ""
+
+    normalized_texts = [normalize_whitespace(text) for text in texts if normalize_whitespace(text)]
+    if not normalized_texts:
+        return ""
+    title_corpus = _normalize_role_text(" ".join(normalized_texts[:2]))
+    corpus = _normalize_role_text(" ".join(normalized_texts))
+
+    if normalized_role == "데이터 분석가":
+        if _has_any_phrase(title_corpus, _ANALYTICS_FOCUS_STRICT_ANALYST_DENY_TITLE_PHRASES):
+            return ""
+        title_fit = _has_any_phrase(title_corpus, _ANALYTICS_FOCUS_STRICT_ANALYST_TITLE_PHRASES)
+        body_fit = _has_any_phrase(corpus, _ANALYTICS_FOCUS_STRICT_ANALYST_BODY_PHRASES)
+        if title_fit:
+            return normalized_role
+        if _has_any_phrase(corpus, _ANALYTICS_FOCUS_STRICT_EXCLUDED_PHRASES):
+            return ""
+        return normalized_role if body_fit else ""
+
+    if _has_any_phrase(title_corpus, _ANALYTICS_FOCUS_STRICT_SCIENTIST_DENY_TITLE_PHRASES):
+        return ""
+    title_fit = _has_any_phrase(title_corpus, _ANALYTICS_FOCUS_STRICT_SCIENTIST_TITLE_PHRASES)
+    body_fit = _has_any_phrase(corpus, _ANALYTICS_FOCUS_STRICT_SCIENTIST_BODY_PHRASES)
+    if title_fit:
+        return normalized_role
+    if _has_any_phrase(corpus, _ANALYTICS_FOCUS_STRICT_EXCLUDED_PHRASES):
+        return ""
+    if "data " in title_corpus or "데이터" in title_corpus:
+        return normalized_role if body_fit else ""
+    return ""
+
+
 def _refresh_existing_job_role(row: dict[str, Any]) -> tuple[str, dict[str, str]]:
     analysis_fields = {
         "주요업무_분석용": normalize_whitespace(row.get("주요업무_분석용")),
@@ -1549,6 +2039,52 @@ def _refresh_merged_job_rows(frame: pd.DataFrame) -> pd.DataFrame:
         else:
             continue
 
+        display_fields = build_display_fields(row, analysis_fields=analysis_fields)
+        row.update(analysis_fields)
+        row.update(display_fields)
+        refreshed_rows.append({column: row.get(column, "") for column in JOB_COLUMNS})
+
+    return pd.DataFrame(refreshed_rows, columns=list(JOB_COLUMNS))
+
+
+def _materialize_analytics_focus_rows(frame: pd.DataFrame) -> pd.DataFrame:
+    if frame.empty:
+        return frame.copy()
+
+    refreshed_rows: list[dict[str, Any]] = []
+    for row in frame.fillna("").to_dict(orient="records"):
+        refreshed_role, analysis_fields = _refresh_existing_job_role(row)
+        audited_role = classify_job_role(
+            row.get("job_title_raw"),
+            row.get("공고제목_표시"),
+            analysis_fields.get("주요업무_분석용", ""),
+            analysis_fields.get("자격요건_분석용", ""),
+            analysis_fields.get("우대사항_분석용", ""),
+            analysis_fields.get("핵심기술_분석용", ""),
+            analysis_fields.get("상세본문_분석용", ""),
+        )
+        published_role = _published_analytics_focus_role(
+            refreshed_role,
+            row.get("job_title_raw"),
+            row.get("공고제목_표시"),
+            analysis_fields.get("주요업무_분석용", ""),
+            analysis_fields.get("자격요건_분석용", ""),
+            analysis_fields.get("우대사항_분석용", ""),
+            analysis_fields.get("핵심기술_분석용", ""),
+            analysis_fields.get("상세본문_분석용", ""),
+        )
+        final_role = ""
+        if refreshed_role in {"인공지능 엔지니어", "인공지능 리서처"}:
+            if audited_role in {"인공지능 엔지니어", "인공지능 리서처"}:
+                final_role = audited_role
+        elif published_role in {"데이터 분석가", "데이터 사이언티스트"}:
+            if audited_role in {"데이터 분석가", "데이터 사이언티스트"}:
+                final_role = audited_role
+
+        if final_role not in ALLOWED_JOB_ROLES:
+            continue
+
+        row["job_role"] = final_role
         display_fields = build_display_fields(row, analysis_fields=analysis_fields)
         row.update(analysis_fields)
         row.update(display_fields)
@@ -3637,6 +4173,96 @@ def _work24_public_query_int(url: str, key: str, default: str, *, minimum: int =
     return max(min(value, maximum), minimum)
 
 
+def _expand_work24_public_runtime_url(url: str) -> str:
+    normalized_url = normalize_whitespace(url) or _WORK24_PUBLIC_SEARCH_BASE_URL
+    parts = urlsplit(normalized_url)
+    query = parse_qs(parts.query, keep_blank_values=True)
+
+    def set_minimum(key: str, minimum: int) -> None:
+        current = _work24_public_query_int(normalized_url, key, str(minimum), minimum=0, maximum=maximums.get(key, 100))
+        query[key] = [str(max(current, minimum))]
+
+    maximums = {
+        "resultCnt": 50,
+        "pageLimit": 20,
+        "hotPageLimit": 5,
+        "scanDepth": 50,
+        "detailLimit": 100,
+    }
+    keyword_busi_nm = (_worknet_query_value(normalized_url, "keywordBusiNm") or "N").upper() == "Y"
+    keyword_wanted_title = (_worknet_query_value(normalized_url, "keywordWantedTitle") or "N").upper() == "Y"
+    keyword_job_cont = (_worknet_query_value(normalized_url, "keywordJobCont") or "N").upper() == "Y"
+
+    # Only widen runtime windows for explicit public-search seeds and limited
+    # company-board fallback URLs. Ad-hoc test URLs and narrow probes should
+    # preserve their authored limits.
+    if not (keyword_busi_nm or keyword_wanted_title or keyword_job_cont):
+        return normalized_url
+
+    set_minimum("resultCnt", 50)
+    if keyword_busi_nm and not keyword_wanted_title and not keyword_job_cont:
+        set_minimum("pageLimit", 3)
+        set_minimum("hotPageLimit", 2)
+        set_minimum("scanDepth", 10)
+        set_minimum("detailLimit", 10)
+    else:
+        set_minimum("pageLimit", 12)
+        set_minimum("hotPageLimit", 3)
+        set_minimum("scanDepth", 40)
+        set_minimum("detailLimit", 20)
+
+    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query, doseq=True), parts.fragment))
+
+
+def _work24_public_query_terms(url: str) -> list[str]:
+    normalized_url = normalize_whitespace(url) or _WORK24_PUBLIC_SEARCH_BASE_URL
+    keyword = _worknet_query_value(normalized_url, "srcKeyword") or _worknet_query_value(normalized_url, "keyword")
+    seen: set[str] = set()
+    terms: list[str] = []
+    for raw_term in keyword.split("|"):
+        term = normalize_whitespace(raw_term)
+        if not term or term in seen:
+            continue
+        seen.add(term)
+        terms.append(term)
+    return terms
+
+
+def _work24_public_variant_sources(url: str, settings) -> list[tuple[str, str]]:
+    normalized_url = _expand_work24_public_runtime_url(url)
+    terms = _work24_public_query_terms(normalized_url)
+    if len(terms) <= 1:
+        return [(normalized_url, terms[0] if terms else "")]
+
+    keyword_busi_nm = (_worknet_query_value(normalized_url, "keywordBusiNm") or "N").upper() == "Y"
+    keyword_wanted_title = (_worknet_query_value(normalized_url, "keywordWantedTitle") or "N").upper() == "Y"
+    keyword_job_cont = (_worknet_query_value(normalized_url, "keywordJobCont") or "N").upper() == "Y"
+    if keyword_busi_nm and not keyword_wanted_title and not keyword_job_cont:
+        return [(normalized_url, terms[0] if terms else "")]
+
+    parsed = urlsplit(normalized_url)
+    original_query = parse_qs(parsed.query, keep_blank_values=True)
+    original_page_limit = _work24_public_query_int(normalized_url, "pageLimit", _WORK24_PUBLIC_DEFAULT_PAGE_LIMIT, minimum=1, maximum=20)
+    original_scan_depth = _work24_public_query_int(normalized_url, "scanDepth", str(original_page_limit), minimum=1, maximum=50)
+    max_terms = max(1, int(getattr(settings, "work24_public_keyword_fanout_max_terms", len(terms)) or len(terms)))
+    per_term_pages = max(
+        1,
+        int(getattr(settings, "work24_public_keyword_fanout_max_pages_per_term", min(original_scan_depth, 4)) or min(original_scan_depth, 4)),
+    )
+    per_term_pages = min(per_term_pages, original_page_limit, original_scan_depth)
+
+    variants: list[tuple[str, str]] = []
+    for term in terms[:max_terms]:
+        query = {key: list(values) for key, values in original_query.items()}
+        query["srcKeyword"] = [term]
+        query["keyword"] = [term]
+        query["pageLimit"] = [str(per_term_pages)]
+        query["scanDepth"] = [str(per_term_pages)]
+        variant_url = parsed._replace(query=urlencode(query, doseq=True)).geturl()
+        variants.append((variant_url, term))
+    return variants
+
+
 def _work24_public_progress_path(paths) -> Path:
     return paths.runtime_dir / _WORK24_PUBLIC_PROGRESS_FILE_NAME
 
@@ -3698,7 +4324,7 @@ def _work24_public_page_plan(
     url: str,
     paths=None,
 ) -> tuple[list[int], dict[str, Any], str, int, set[str], int, int]:
-    page_window = _work24_public_query_int(url, "pageLimit", _WORK24_PUBLIC_DEFAULT_PAGE_LIMIT, minimum=1, maximum=5)
+    page_window = _work24_public_query_int(url, "pageLimit", _WORK24_PUBLIC_DEFAULT_PAGE_LIMIT, minimum=1, maximum=20)
     scan_depth_default = str(page_window)
     scan_depth = _work24_public_query_int(url, "scanDepth", scan_depth_default, minimum=1, maximum=50)
     hot_page_limit = _work24_public_query_int(
@@ -4222,23 +4848,37 @@ def _update_work24_public_progress(
 
 
 def _fetch_work24_public_html_source(url: str, settings, *, paths=None) -> tuple[str, str]:
-    normalized_url = normalize_whitespace(url) or _WORK24_PUBLIC_SEARCH_BASE_URL
-    detail_limit = _work24_public_query_int(normalized_url, _WORKNET_DETAIL_LIMIT_QUERY_KEY, _WORK24_PUBLIC_DEFAULT_DETAIL_LIMIT, minimum=0, maximum=100)
-    pages, progress, source_key, next_page, previous_seen, scan_depth, hot_page_limit = _work24_public_page_plan(normalized_url, paths=paths)
+    normalized_url = _expand_work24_public_runtime_url(url)
+    variant_sources = _work24_public_variant_sources(normalized_url, settings)
+    base_detail_limit = _work24_public_query_int(
+        normalized_url,
+        _WORKNET_DETAIL_LIMIT_QUERY_KEY,
+        _WORK24_PUBLIC_DEFAULT_DETAIL_LIMIT,
+        minimum=0,
+        maximum=100,
+    )
+    detail_limit = min(100, max(1, len(variant_sources)) * max(base_detail_limit, 1)) if base_detail_limit > 0 else 0
     jobs: list[dict[str, Any]] = []
     seen_urls: set[str] = set()
-    for page in pages:
-        form_data = _build_work24_public_search_form(normalized_url, page)
-        list_html = _fetch_work24_public_html(_WORK24_PUBLIC_SEARCH_POST_URL, settings, data=form_data)
-        for listing in _parse_work24_public_list_jobs(list_html, base_url=_WORK24_PUBLIC_SEARCH_BASE_URL):
-            job_url = normalize_whitespace(listing.get("job_url"))
-            if not job_url or job_url in seen_urls:
-                continue
-            seen_urls.add(job_url)
-            auth_no = _work24_public_auth_no(listing)
-            listing["work24_public_page"] = str(page)
-            listing["work24_public_tracking_signal"] = "seen" if auth_no and auth_no in previous_seen else "new"
-            jobs.append(listing)
+    progress_state: list[tuple[dict[str, Any], str, str, int, set[str], int, int, list[int]]] = []
+    for variant_url, query_term in variant_sources:
+        pages, progress, source_key, next_page, previous_seen, scan_depth, hot_page_limit = _work24_public_page_plan(variant_url, paths=paths)
+        selected_pages: list[int] = []
+        for page in pages:
+            selected_pages.append(page)
+            form_data = _build_work24_public_search_form(variant_url, page)
+            list_html = _fetch_work24_public_html(_WORK24_PUBLIC_SEARCH_POST_URL, settings, data=form_data)
+            for listing in _parse_work24_public_list_jobs(list_html, base_url=_WORK24_PUBLIC_SEARCH_BASE_URL):
+                job_url = normalize_whitespace(listing.get("job_url"))
+                if not job_url or job_url in seen_urls:
+                    continue
+                seen_urls.add(job_url)
+                auth_no = _work24_public_auth_no(listing)
+                listing["work24_public_page"] = str(page)
+                listing["work24_public_query_term"] = query_term
+                listing["work24_public_tracking_signal"] = "seen" if auth_no and auth_no in previous_seen else "new"
+                jobs.append(listing)
+        progress_state.append((progress, source_key, variant_url, next_page, previous_seen, scan_depth, hot_page_limit, selected_pages))
     tracking_budget = GeminiBudget(max_calls=min(3, int(getattr(settings, "gemini_html_listing_max_calls_per_run", 0) or 0)))
     jobs = _track_work24_public_listings_with_llm(jobs, settings, paths=paths, budget=tracking_budget)
     detail_indexes = {
@@ -4259,18 +4899,19 @@ def _fetch_work24_public_html_source(url: str, settings, *, paths=None) -> tuple
         except Exception:  # noqa: BLE001
             hydrated_jobs.append(listing)
     if paths is not None:
-        _update_work24_public_progress(
-            paths,
-            progress,
-            source_key=source_key,
-            source_url=normalized_url,
-            next_page=next_page,
-            scan_depth=scan_depth,
-            hot_page_limit=hot_page_limit,
-            selected_pages=pages,
-            listings=jobs,
-            hydrated_jobs=hydrated_jobs,
-        )
+        for progress, source_key, variant_url, next_page, previous_seen, scan_depth, hot_page_limit, selected_pages in progress_state:
+            _update_work24_public_progress(
+                paths,
+                progress,
+                source_key=source_key,
+                source_url=variant_url,
+                next_page=next_page,
+                scan_depth=scan_depth,
+                hot_page_limit=hot_page_limit,
+                selected_pages=selected_pages,
+                listings=jobs,
+                hydrated_jobs=hydrated_jobs,
+            )
     return json.dumps({"jobs": hydrated_jobs}, ensure_ascii=False), "application/json"
 
 

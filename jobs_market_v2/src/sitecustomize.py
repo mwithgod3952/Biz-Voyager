@@ -200,7 +200,71 @@ def _install() -> None:
     )
     analyst_titles = ("data analyst", "analytics analyst", "monetization analyst", "데이터 분석가", "데이터분석가", "분석가")
     data_engineer_titles = ("data engineer", "data analytics engineer", "analytics engineer", "데이터 엔지니어")
-    data_scientist_titles = ("data scientist", "데이터 사이언티스트", "applied scientist", "머신러닝 사이언티스트")
+    data_scientist_titles = (
+        "data scientist",
+        "data science",
+        "데이터 사이언티스트",
+        "데이터 사이어티스트",
+        "데이터 사이언티스",
+        "데이터 사이언스",
+        "데이터사이언스",
+        "applied scientist",
+        "머신러닝 사이언티스트",
+    )
+    research_engineer_track_terms = (
+        "research div",
+        "ai research div",
+        "foundation model",
+        "foundation models",
+        "파운데이션 모델",
+        "vision language",
+        "vision-language",
+        "vision language action",
+        "vla",
+        "멀티모달",
+        "multimodal",
+        "post-training",
+        "post training",
+        "모델 해석",
+        "scaling law",
+        "스케일링 법칙",
+    )
+    research_engineer_output_terms = (
+        "논문",
+        "학회",
+        "출판",
+        "저널",
+        "publication",
+        "conference",
+        "workshop",
+        "journal",
+        "박사",
+        "phd",
+        "benchmark",
+        "top-tier",
+        "탑티어",
+        "최신 논문",
+        "논문 게재",
+        "저명 학회",
+        "학회 논문",
+        "연구 결과",
+        "research result",
+        "벤치마크",
+    )
+    research_engineer_delivery_blocklist = (
+        "고객 문제",
+        "customer problem",
+        "고객 대응",
+        "고객사",
+        "field application",
+        "solution architect",
+        "sales",
+        "영업",
+        "workflow",
+        "workflows",
+        "agent",
+        "agents",
+    )
     strict_non_target_titles = (
         "product manager",
         "growth manager",
@@ -355,6 +419,8 @@ def _install() -> None:
     )
     researcher_titles = ("research scientist", "ai researcher", "ml researcher", "researcher", "리서처", "연구직", "연구원")
     research_engineer_titles = ("research engineer", "리서치 엔지니어", "연구 엔지니어")
+    researcher_non_target_titles = ("ux researcher", "product researcher", "offensive security", "security researcher", "security research", "기획사원")
+    researcher_non_target_corpus_terms = ("기획 사무원", "경영 기획 사무원")
     academic_terms = ("논문", "학회", "출판", "저널", "publication", "conference", "workshop", "journal", "박사", "phd", "benchmark")
     delivery_terms = ("설계", "구현", "개발", "구축", "운영", "배포", "서빙", "pipeline", "파이프라인", "제품", "서비스", "customer", "고객")
     weak_ai_software_titles = ("ai software engineer", "global software engineer", "applied ai technical engineer")
@@ -446,6 +512,20 @@ def _install() -> None:
         "런타임",
         "추론",
     )
+    researcher_required_signal_terms = strong_ai_work_terms + (
+        "ai",
+        "인공지능",
+        "research scientist",
+        "applied scientist",
+        "clinical research",
+        "medical ai",
+        "의료 인공지능",
+        "알고리즘",
+        "algorithm",
+        "최적화",
+        "optimization",
+        "모델링",
+    )
 
     def target_signal(text: str) -> bool:
         if has_any(text, ai_signals + data_engineer_titles + data_scientist_titles):
@@ -487,6 +567,37 @@ def _install() -> None:
             return "데이터 분석가"
         if has_any(title_corpus, title_only_non_target):
             return ""
+        if (
+            has_any(
+                title_corpus,
+                (
+                    "data science",
+                    "데이터 사이언스",
+                    "데이터사이언스",
+                    "데이터 사이어티스트",
+                    "데이터 사이언티스",
+                ),
+            )
+            and not has_any(
+                title_corpus,
+                (
+                    "engineer",
+                    "developer",
+                    "엔지니어",
+                    "개발자",
+                    "platform",
+                    "infra",
+                    "infrastructure",
+                    "backend",
+                    "frontend",
+                    "sdk",
+                    "kernel",
+                    "compiler",
+                    "driver",
+                ),
+            )
+        ):
+            return "데이터 사이언티스트"
         if has_any(title_corpus, ("adas application engineer", "application engineer")) and has_any(corpus, ("adas", "에이디에이에스", "컴퓨터 비전", "컴퓨터비전", "자율주행")):
             return "인공지능 엔지니어"
         if has_any(title_corpus, strict_non_target_titles) and not title_has_analyst:
@@ -512,12 +623,24 @@ def _install() -> None:
             return "인공지능 엔지니어"
         if title_has_analyst:
             return "데이터 분석가"
+        if has_any(title_corpus, researcher_non_target_titles):
+            return ""
+        if has_any(corpus, researcher_non_target_corpus_terms):
+            return ""
         if has_any(title_corpus, ("연구직", "연구원")) and target_signal(corpus) and not has_any(title_corpus, ("developer", "engineer", "개발자", "엔지니어")):
             return "인공지능 리서처"
         if has_any(title_corpus, research_engineer_titles + researcher_titles):
+            if not has_any(corpus, researcher_required_signal_terms):
+                return ""
             academic_score = count_terms(corpus, academic_terms)
             delivery_score = count_terms(corpus, delivery_terms)
             if has_any(title_corpus, ("research scientist", "researcher", "리서처")) and not has_any(title_corpus, ("developer", "engineer", "개발자", "엔지니어")):
+                return "인공지능 리서처"
+            if (
+                has_any(corpus, research_engineer_track_terms)
+                and has_any(corpus, research_engineer_output_terms)
+                and not has_any(corpus, research_engineer_delivery_blocklist)
+            ):
                 return "인공지능 리서처"
             return "인공지능 리서처" if academic_score >= delivery_score + 1 else "인공지능 엔지니어"
         if has_any(title_corpus, ("engineer", "엔지니어", "developer", "개발자")) and target_signal(corpus):
@@ -609,8 +732,23 @@ def _install() -> None:
             "role_non_target_samples": non_target_samples,
         }
 
-    def evaluate_quality_gate(staging_jobs: pd.DataFrame, source_registry: pd.DataFrame, *, settings=None, paths=None, already_filtered: bool = False) -> GateResult:
-        result = old_evaluate_quality_gate(staging_jobs, source_registry, settings=settings, paths=paths, already_filtered=already_filtered)
+    def evaluate_quality_gate(
+        staging_jobs: pd.DataFrame,
+        source_registry: pd.DataFrame,
+        *,
+        settings=None,
+        paths=None,
+        already_filtered: bool = False,
+        analytics_focus_mode: bool = False,
+    ) -> GateResult:
+        result = old_evaluate_quality_gate(
+            staging_jobs,
+            source_registry,
+            settings=settings,
+            paths=paths,
+            already_filtered=already_filtered,
+            analytics_focus_mode=analytics_focus_mode,
+        )
         if "is_active" in staging_jobs.columns:
             active_jobs = staging_jobs[staging_jobs["is_active"].astype(str).str.lower().isin(["true", "1"])].copy()
         else:

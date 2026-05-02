@@ -11,7 +11,12 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 
-from .collection import canonicalize_job_key, collect_jobs_from_sources, merge_incremental
+from .collection import (
+    _materialize_analytics_focus_rows,
+    canonicalize_job_key,
+    collect_jobs_from_sources,
+    merge_incremental,
+)
 from .company_screening import collect_company_evidence, split_company_buckets
 from .company_seed_sources import (
     CATALOG_SOURCE_TYPES,
@@ -23,7 +28,7 @@ from .company_seed_sources import (
     promote_shadow_company_seed_sources,
     refresh_company_seed_sources,
 )
-from .constants import COMPANY_CANDIDATE_COLUMNS, IMPORT_COMPANY_COLUMNS, JOB_COLUMNS, RUN_COLUMNS, SOURCE_REGISTRY_COLUMNS
+from .constants import ALLOWED_JOB_ROLES, COMPANY_CANDIDATE_COLUMNS, IMPORT_COMPANY_COLUMNS, JOB_COLUMNS, RUN_COLUMNS, SOURCE_REGISTRY_COLUMNS
 from .discovery import (
     WORK24_LIMITED_PUBLIC_BOARD_DISCOVERY_METHOD,
     audit_work24_population,
@@ -86,6 +91,63 @@ def _record_error(paths, command: str, run_id: str, exc: Exception) -> None:
             "error_message": str(exc),
         },
     )
+
+
+def _match_audit_sample_mask(frame: pd.DataFrame, sample: dict[str, object]) -> pd.Series:
+    if frame.empty:
+        return pd.Series(dtype=bool)
+
+    job_url = normalize_whitespace(sample.get("job_url"))
+    if job_url and "job_url" in frame.columns:
+        return frame["job_url"].fillna("").astype(str).map(normalize_whitespace).eq(job_url)
+
+    company_name = normalize_whitespace(sample.get("company_name"))
+    job_title = normalize_whitespace(sample.get("job_title_raw"))
+    mask = pd.Series(True, index=frame.index)
+    if company_name and "company_name" in frame.columns:
+        mask &= frame["company_name"].fillna("").astype(str).map(normalize_whitespace).eq(company_name)
+    if job_title and "job_title_raw" in frame.columns:
+        mask &= frame["job_title_raw"].fillna("").astype(str).map(normalize_whitespace).eq(job_title)
+    return mask
+
+
+def _apply_gate_role_repairs(frame: pd.DataFrame, gate) -> tuple[pd.DataFrame, dict[str, int]]:
+    if frame.empty:
+        return frame.copy(), {"role_corrected_count": 0, "role_dropped_count": 0}
+
+    repaired = frame.copy()
+    corrected = 0
+    dropped = 0
+    metrics = gate.metrics if gate is not None else {}
+
+    for sample in metrics.get("role_mismatch_samples", []) or []:
+        expected_role = normalize_whitespace(sample.get("expected_role"))
+        if expected_role not in ALLOWED_JOB_ROLES:
+            continue
+        mask = _match_audit_sample_mask(repaired, sample)
+        if not mask.any():
+            continue
+        corrected += int(mask.sum())
+        repaired.loc[mask, "job_role"] = expected_role
+        if "직무명_표시" in repaired.columns:
+            repaired.loc[mask, "직무명_표시"] = expected_role
+
+    drop_masks: list[pd.Series] = []
+    for sample in metrics.get("role_non_target_samples", []) or []:
+        mask = _match_audit_sample_mask(repaired, sample)
+        if mask.any():
+            drop_masks.append(mask)
+
+    if drop_masks:
+        combined_drop_mask = drop_masks[0].copy()
+        for mask in drop_masks[1:]:
+            combined_drop_mask |= mask
+        dropped = int(combined_drop_mask.sum())
+        repaired = repaired.loc[~combined_drop_mask].reset_index(drop=True)
+    else:
+        repaired = repaired.reset_index(drop=True)
+
+    return repaired, {"role_corrected_count": corrected, "role_dropped_count": dropped}
 
 
 def _latest_run_summary(paths, command: str) -> dict:
@@ -1731,9 +1793,29 @@ def promote_staging_pipeline(project_root: Path | None = None) -> dict:
     run_id = _run_id("promote-staging")
     try:
         staging = read_csv_or_empty(paths.staging_jobs_path, JOB_COLUMNS)
-        filtered_staging, dropped_jobs = filter_low_quality_jobs(staging, settings=settings, paths=paths)
+        analytics_staging = _materialize_analytics_focus_rows(staging)
+        filtered_staging, dropped_jobs = filter_low_quality_jobs(analytics_staging, settings=settings, paths=paths)
         registry = read_csv_or_empty(paths.source_registry_path, SOURCE_REGISTRY_COLUMNS)
-        gate = evaluate_quality_gate(filtered_staging, registry, settings=settings, paths=paths, already_filtered=True)
+        gate = evaluate_quality_gate(
+            filtered_staging,
+            registry,
+            settings=settings,
+            paths=paths,
+            already_filtered=True,
+            analytics_focus_mode=True,
+        )
+        role_repair_stats = {"role_corrected_count": 0, "role_dropped_count": 0}
+        repaired_staging, role_repair_stats = _apply_gate_role_repairs(filtered_staging, gate)
+        if role_repair_stats["role_corrected_count"] or role_repair_stats["role_dropped_count"]:
+            filtered_staging = repaired_staging
+            gate = evaluate_quality_gate(
+                filtered_staging,
+                registry,
+                settings=settings,
+                paths=paths,
+                already_filtered=True,
+                analytics_focus_mode=True,
+            )
         write_csv(filtered_staging, paths.staging_jobs_path)
         shrink_guard = _evaluate_publish_shrink_guard(filtered_staging, paths)
         if shrink_guard["triggered"]:
@@ -1760,7 +1842,10 @@ def promote_staging_pipeline(project_root: Path | None = None) -> dict:
         summary = {
             "quality_gate_passed": gate.passed,
             "quality_gate_reasons": gate.reasons,
+            "analytics_focus_job_count": int(len(filtered_staging)),
             "dropped_low_quality_job_count": int(len(dropped_jobs)),
+            "role_corrected_count": int(role_repair_stats["role_corrected_count"]),
+            "role_dropped_count": int(role_repair_stats["role_dropped_count"]),
             "publish_shrink_guard_triggered": bool(shrink_guard["triggered"]),
             "publish_shrink_guard_reason": str(shrink_guard["reason"]),
         }

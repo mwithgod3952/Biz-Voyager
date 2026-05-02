@@ -2669,7 +2669,7 @@ def test_source_screening_uses_approved_and_candidate_buckets(sandbox_project: P
     assert rejected.empty
 
 
-def test_work24_population_source_is_not_direct_source_candidate(sandbox_project: Path) -> None:
+def test_work24_population_source_is_direct_source_candidate(sandbox_project: Path) -> None:
     paths = ProjectPaths.from_root(sandbox_project)
     work24_url = "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=데이터"
     manual_path = paths.config_dir / "manual_sources_seed.yaml"
@@ -2693,7 +2693,10 @@ def test_work24_population_source_is_not_direct_source_candidate(sandbox_project
     candidates = discover_source_candidates(companies, paths)
 
     assert "고용24" not in companies["company_name"].tolist()
-    assert work24_url not in candidates["source_url"].tolist()
+    assert work24_url in candidates["source_url"].tolist()
+    row = candidates.loc[candidates["source_url"] == work24_url].iloc[0]
+    assert row["company_name"] == "고용24"
+    assert row["source_type"] == "work24_public_html"
 
 
 def test_generate_company_candidates_includes_work24_population_artifact(sandbox_project: Path) -> None:
@@ -4339,6 +4342,10 @@ def test_job_role_classification() -> None:
     assert classify_job_role("AI서비스개발 직무 인재모집") == "인공지능 엔지니어"
     assert classify_job_role("[AI시험인증2팀] AI 검증 및 개발 (신입/경력)") == "인공지능 엔지니어"
     assert classify_job_role("AI Researcher") == "인공지능 리서처"
+    assert classify_job_role("UX Researcher (인턴) | 로컬 비즈니스", "", "사용자 인터뷰 운영과 UX 리서치 지원을 담당합니다.") == ""
+    assert classify_job_role("Offensive Security Researcher", "", "보안 취약점 분석과 침투 테스트를 수행합니다.") == ""
+    assert classify_job_role("AI 기획사원채용", "", "이공 및 사회과학 분야 연구개발 수행과 정부 과제 수행 및 관리를 담당합니다.") == ""
+    assert classify_job_role("학술연구, 리서치, 통계, 연구원 모집", "", "학술 연구 수행과 통계 분석 및 연구를 담당합니다.") == ""
     assert classify_job_role("머신러닝 엔지니어") == "인공지능 엔지니어"
     assert classify_job_role("Software Engineer, Machine Learning") == "인공지능 엔지니어"
     assert classify_job_role("Machine Learning Software Engineer") == "인공지능 엔지니어"
@@ -4382,10 +4389,28 @@ def test_job_role_classification() -> None:
     )
     assert (
         classify_job_role(
+            "[AI Research Div.] Research Engineer - Foundation Models",
+            "",
+            "최신 머신러닝 논문을 기반으로 실험을 설계하고 아이씨엠엘, 아이씨엘알 등 저명 학회 논문 게재 경험을 우대합니다. "
+            "파운데이션 모델 표현 학습과 스케일링 법칙 연구를 수행합니다.",
+        )
+        == "인공지능 리서처"
+    )
+    assert (
+        classify_job_role(
             "Algorithm - AI Research Engineer",
             "",
             "선도적인 인공지능 연구를 주도적으로 수행하여 학회에 출판합니다. "
             "세계 유수의 기관들과 연구 협력을 진행합니다.",
+        )
+        == "인공지능 리서처"
+    )
+    assert (
+        classify_job_role(
+            "[독파모] AI Research Engineer - Vision Language Model",
+            "",
+            "멀티모달 모델 학습과 벤치마크 평가를 수행하고 연구 결과를 탑티어 국제 학회 논문 또는 오픈소스 코드 형태로 공유합니다. "
+            "최신 논문 재현 및 선행 연구를 주도합니다.",
         )
         == "인공지능 리서처"
     )
@@ -4583,6 +4608,215 @@ def test_job_role_classification() -> None:
     assert classify_job_role("Security Engineer | 인프라 (보안, AI Security)") == ""
     assert classify_job_role("Software Engineer, Backend | ML Data Platform") == ""
     assert classify_job_role("AI Agent 프론트엔드 개발자") == ""
+
+
+def test_compress_role_to_analytics_focus_remaps_engineer_and_researcher_roles() -> None:
+    compress = collection_module._compress_role_to_analytics_focus
+
+    assert (
+        compress(
+            "인공지능 엔지니어",
+            "Data Analytics Engineer | 테크코어 (데이터 가치화)",
+            "",
+            "데이터 분석과 지표 설계를 담당합니다.",
+        )
+        == "데이터 분석가"
+    )
+    assert (
+        compress(
+            "인공지능 엔지니어",
+            "Software Engineer, Machine Learning | ML 인프라",
+            "",
+            "머신러닝 인프라와 모델 서빙을 담당합니다.",
+        )
+        == "데이터 사이언티스트"
+    )
+    assert (
+        compress(
+            "인공지능 리서처",
+            "Research Scientist - Foundation Model",
+            "",
+            "파운데이션 모델 학습과 평가를 수행합니다.",
+        )
+        == "데이터 사이언티스트"
+    )
+    assert (
+        compress(
+            "인공지능 리서처",
+            "Product Researcher (인턴) | 중고거래",
+            "",
+            "제품 사용성 리서치를 수행합니다.",
+        )
+        == ""
+    )
+
+
+def test_published_analytics_focus_role_keeps_clear_analyst_and_scientist_only() -> None:
+    publish_role = collection_module._published_analytics_focus_role
+
+    assert (
+        publish_role(
+            "데이터 분석가",
+            "Data Analyst",
+            "",
+            "대시보드와 SQL 기반 리포팅을 수행합니다.",
+        )
+        == "데이터 분석가"
+    )
+    assert (
+        publish_role(
+            "데이터 분석가",
+            "Data Analyst (Product)",
+            "",
+            "목표 달성을 위한 지표와 가설을 설정하고 에이비 테스트를 설계하며 제품 성장 기회를 찾습니다.",
+        )
+        == "데이터 분석가"
+    )
+    assert (
+        publish_role(
+            "데이터 분석가",
+            "데이터 애널리스트(3년 이상)",
+            "",
+            "파이썬 및 에스큐엘 기반 데이터 분석과 대시보드 구축을 수행합니다.",
+        )
+        == "데이터 분석가"
+    )
+    assert (
+        publish_role(
+            "데이터 사이언티스트",
+            "Applied Scientist",
+            "",
+            "머신러닝 모델링과 실험 설계를 수행합니다.",
+        )
+        == "데이터 사이언티스트"
+    )
+    assert (
+        publish_role(
+            "데이터 분석가",
+            "키워드광고 관리/AE/온라인광고 관리자 모집합니다.",
+            "",
+            "광고 운영과 고객 대응을 담당합니다.",
+        )
+        == ""
+    )
+    assert (
+        publish_role(
+            "데이터 사이언티스트",
+            "Software Engineer, Machine Learning | ML 인프라",
+            "",
+            "머신러닝 인프라와 모델 서빙을 담당합니다.",
+        )
+        == ""
+    )
+    assert (
+        publish_role(
+            "데이터 분석가",
+            "Financial Data Analyst",
+            "",
+            "예산 수립과 재무 분석을 수행합니다.",
+        )
+        == ""
+    )
+    assert (
+        publish_role(
+            "데이터 분석가",
+            "[카드] CX/사업 운영 인턴",
+            "",
+            "고객 운영 프로세스를 지원합니다.",
+        )
+        == ""
+    )
+    assert (
+        publish_role(
+            "데이터 사이언티스트",
+            "Data Science 연구원(석사 이상)",
+            "",
+            "예측모델 개발과 실험 설계를 수행합니다.",
+        )
+        == "데이터 사이언티스트"
+    )
+
+
+def test_classify_job_role_keeps_data_science_title_variants_as_scientist() -> None:
+    classify_job_role = collection_module.classify_job_role
+
+    assert classify_job_role("데이터 사이어티스트 (Python/ 딥러닝 중급 이상)") == "데이터 사이언티스트"
+    assert classify_job_role("데이터 사이언티스") == "데이터 사이언티스트"
+    assert classify_job_role("Data Science 연구원(석사 이상)") == "데이터 사이언티스트"
+    assert classify_job_role("데이터 사이언스 연구원") == "데이터 사이언티스트"
+
+
+def test_materialize_analytics_focus_rows_does_not_remap_engineer_rows() -> None:
+    frame = pd.DataFrame(
+        [
+            {
+                "job_title_raw": "Software Engineer, Machine Learning | ML 인프라",
+                "공고제목_표시": "Software Engineer, Machine Learning | ML 인프라",
+                "job_role": "인공지능 엔지니어",
+                "주요업무_분석용": "머신러닝 인프라와 모델 서빙을 담당합니다.",
+                "자격요건_분석용": "Python, Kubernetes 경험",
+                "우대사항_분석용": "",
+                "핵심기술_분석용": "MLOps",
+                "상세본문_분석용": "머신러닝 인프라와 모델 서빙을 담당합니다.",
+                "company_name": "테스트",
+                "source_url": "https://example.com/engineer",
+                "source_name": "테스트",
+                "source_bucket": "approved",
+                "job_url": "https://example.com/engineer/job",
+            },
+            {
+                "job_title_raw": "AI Research Scientist",
+                "공고제목_표시": "AI Research Scientist",
+                "job_role": "인공지능 리서처",
+                "주요업무_분석용": "멀티모달 모델 연구와 실험 설계를 수행합니다.",
+                "자격요건_분석용": "PyTorch, 논문 구현 경험",
+                "우대사항_분석용": "",
+                "핵심기술_분석용": "Deep Learning",
+                "상세본문_분석용": "멀티모달 모델 연구와 실험 설계를 수행합니다.",
+                "company_name": "테스트",
+                "source_url": "https://example.com/researcher",
+                "source_name": "테스트",
+                "source_bucket": "approved",
+                "job_url": "https://example.com/researcher/job",
+            },
+            {
+                "job_title_raw": "Data Scientist",
+                "공고제목_표시": "Data Scientist",
+                "job_role": "데이터 사이언티스트",
+                "주요업무_분석용": "머신러닝 모델링과 실험 설계를 수행합니다.",
+                "자격요건_분석용": "Python, SQL",
+                "우대사항_분석용": "",
+                "핵심기술_분석용": "ML",
+                "상세본문_분석용": "머신러닝 모델링과 실험 설계를 수행합니다.",
+                "company_name": "테스트",
+                "source_url": "https://example.com/scientist",
+                "source_name": "테스트",
+                "source_bucket": "approved",
+                "job_url": "https://example.com/scientist/job",
+            },
+            {
+                "job_title_raw": "Manager, QA Engineering (Eats Customer)",
+                "공고제목_표시": "Manager, QA Engineering (Eats Customer)",
+                "job_role": "데이터 분석가",
+                "주요업무_분석용": "QA 운영과 테스트 프로세스를 관리합니다.",
+                "자격요건_분석용": "품질관리 경험",
+                "우대사항_분석용": "",
+                "핵심기술_분석용": "QA",
+                "상세본문_분석용": "QA 운영과 테스트 프로세스를 관리합니다.",
+                "company_name": "테스트",
+                "source_url": "https://example.com/qa",
+                "source_name": "테스트",
+                "source_bucket": "approved",
+                "job_url": "https://example.com/qa/job",
+            },
+        ]
+    )
+
+    materialized = collection_module._materialize_analytics_focus_rows(frame)
+
+    assert len(materialized) == 3
+    assert set(materialized["job_role"]) == {"인공지능 엔지니어", "인공지능 리서처", "데이터 사이언티스트"}
+    assert "Manager, QA Engineering (Eats Customer)" not in materialized["job_title_raw"].tolist()
 
 
 def test_html_cleaning_and_section_extraction() -> None:
@@ -7364,6 +7598,46 @@ def test_normalize_job_analysis_fields_adds_focus_fallback_for_research_titles()
     assert normalized.loc[0, "직무초점근거_표시"] in {"제목/요건추론", "주요업무", "자격요건"}
 
 
+def test_normalize_job_analysis_fields_backfills_analytics_focus_sections_from_detail_and_role() -> None:
+    frame = pd.DataFrame(
+        [
+            {
+                "company_name": "테스트상사",
+                "source_name": "원티드",
+                "job_title_raw": "Data Analyst",
+                "job_role": "데이터 분석가",
+                "경력수준_표시": "경력",
+                "주요업무_분석용": "",
+                "자격요건_분석용": "",
+                "우대사항_분석용": "",
+                "핵심기술_분석용": "에스큐엘\n태블로",
+                "상세본문_분석용": "비즈니스 성과 지표를 분석하고 인사이트를 도출합니다.\n대시보드를 구축하고 의사결정을 지원합니다.",
+            },
+            {
+                "company_name": "테스트랩",
+                "source_name": "리멤버",
+                "job_title_raw": "Data Science 연구원",
+                "job_role": "데이터 사이언티스트",
+                "경력수준_표시": "경력",
+                "주요업무_분석용": "",
+                "자격요건_분석용": "",
+                "우대사항_분석용": "",
+                "핵심기술_분석용": "파이썬\n머신러닝",
+                "상세본문_분석용": "통계·머신러닝 기반 모델을 개발합니다.\n실험을 설계하고 모델 성능을 고도화합니다.",
+            },
+        ]
+    )
+
+    normalized = normalize_job_analysis_fields(frame)
+
+    assert normalized.loc[0, "주요업무_분석용"] != ""
+    assert normalized.loc[0, "자격요건_분석용"] != ""
+    assert normalized.loc[0, "직무초점_표시"] in {"제품분석", "비즈니스분석"}
+    assert normalized.loc[1, "주요업무_분석용"] != ""
+    assert normalized.loc[1, "자격요건_분석용"] != ""
+    assert normalized.loc[1, "직무초점_표시"] == "모델링"
+
+
 def test_canonicalize_runtime_source_url_roots_custom_ats_hosts() -> None:
     assert canonicalize_runtime_source_url("https://interxlab.career.greetinghr.com/aboutinterxlab") == "https://interxlab.career.greetinghr.com"
     assert canonicalize_runtime_source_url("https://webzen.recruiter.co.kr/app/jobnotice/list") == "https://webzen.recruiter.co.kr"
@@ -8500,6 +8774,40 @@ def test_filter_low_quality_jobs_applies_work24_semantic_role_filter() -> None:
     assert filtered.iloc[0]["직무명_표시"] == "데이터 분석가"
     assert dropped["company_name"].tolist() == ["브릴스"]
     assert dropped.iloc[0]["semantic_filter_reason"] == "work24_semantic_non_target"
+
+
+def test_filter_low_quality_jobs_restores_work24_semantic_role_without_focus_compression() -> None:
+    staging = pd.DataFrame(
+        [
+            {
+                "company_name": "에이아이랩",
+                "source_name": "고용24 공개 채용검색",
+                "source_url": "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=AI",
+                "source_bucket": "approved",
+                "company_tier": "중견/중소",
+                "is_active": True,
+                "record_status": "신규",
+                "job_role": "데이터 사이언티스트",
+                "job_title_raw": "AI Platform Engineer",
+                "job_url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K-AI-SCI",
+                "회사명_표시": "에이아이랩",
+                "소스명_표시": "고용24",
+                "공고제목_표시": "AI Platform Engineer",
+                "직무명_표시": "데이터 사이언티스트",
+                "주요업무_분석용": "머신러닝 모델 학습과 평가 파이프라인을 구축하고 실험 결과를 분석합니다.",
+                "자격요건_분석용": "파이썬과 머신러닝 모델링 경험이 필요합니다.",
+                "우대사항_분석용": "실험 자동화 경험을 우대합니다.",
+                "핵심기술_분석용": "파이썬\n머신러닝\n평가",
+                "상세본문_분석용": "머신러닝 모델 학습과 평가 파이프라인을 구축하고 실험 결과를 분석합니다.\n파이썬과 머신러닝 모델링 경험이 필요합니다.",
+            }
+        ]
+    )
+
+    filtered, dropped = filter_low_quality_jobs(staging)
+
+    assert dropped.empty
+    assert filtered.iloc[0]["job_role"] == "인공지능 엔지니어"
+    assert filtered.iloc[0]["직무명_표시"] == "인공지능 엔지니어"
 
 
 def test_normalize_job_analysis_fields_sanitizes_visible_sections_from_analysis_text() -> None:
@@ -10594,6 +10902,63 @@ def test_fetch_work24_public_html_source_rotates_pages_with_progress(
     assert source_state["last_pages"] == [1, 3]
     assert source_state["next_page"] == 2
     assert "K-PAGE-3" in source_state["new_wanted_auth_nos"]
+
+
+def test_fetch_work24_public_html_source_broadens_public_search_runtime_window(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Settings:
+        user_agent = "jobs-market-v2-test"
+        timeout_seconds = 20.0
+        connect_timeout_seconds = 5.0
+        ats_source_timeout_seconds = 10.0
+        ats_source_connect_timeout_seconds = 3.0
+        enable_gemini_fallback = False
+        gemini_html_listing_max_calls_per_run = 0
+
+    fetched_pages: list[int] = []
+
+    def fake_fetch_work24_public_html(url: str, settings, *, data: dict[str, str] | None = None) -> str:
+        assert data is not None
+        fetched_pages.append(int(data["currentPageNo"]))
+        return "<table><tbody></tbody></table>"
+
+    monkeypatch.setattr(collection_module, "_fetch_work24_public_html", fake_fetch_work24_public_html)
+
+    collection_module._fetch_work24_public_html_source(
+        "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=데이터+분석가&resultCnt=20&pageLimit=1&hotPageLimit=1&scanDepth=1&detailLimit=0&keywordWantedTitle=Y&keywordJobCont=Y&keywordBusiNm=N",
+        Settings(),
+    )
+
+    assert fetched_pages == list(range(1, 13))
+
+
+def test_work24_public_variant_sources_fan_out_pipe_delimited_query() -> None:
+    class Settings:
+        work24_public_keyword_fanout_max_terms = 8
+        work24_public_keyword_fanout_max_pages_per_term = 3
+
+    variants = collection_module._work24_public_variant_sources(
+        "https://www.work24.go.kr/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=AI+엔지니어|MLOps|LLM&resultCnt=50&pageLimit=12&hotPageLimit=3&scanDepth=40&detailLimit=20&keywordWantedTitle=Y&keywordJobCont=Y&keywordBusiNm=N",
+        Settings(),
+    )
+
+    assert len(variants) == 3
+    assert [term for _, term in variants] == ["AI 엔지니어", "MLOps", "LLM"]
+    assert all("pageLimit=3" in url for url, _ in variants)
+    assert all("scanDepth=3" in url for url, _ in variants)
+    assert any("srcKeyword=MLOps" in url for url, _ in variants)
+
+
+def test_work24_limited_public_board_source_url_uses_broader_defaults() -> None:
+    url = discovery_module._work24_limited_public_board_source_url("테스트기업")
+
+    assert "resultCnt=50" in url
+    assert "pageLimit=3" in url
+    assert "hotPageLimit=2" in url
+    assert "scanDepth=10" in url
+    assert "detailLimit=10" in url
+    assert "keywordBusiNm=Y" in url
 
 
 def test_fetch_work24_public_html_source_prioritizes_llm_target_detail(
@@ -13576,6 +13941,134 @@ def test_quality_gate_for_staging_and_master() -> None:
     assert any("허용 직무 4개 중 2개 이상이 0건입니다." == reason for reason in result.reasons)
 
 
+def test_quality_gate_allows_analytics_focus_distribution() -> None:
+    rows: list[dict[str, object]] = []
+    for index in range(100):
+        role = "데이터 분석가" if index < 50 else "데이터 사이언티스트"
+        rows.append(
+            {
+                "job_key": f"job-{index}",
+                "change_hash": f"hash-{index}",
+                "first_seen_at": "2026-03-29T00:00:00+09:00",
+                "last_seen_at": "2026-03-29T00:00:00+09:00",
+                "is_active": True,
+                "missing_count": 0,
+                "snapshot_date": "2026-03-29",
+                "run_id": "r1",
+                "source_url": f"https://example.com/source/{index}",
+                "source_bucket": "approved",
+                "source_name": f"소스{index}",
+                "company_name": f"회사{index}",
+                "company_tier": "중견/중소",
+                "job_title_raw": role,
+                "experience_level_raw": "경력",
+                "job_role": role,
+                "job_url": f"https://example.com/job/{index}",
+                "record_status": "신규",
+                "회사명_표시": f"회사{index}",
+                "소스명_표시": f"소스{index}",
+                "공고제목_표시": role,
+                "경력수준_표시": "경력",
+                "경력근거_표시": "공고 기준 경력",
+                "채용트랙_표시": "정규직",
+                "채용트랙근거_표시": "정규직 공고",
+                "직무초점_표시": "분석" if role == "데이터 분석가" else "모델링",
+                "직무초점근거_표시": "업무 문구 기준",
+                "구분요약_표시": "분석 / 모델링",
+                "직무명_표시": role,
+                "주요업무_표시": "데이터 기반 의사결정과 모델 성능 분석을 수행합니다.",
+                "자격요건_표시": "파이썬과 SQL 활용 경험이 필요합니다.",
+                "우대사항_표시": "서비스 데이터 경험을 우대합니다.",
+                "핵심기술_표시": "파이썬, SQL, 통계",
+                "주요업무_분석용": "데이터 기반 의사결정과 모델 성능 분석을 수행합니다.",
+                "자격요건_분석용": "파이썬과 SQL 활용 경험이 필요합니다.",
+                "우대사항_분석용": "서비스 데이터 경험을 우대합니다.",
+                "핵심기술_분석용": "파이썬\nSQL\n통계",
+                "상세본문_분석용": "데이터 기반 의사결정과 모델 성능 분석을 수행합니다. 파이썬과 SQL 활용 경험이 필요합니다.",
+            }
+        )
+    staging = pd.DataFrame(rows)
+    source_registry = pd.DataFrame(
+        [
+            {
+                "source_url": f"https://example.com/source/{index}",
+                "source_bucket": "approved",
+                "verification_status": "성공",
+            }
+            for index in range(100)
+        ]
+    )
+
+    result = evaluate_quality_gate(staging, source_registry, already_filtered=True, analytics_focus_mode=True)
+
+    assert result.metrics["analytics_focus_satisfied"] is True
+    assert "허용 직무 4개 중 2개 이상이 0건입니다." not in result.reasons
+
+
+def test_quality_gate_ignores_preferred_blank_ratio_for_analytics_focus_mode() -> None:
+    rows: list[dict[str, object]] = []
+    for index in range(100):
+        role = "데이터 분석가" if index < 50 else "데이터 사이언티스트"
+        rows.append(
+            {
+                "job_key": f"job-{index}",
+                "change_hash": f"hash-{index}",
+                "first_seen_at": "2026-03-29T00:00:00+09:00",
+                "last_seen_at": "2026-03-29T00:00:00+09:00",
+                "is_active": True,
+                "missing_count": 0,
+                "snapshot_date": "2026-03-29",
+                "run_id": "r1",
+                "source_url": f"https://example.com/source/{index}",
+                "source_bucket": "approved",
+                "source_name": f"소스{index}",
+                "company_name": f"회사{index}",
+                "company_tier": "중견/중소",
+                "job_title_raw": role,
+                "experience_level_raw": "경력",
+                "job_role": role,
+                "job_url": f"https://example.com/job/{index}",
+                "record_status": "신규",
+                "회사명_표시": f"회사{index}",
+                "소스명_표시": f"소스{index}",
+                "공고제목_표시": role,
+                "경력수준_표시": "경력",
+                "경력근거_표시": "공고 기준 경력",
+                "채용트랙_표시": "정규직",
+                "채용트랙근거_표시": "정규직 공고",
+                "직무초점_표시": "제품분석" if role == "데이터 분석가" else "모델링",
+                "직무초점근거_표시": "업무 문구 기준",
+                "구분요약_표시": "분석 / 모델링",
+                "직무명_표시": role,
+                "주요업무_표시": "데이터 기반 의사결정과 모델 성능 분석을 수행합니다.",
+                "자격요건_표시": "파이썬과 에스큐엘 활용 경험이 필요합니다.",
+                "우대사항_표시": "별도 우대사항 미기재",
+                "핵심기술_표시": "파이썬, 에스큐엘, 통계",
+                "주요업무_분석용": "데이터 기반 의사결정과 모델 성능 분석을 수행합니다.",
+                "자격요건_분석용": "파이썬과 에스큐엘 활용 경험이 필요합니다.",
+                "우대사항_분석용": "",
+                "핵심기술_분석용": "파이썬\n에스큐엘\n통계",
+                "상세본문_분석용": "데이터 기반 의사결정과 모델 성능 분석을 수행합니다. 파이썬과 에스큐엘 활용 경험이 필요합니다.",
+            }
+        )
+    staging = pd.DataFrame(rows)
+    source_registry = pd.DataFrame(
+        [
+            {
+                "source_url": f"https://example.com/source/{index}",
+                "source_bucket": "approved",
+                "verification_status": "성공",
+            }
+            for index in range(100)
+        ]
+    )
+
+    result = evaluate_quality_gate(staging, source_registry, already_filtered=True, analytics_focus_mode=True)
+
+    assert "우대사항 표시값 공란 비율이 너무 높습니다." not in result.reasons
+    assert result.passed is True
+
+
 def test_promote_staging_blocks_suspicious_partial_scan_shrink(
     sandbox_project: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -13583,7 +14076,10 @@ def test_promote_staging_blocks_suspicious_partial_scan_shrink(
     paths = ProjectPaths.from_root(sandbox_project)
 
     def _job_row(index: int, *, status: str = "유지") -> dict[str, object]:
-        role = "인공지능 엔지니어" if index % 2 == 0 else "데이터 분석가"
+        role = "데이터 사이언티스트" if index % 2 == 0 else "데이터 분석가"
+        title = "Data Scientist" if role == "데이터 사이언티스트" else "Data Analyst"
+        main_task = "예측모델을 개발하고 실험을 설계합니다." if role == "데이터 사이언티스트" else "대시보드와 지표 분석을 수행합니다."
+        focus = "모델링" if role == "데이터 사이언티스트" else "제품분석"
         return {
             "job_key": f"job-{index}",
             "change_hash": f"hash-{index}",
@@ -13598,28 +14094,28 @@ def test_promote_staging_blocks_suspicious_partial_scan_shrink(
             "source_name": f"소스{index}",
             "company_name": f"회사{index}",
             "company_tier": "중견/중소",
-            "job_title_raw": f"공고 {index}",
+            "job_title_raw": title,
             "experience_level_raw": "경력",
             "job_role": role,
             "job_url": f"https://example.com/jobs/{index}",
             "record_status": status,
-            "주요업무_분석용": "모델을 개발합니다.",
+            "주요업무_분석용": main_task,
             "자격요건_분석용": "파이썬 경험",
             "우대사항_분석용": "서비스 경험",
             "핵심기술_분석용": "파이썬",
-            "상세본문_분석용": "모델을 개발합니다.\n파이썬 경험\n서비스 경험",
+            "상세본문_분석용": f"{main_task}\n파이썬 경험\n서비스 경험",
             "회사명_표시": f"회사{index}",
             "소스명_표시": f"소스{index}",
-            "공고제목_표시": f"공고 {index}",
+            "공고제목_표시": title,
             "경력수준_표시": "경력",
             "경력근거_표시": "구조화 메타데이터",
             "채용트랙_표시": "일반채용",
             "채용트랙근거_표시": "기본추론",
-            "직무초점_표시": "서비스개발",
+            "직무초점_표시": focus,
             "직무초점근거_표시": "공고제목",
             "구분요약_표시": "경력",
             "직무명_표시": role,
-            "주요업무_표시": "모델을 개발합니다.",
+            "주요업무_표시": main_task,
             "자격요건_표시": "파이썬 경험",
             "우대사항_표시": "서비스 경험",
             "핵심기술_표시": "파이썬",
@@ -13680,7 +14176,7 @@ def test_promote_staging_blocks_suspicious_partial_scan_shrink(
     monkeypatch.setattr(
         pipelines_module,
         "evaluate_quality_gate",
-        lambda staging_jobs, registry_frame, settings=None, paths=None, already_filtered=False: GateResult(
+        lambda staging_jobs, registry_frame, settings=None, paths=None, already_filtered=False, analytics_focus_mode=False: GateResult(
             passed=True,
             reasons=[],
             metrics={},
@@ -13704,7 +14200,10 @@ def test_promote_staging_allows_legitimate_shrink_after_full_scan(
     paths = ProjectPaths.from_root(sandbox_project)
 
     def _job_row(index: int, *, status: str = "유지") -> dict[str, object]:
-        role = "인공지능 엔지니어" if index % 2 == 0 else "데이터 분석가"
+        role = "데이터 사이언티스트" if index % 2 == 0 else "데이터 분석가"
+        title = "Data Scientist" if role == "데이터 사이언티스트" else "Data Analyst"
+        main_task = "예측모델을 개발하고 실험을 설계합니다." if role == "데이터 사이언티스트" else "대시보드와 지표 분석을 수행합니다."
+        focus = "모델링" if role == "데이터 사이언티스트" else "제품분석"
         return {
             "job_key": f"job-{index}",
             "change_hash": f"hash-{index}",
@@ -13719,28 +14218,28 @@ def test_promote_staging_allows_legitimate_shrink_after_full_scan(
             "source_name": f"소스{index}",
             "company_name": f"회사{index}",
             "company_tier": "중견/중소",
-            "job_title_raw": f"공고 {index}",
+            "job_title_raw": title,
             "experience_level_raw": "경력",
             "job_role": role,
             "job_url": f"https://example.com/jobs/{index}",
             "record_status": status,
-            "주요업무_분석용": "모델을 개발합니다.",
+            "주요업무_분석용": main_task,
             "자격요건_분석용": "파이썬 경험",
             "우대사항_분석용": "서비스 경험",
             "핵심기술_분석용": "파이썬",
-            "상세본문_분석용": "모델을 개발합니다.\n파이썬 경험\n서비스 경험",
+            "상세본문_분석용": f"{main_task}\n파이썬 경험\n서비스 경험",
             "회사명_표시": f"회사{index}",
             "소스명_표시": f"소스{index}",
-            "공고제목_표시": f"공고 {index}",
+            "공고제목_표시": title,
             "경력수준_표시": "경력",
             "경력근거_표시": "구조화 메타데이터",
             "채용트랙_표시": "일반채용",
             "채용트랙근거_표시": "기본추론",
-            "직무초점_표시": "서비스개발",
+            "직무초점_표시": focus,
             "직무초점근거_표시": "공고제목",
             "구분요약_표시": "경력",
             "직무명_표시": role,
-            "주요업무_표시": "모델을 개발합니다.",
+            "주요업무_표시": main_task,
             "자격요건_표시": "파이썬 경험",
             "우대사항_표시": "서비스 경험",
             "핵심기술_표시": "파이썬",
@@ -13801,7 +14300,7 @@ def test_promote_staging_allows_legitimate_shrink_after_full_scan(
     monkeypatch.setattr(
         pipelines_module,
         "evaluate_quality_gate",
-        lambda staging_jobs, registry_frame, settings=None, paths=None, already_filtered=False: GateResult(
+        lambda staging_jobs, registry_frame, settings=None, paths=None, already_filtered=False, analytics_focus_mode=False: GateResult(
             passed=True,
             reasons=[],
             metrics={},

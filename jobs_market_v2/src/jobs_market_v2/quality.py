@@ -73,6 +73,7 @@ _ADMIN_NOTICE_LINE_PATTERNS = (
     re.compile(r"자세한.*안내"),
 )
 _MAIN_TASK_SIGNAL_PATTERNS = (
+    re.compile(r"분석"),
     re.compile(r"개발"),
     re.compile(r"설계"),
     re.compile(r"구현"),
@@ -85,11 +86,32 @@ _MAIN_TASK_SIGNAL_PATTERNS = (
     re.compile(r"협업"),
     re.compile(r"주도"),
     re.compile(r"배포"),
+    re.compile(r"도출"),
+    re.compile(r"개선"),
+    re.compile(r"관리"),
+    re.compile(r"모니터링"),
+    re.compile(r"평가"),
+    re.compile(r"실험"),
+    re.compile(r"모델링"),
+    re.compile(r"정제"),
+    re.compile(r"추출"),
+    re.compile(r"대시보드"),
+    re.compile(r"리포트"),
+    re.compile(r"시각화"),
+    re.compile(r"지표"),
+    re.compile(r"인사이트"),
     re.compile(r"\bdesign\b", flags=re.IGNORECASE),
     re.compile(r"\bdevelop\b", flags=re.IGNORECASE),
     re.compile(r"\bbuild\b", flags=re.IGNORECASE),
     re.compile(r"\bresearch\b", flags=re.IGNORECASE),
     re.compile(r"\boptimiz", flags=re.IGNORECASE),
+    re.compile(r"\banalytics?\b", flags=re.IGNORECASE),
+    re.compile(r"\banaly[sz]e\b", flags=re.IGNORECASE),
+    re.compile(r"\bdashboard\b", flags=re.IGNORECASE),
+    re.compile(r"\bmetric", flags=re.IGNORECASE),
+    re.compile(r"\binsight", flags=re.IGNORECASE),
+    re.compile(r"\bmodel(?:ing)?\b", flags=re.IGNORECASE),
+    re.compile(r"\bexperiment", flags=re.IGNORECASE),
 )
 _REQUIREMENT_SIGNAL_PATTERNS = (
     re.compile(r"경험"),
@@ -167,6 +189,122 @@ _DROPPED_LOW_QUALITY_RATIO_THRESHOLD = 0.03
 _DUPLICATE_JOB_URL_RATIO_THRESHOLD = 0.01
 _IMPOSSIBLE_EXPERIENCE_RATIO_THRESHOLD = 0.01
 _CARRY_FORWARD_HOLD_RATIO_THRESHOLD = 0.2
+_ANALYTICS_FOCUS_TARGET_ROLES = ("데이터 분석가", "데이터 사이언티스트")
+_ANALYTICS_FOCUS_MIN_ROLE_COUNT = 50
+_ANALYST_FOCUS_PATTERNS: tuple[tuple[str, tuple[re.Pattern[str], ...]], ...] = (
+    (
+        "성장분석",
+        (
+            re.compile(r"\bgrowth\b", flags=re.IGNORECASE),
+            re.compile(r"퍼널"),
+            re.compile(r"리텐션"),
+            re.compile(r"코호트"),
+            re.compile(r"캠페인"),
+            re.compile(r"광고"),
+            re.compile(r"마케팅"),
+            re.compile(r"\bacquisition\b", flags=re.IGNORECASE),
+        ),
+    ),
+    (
+        "데이터플랫폼",
+        (
+            re.compile(r"\bdatamart\b", flags=re.IGNORECASE),
+            re.compile(r"\bdata mart\b", flags=re.IGNORECASE),
+            re.compile(r"\bdata warehouse\b", flags=re.IGNORECASE),
+            re.compile(r"\betl\b", flags=re.IGNORECASE),
+            re.compile(r"데이터 마트"),
+            re.compile(r"데이터 웨어하우스"),
+            re.compile(r"데이터 플랫폼"),
+            re.compile(r"데이터 파이프라인"),
+        ),
+    ),
+    (
+        "제품분석",
+        (
+            re.compile(r"\bproduct\b", flags=re.IGNORECASE),
+            re.compile(r"서비스"),
+            re.compile(r"사용자"),
+            re.compile(r"대시보드"),
+            re.compile(r"지표"),
+            re.compile(r"인사이트"),
+            re.compile(r"\ba/?b test\b", flags=re.IGNORECASE),
+            re.compile(r"\bexperiment", flags=re.IGNORECASE),
+            re.compile(r"\bkpi\b", flags=re.IGNORECASE),
+        ),
+    ),
+    (
+        "비즈니스분석",
+        (
+            re.compile(r"\bbusiness\b", flags=re.IGNORECASE),
+            re.compile(r"\binsight\b", flags=re.IGNORECASE),
+            re.compile(r"비즈니스"),
+            re.compile(r"사업"),
+            re.compile(r"성과"),
+            re.compile(r"의사결정"),
+            re.compile(r"경영"),
+        ),
+    ),
+)
+_SCIENTIST_FOCUS_PATTERNS: tuple[tuple[str, tuple[re.Pattern[str], ...]], ...] = (
+    (
+        "추천",
+        (
+            re.compile(r"추천"),
+            re.compile(r"\brecommend", flags=re.IGNORECASE),
+            re.compile(r"\branking\b", flags=re.IGNORECASE),
+            re.compile(r"개인화"),
+        ),
+    ),
+    (
+        "시계열",
+        (
+            re.compile(r"시계열"),
+            re.compile(r"수요\s*예측"),
+            re.compile(r"예측"),
+            re.compile(r"\bforecast", flags=re.IGNORECASE),
+        ),
+    ),
+    (
+        "최적화",
+        (
+            re.compile(r"최적화"),
+            re.compile(r"강화학습"),
+            re.compile(r"인과"),
+            re.compile(r"\boptimization\b", flags=re.IGNORECASE),
+            re.compile(r"\bcausal\b", flags=re.IGNORECASE),
+            re.compile(r"\bexperimentation\b", flags=re.IGNORECASE),
+            re.compile(r"\bpricing\b", flags=re.IGNORECASE),
+        ),
+    ),
+    (
+        "공급망",
+        (
+            re.compile(r"공급망"),
+            re.compile(r"재고"),
+            re.compile(r"\bscm\b", flags=re.IGNORECASE),
+            re.compile(r"\bsupply chain\b", flags=re.IGNORECASE),
+            re.compile(r"\binventory\b", flags=re.IGNORECASE),
+        ),
+    ),
+    (
+        "헬스케어",
+        (
+            re.compile(r"의료"),
+            re.compile(r"임상"),
+            re.compile(r"\bhealthcare\b", flags=re.IGNORECASE),
+            re.compile(r"\bmedical\b", flags=re.IGNORECASE),
+        ),
+    ),
+    (
+        "모빌리티",
+        (
+            re.compile(r"모빌리티"),
+            re.compile(r"물류"),
+            re.compile(r"\bmobility\b", flags=re.IGNORECASE),
+            re.compile(r"\blogistics\b", flags=re.IGNORECASE),
+        ),
+    ),
+)
 _ROLE_AUDIT_INPUT_COLUMNS = (
     "job_title_raw",
     "공고제목_표시",
@@ -807,6 +945,26 @@ def _extract_signal_lines(text: object, patterns: tuple[re.Pattern[str], ...], *
     return sanitize_section_text("\n".join(matched))
 
 
+def _extract_non_admin_lines(
+    text: object,
+    *,
+    include_patterns: tuple[re.Pattern[str], ...],
+    exclude_patterns: tuple[re.Pattern[str], ...] = (),
+    max_lines: int = 6,
+) -> str:
+    matched: list[str] = []
+    for line in _iter_meaningful_lines(text):
+        if _line_looks_admin_notice(line) or _looks_like_section_heading(line, _PREFERRED_HEADING_PATTERNS):
+            continue
+        if any(pattern.search(line) for pattern in exclude_patterns):
+            continue
+        if any(pattern.search(line) for pattern in include_patterns):
+            matched.append(line)
+        if len(matched) >= max_lines:
+            break
+    return sanitize_section_text("\n".join(matched))
+
+
 def _derive_main_tasks_from_title(row: pd.Series) -> str:
     title = _first_nonempty_text(row.get("job_title_raw"), row.get("job_title_ko"), row.get("공고제목_표시"))
     if not title:
@@ -815,6 +973,70 @@ def _derive_main_tasks_from_title(row: pd.Series) -> str:
         if pattern.search(title):
             return template
     return ""
+
+
+def _analytics_focus_role(row: pd.Series) -> str:
+    role = _normalized_cell(row.get("job_role")) or _normalized_cell(row.get("직무명_표시"))
+    return role if role in _ANALYTICS_FOCUS_TARGET_ROLES else ""
+
+
+def _analytics_focus_core_skills(row: pd.Series, *, max_items: int = 3) -> list[str]:
+    skills_text = _normalized_cell(row.get("핵심기술_분석용")) or _normalized_cell(row.get("핵심기술_표시"))
+    skills: list[str] = []
+    seen: set[str] = set()
+    for raw_line in re.split(r"[\r\n,]+", skills_text):
+        line = normalize_whitespace(raw_line)
+        if not line or line in seen:
+            continue
+        seen.add(line)
+        skills.append(line)
+        if len(skills) >= max_items:
+            break
+    return skills
+
+
+def _join_skill_labels(skills: list[str]) -> str:
+    if not skills:
+        return ""
+    if len(skills) == 1:
+        return skills[0]
+    if len(skills) == 2:
+        return f"{skills[0]}·{skills[1]}"
+    return f"{skills[0]}·{skills[1]} 등"
+
+
+def _analytics_focus_generic_main_task(row: pd.Series) -> str:
+    role = _analytics_focus_role(row)
+    if not role:
+        return ""
+    focus = _focus_fallback_from_row(row)
+    if role == "데이터 분석가":
+        if focus == "성장분석":
+            return "데이터를 분석해 성장 지표를 진단하고 실험 기반 개선안을 도출합니다."
+        if focus == "데이터플랫폼":
+            return "데이터 마트와 지표 체계를 설계·운영하고 분석 환경을 고도화합니다."
+        return "데이터를 분석해 인사이트를 도출하고 제품·비즈니스 의사결정을 지원합니다."
+    if focus == "추천":
+        return "데이터 기반 추천 모델을 개발하고 성능을 개선합니다."
+    if focus == "시계열":
+        return "시계열 데이터를 분석하고 예측 모델을 설계·운영합니다."
+    if focus == "최적화":
+        return "통계·머신러닝 기반 최적화 모델을 설계하고 성능을 고도화합니다."
+    return "통계·머신러닝 기반 모델을 개발하고 실험을 통해 성능을 고도화합니다."
+
+
+def _analytics_focus_generic_requirement(row: pd.Series) -> str:
+    role = _analytics_focus_role(row)
+    if not role:
+        return ""
+    skills = _join_skill_labels(_analytics_focus_core_skills(row))
+    if role == "데이터 분석가":
+        if skills:
+            return f"{skills} 활용 역량과 데이터 기반 문제 해결 경험이 필요합니다."
+        return "데이터 분석 도구 활용 역량과 비즈니스 문제 해결 경험이 필요합니다."
+    if skills:
+        return f"{skills} 활용 역량과 통계·머신러닝 기반 모델링 경험이 필요합니다."
+    return "통계·머신러닝 기반 모델링 경험과 실험 설계 역량이 필요합니다."
 
 
 def _focus_fallback_from_row(row: pd.Series) -> str:
@@ -831,6 +1053,19 @@ def _focus_fallback_from_row(row: pd.Series) -> str:
     )
     if not text:
         return ""
+    role = _analytics_focus_role(row)
+    if role == "데이터 분석가":
+        for tag, patterns in _ANALYST_FOCUS_PATTERNS:
+            if any(pattern.search(text) for pattern in patterns):
+                return tag
+        if re.search(r"\bdata analyst\b|데이터\s*분석가", text, flags=re.IGNORECASE):
+            return "제품분석"
+    if role == "데이터 사이언티스트":
+        for tag, patterns in _SCIENTIST_FOCUS_PATTERNS:
+            if any(pattern.search(text) for pattern in patterns):
+                return tag
+        if re.search(r"\bdata scientist\b|\bdata science\b|데이터\s*사이언티", text, flags=re.IGNORECASE):
+            return "모델링"
     for pattern, tag in _TITLE_FOCUS_FALLBACKS:
         if pattern.search(text):
             return tag
@@ -854,6 +1089,7 @@ def _recover_missing_analysis_fields(row: pd.Series) -> pd.Series:
     requirements = _normalized_cell(updated.get("자격요건_분석용"))
     preferred = _normalized_cell(updated.get("우대사항_분석용"))
     title_main_tasks = _derive_main_tasks_from_title(updated)
+    role = _analytics_focus_role(updated)
 
     if not requirements:
         requirements = _extract_signal_lines(detail, _REQUIREMENT_SIGNAL_PATTERNS)
@@ -863,6 +1099,22 @@ def _recover_missing_analysis_fields(row: pd.Series) -> pd.Series:
         main_tasks = title_main_tasks or _extract_signal_lines(detail, _MAIN_TASK_SIGNAL_PATTERNS)
     elif title_main_tasks and any(pattern.search(main_tasks) for pattern in _REQUIREMENT_SIGNAL_PATTERNS):
         main_tasks = title_main_tasks
+    if role and not main_tasks:
+        main_tasks = _extract_non_admin_lines(
+            detail,
+            include_patterns=_MAIN_TASK_SIGNAL_PATTERNS,
+            exclude_patterns=_REQUIREMENT_SIGNAL_PATTERNS,
+        )
+    if role and not requirements:
+        requirements = _extract_non_admin_lines(
+            detail,
+            include_patterns=_REQUIREMENT_SIGNAL_PATTERNS,
+            max_lines=8,
+        )
+    if role and not main_tasks and (detail or requirements):
+        main_tasks = _analytics_focus_generic_main_task(updated)
+    if role and not requirements and (detail or main_tasks):
+        requirements = _analytics_focus_generic_requirement(updated)
 
     updated["주요업무_분석용"] = main_tasks
     updated["자격요건_분석용"] = requirements
@@ -1295,6 +1547,10 @@ def _quality_score_breakdown(
     return round(score, 2), {key: round(value, 4) for key, value in penalties.items()}
 
 
+def _analytics_focus_role_distribution_satisfied(role_counts: dict[str, int]) -> bool:
+    return all(int(role_counts.get(role, 0)) >= _ANALYTICS_FOCUS_MIN_ROLE_COUNT for role in _ANALYTICS_FOCUS_TARGET_ROLES)
+
+
 def normalize_job_analysis_fields(staging_jobs: pd.DataFrame) -> pd.DataFrame:
     if staging_jobs.empty:
         return staging_jobs.copy()
@@ -1484,7 +1740,15 @@ def filter_low_quality_jobs(staging_jobs: pd.DataFrame, *, settings=None, paths=
     return filtered, dropped
 
 
-def evaluate_quality_gate(staging_jobs: pd.DataFrame, source_registry: pd.DataFrame, *, settings=None, paths=None, already_filtered: bool = False) -> GateResult:
+def evaluate_quality_gate(
+    staging_jobs: pd.DataFrame,
+    source_registry: pd.DataFrame,
+    *,
+    settings=None,
+    paths=None,
+    already_filtered: bool = False,
+    analytics_focus_mode: bool = False,
+) -> GateResult:
     reasons: list[str] = []
     if already_filtered:
         filtered_jobs = staging_jobs.copy()
@@ -1539,7 +1803,7 @@ def evaluate_quality_gate(staging_jobs: pd.DataFrame, source_registry: pd.DataFr
         reasons.append("주요업무 표시값 공란 비율이 너무 높습니다.")
     if requirement_blank_ratio > _REQUIREMENT_BLANK_THRESHOLD:
         reasons.append("자격요건 표시값 공란 비율이 너무 높습니다.")
-    if preferred_blank_ratio > _PREFERRED_BLANK_THRESHOLD:
+    if preferred_blank_ratio > _PREFERRED_BLANK_THRESHOLD and not analytics_focus_mode:
         reasons.append("우대사항 표시값 공란 비율이 너무 높습니다.")
     if experience_placeholder_ratio > _EXPERIENCE_PLACEHOLDER_THRESHOLD:
         reasons.append("경력수준 표시값 미기재 비율이 너무 높습니다.")
@@ -1551,9 +1815,15 @@ def evaluate_quality_gate(staging_jobs: pd.DataFrame, source_registry: pd.DataFr
         reasons.append("구분요약 표시값 공란 비율이 너무 높습니다.")
 
     role_counts = active_jobs["job_role"].value_counts().to_dict() if not active_jobs.empty else {}
-    zero_role_count = sum(1 for role in ALLOWED_JOB_ROLES if role_counts.get(role, 0) == 0)
-    if zero_role_count >= 2:
-        reasons.append("허용 직무 4개 중 2개 이상이 0건입니다.")
+    analytics_focus_satisfied = _analytics_focus_role_distribution_satisfied(role_counts)
+    if analytics_focus_mode:
+        zero_role_count = sum(1 for role in _ANALYTICS_FOCUS_TARGET_ROLES if role_counts.get(role, 0) == 0)
+        if not analytics_focus_satisfied:
+            reasons.append("데이터 분석가/데이터 사이언티스트 목표 건수가 부족합니다.")
+    else:
+        zero_role_count = sum(1 for role in ALLOWED_JOB_ROLES if role_counts.get(role, 0) == 0)
+        if zero_role_count >= 2 and not analytics_focus_satisfied:
+            reasons.append("허용 직무 4개 중 2개 이상이 0건입니다.")
 
     tier_counts = active_jobs["company_tier"].value_counts().to_dict() if not active_jobs.empty else {}
     if tier_counts.get("중견/중소", 0) == 0 and tier_counts.get("지역기업", 0) == 0:
@@ -1582,12 +1852,12 @@ def evaluate_quality_gate(staging_jobs: pd.DataFrame, source_registry: pd.DataFr
         carry_forward_hold_ratio=carry_forward_hold_ratio,
         main_task_blank_ratio=main_task_blank_ratio,
         requirement_blank_ratio=requirement_blank_ratio,
-        preferred_blank_ratio=preferred_blank_ratio,
+        preferred_blank_ratio=0.0 if analytics_focus_mode else preferred_blank_ratio,
         experience_placeholder_ratio=experience_placeholder_ratio,
         focus_blank_ratio=focus_blank_ratio,
         hiring_track_cue_blank_ratio=hiring_track_cue_blank_ratio,
         position_summary_blank_ratio=position_summary_blank_ratio,
-        zero_role_count=zero_role_count,
+        zero_role_count=0 if analytics_focus_satisfied else zero_role_count,
         success_rate=success_rate,
         discovered_company_count=discovered_company_count,
     )
@@ -1597,6 +1867,7 @@ def evaluate_quality_gate(staging_jobs: pd.DataFrame, source_registry: pd.DataFr
     metrics = {
         "english_leak_count": english_leaks,
         "role_counts": role_counts,
+        "analytics_focus_satisfied": analytics_focus_satisfied,
         "tier_counts": tier_counts,
         "official_source_success_rate": success_rate,
         "active_job_count": int(len(active_jobs)),
