@@ -1076,6 +1076,26 @@ _RESEARCH_ENGINEER_OUTPUT_PHRASES = _RESEARCH_ACADEMIC_PHRASES + (
     "벤치마크",
 )
 
+_RESEARCH_ENGINEER_ACADEMIC_PRIORITY_PHRASES = (
+    "석사",
+    "master",
+    "masters",
+    "master's",
+    "국제 학회",
+    "국제 학술활동",
+    "학술활동",
+    "top-tier",
+    "탑티어",
+    "최신 논문",
+    "논문 작성",
+    "논문 게재",
+    "논문 실적",
+    "연구 설계",
+    "실험 설계",
+    "연구 동향",
+    "벤치마크",
+)
+
 _RESEARCH_ENGINEER_DELIVERY_BLOCKLIST_PHRASES = (
     "고객 문제",
     "customer problem",
@@ -1091,6 +1111,20 @@ _RESEARCH_ENGINEER_DELIVERY_BLOCKLIST_PHRASES = (
     "agents",
 )
 
+_RESEARCH_ENGINEER_STRONG_DELIVERY_PHRASES = (
+    "고객 문제",
+    "customer problem",
+    "고객사",
+    "workflow",
+    "workflows",
+    "agent",
+    "agents",
+    "제품 기획",
+    "product planning",
+    "서비스 운영",
+    "service operation",
+)
+
 _RESEARCHER_NON_TARGET_TITLE_PHRASES = (
     "ux researcher",
     "product researcher",
@@ -1103,6 +1137,13 @@ _RESEARCHER_NON_TARGET_TITLE_PHRASES = (
 _RESEARCHER_NON_TARGET_CORPUS_PHRASES = (
     "기획 사무원",
     "경영 기획 사무원",
+)
+
+_RESEARCHER_CALL_FOR_PAPERS_PHRASES = (
+    "논문 공모",
+    "원고 모집",
+    "논문 모집",
+    "원고 공모",
 )
 
 _RESEARCHER_REQUIRED_SIGNAL_PHRASES = _RESEARCH_SIGNAL_PHRASES + (
@@ -1632,10 +1673,13 @@ def _classify_ambiguous_research_engineer(
 
     academic_score = _count_phrase_hits(corpus, _RESEARCH_ACADEMIC_PHRASES)
     academic_score += _count_phrase_hits(body_corpus, _RESEARCH_WORK_PHRASES)
+    academic_score += _count_phrase_hits(body_corpus, _RESEARCH_ENGINEER_ACADEMIC_PRIORITY_PHRASES)
     delivery_score = _count_phrase_hits(corpus, _ENGINEER_DELIVERY_PHRASES)
 
     if any(fragment in body_corpus for fragment in ("논문", "학회", "출판", "publication", "conference", "박사", "phd")):
         academic_score += 2
+    if any(fragment in body_corpus for fragment in ("석사", "masters", "master's", "학술활동", "연구 설계", "실험 설계", "논문 작성", "논문 게재")):
+        academic_score += 1
     if any(
         fragment in body_corpus
         for fragment in (
@@ -1655,6 +1699,16 @@ def _classify_ambiguous_research_engineer(
         )
     ):
         delivery_score += 2
+    if _has_any_phrase(body_corpus, _RESEARCH_ENGINEER_STRONG_DELIVERY_PHRASES):
+        delivery_score += 1
+
+    if (
+        _has_any_phrase(title_corpus, ("research engineer / scientist", "research engineer scientist"))
+        and academic_score >= delivery_score
+    ):
+        return "인공지능 리서처"
+    if academic_score >= max(4, delivery_score + 1):
+        return "인공지능 리서처"
 
     if delivery_score >= academic_score + 1:
         return "인공지능 엔지니어"
@@ -1685,6 +1739,8 @@ def _classify_mixed_researcher_title(
         return ""
     if not _has_any_phrase(corpus, _RESEARCHER_REQUIRED_SIGNAL_PHRASES):
         return ""
+    if _classify_ambiguous_research_engineer(title_corpus, body_corpus, corpus, prefer_title_researcher=False) == "인공지능 리서처":
+        return "인공지능 리서처"
     if _has_any_phrase(title_corpus, _MIXED_RESEARCHER_TITLE_PHRASES):
         mixed_delivery_score = _count_phrase_hits(corpus, _ENGINEER_DELIVERY_PHRASES)
         mixed_academic_score = _count_phrase_hits(corpus, _RESEARCH_ACADEMIC_PHRASES)
@@ -1738,6 +1794,8 @@ def classify_job_role(*texts: str | None) -> str:
         and _has_any_phrase(corpus, _ROBOT_SERVICE_NON_TARGET_BODY_PHRASES)
         and not _has_any_phrase(corpus, _STRONG_AI_WORK_PHRASES + ("컴퓨터비전", "자율주행", "머신러닝", "딥러닝", "인공지능"))
     ):
+        return ""
+    if _has_any_phrase(corpus, _RESEARCHER_CALL_FOR_PAPERS_PHRASES) and not _has_any_phrase(corpus, _RESEARCHER_REQUIRED_SIGNAL_PHRASES):
         return ""
     if _has_any_phrase(title_corpus, _TITLE_ONLY_NON_TARGET_PHRASES):
         return ""
@@ -3245,6 +3303,9 @@ def _recruiter_page_text_hints(soup: BeautifulSoup) -> str:
         if any(token in th for token in ("공고명", "접수기간", "근무지", "근무지역", "근무장소")) and td:
             lines.append(f"{th}: {td}")
             continue
+        if any(token in th for token in ("채용분야", "모집직무", "직무", "담당업무", "주요업무", "연구분야", "자격요건", "우대사항")) and td:
+            lines.append(f"{th}: {td}")
+            continue
         if "첨부파일" in th and td_node:
             attachment_names = [
                 normalize_whitespace(anchor.get_text(" ", strip=True))
@@ -3286,12 +3347,15 @@ def _recruiter_asset_urls(description_html: str, soup: BeautifulSoup, detail_url
 
 
 def _recruiter_detail_needs_recovery(title: str, description_html: str, soup: BeautifulSoup) -> bool:
-    if classify_job_role(title) not in ALLOWED_JOB_ROLES:
+    description_text = clean_html_text(description_html)
+    hint_text = _recruiter_page_text_hints(soup)
+    role_probe_title = title if classify_job_role(title) in ALLOWED_JOB_ROLES else hint_text
+    if classify_job_role(role_probe_title, "", hint_text, description_text) not in ALLOWED_JOB_ROLES:
         return False
     has_attachment = bool(soup.select("a.fileWrapperView[href]"))
-    description_text = clean_html_text(description_html)
     has_image_only_body = bool(BeautifulSoup(description_html, "lxml").select("img[src]")) and not section_output_is_substantive(description_text)
-    return has_image_only_body or (has_attachment and not section_output_is_substantive(description_text))
+    short_detail_text = len(normalize_whitespace(description_text)) < 160
+    return has_image_only_body or (has_attachment and (short_detail_text or not section_output_is_substantive(description_text)))
 
 
 def _recover_recruiter_detail_text(

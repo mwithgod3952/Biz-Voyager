@@ -4346,6 +4346,7 @@ def test_job_role_classification() -> None:
     assert classify_job_role("Offensive Security Researcher", "", "보안 취약점 분석과 침투 테스트를 수행합니다.") == ""
     assert classify_job_role("AI 기획사원채용", "", "이공 및 사회과학 분야 연구개발 수행과 정부 과제 수행 및 관리를 담당합니다.") == ""
     assert classify_job_role("학술연구, 리서치, 통계, 연구원 모집", "", "학술 연구 수행과 통계 분석 및 연구를 담당합니다.") == ""
+    assert classify_job_role("한국법제연구원 KLRI", "", "2026년도 상반기 법제연구 논문 공모 원고 모집") == ""
     assert classify_job_role("머신러닝 엔지니어") == "인공지능 엔지니어"
     assert classify_job_role("Software Engineer, Machine Learning") == "인공지능 엔지니어"
     assert classify_job_role("Machine Learning Software Engineer") == "인공지능 엔지니어"
@@ -4416,9 +4417,28 @@ def test_job_role_classification() -> None:
     )
     assert (
         classify_job_role(
+            "[네이버랩스] Generative AI Research Engineer",
+            "",
+            "차세대 인공지능 기술을 연구·개발합니다. "
+            "시공간 데이터 기반 예측 및 생성 모델 연구를 수행합니다. "
+            "관련 분야 석사/박사 학위, 최신 논문 구현, 국제 학술활동 경험을 우대합니다.",
+        )
+        == "인공지능 리서처"
+    )
+    assert (
+        classify_job_role(
             "AI Research Engineer / Scientist",
             "",
             "최신 멀티모달 연구를 수행하고 논문을 작성합니다.",
+        )
+        == "인공지능 리서처"
+    )
+    assert (
+        classify_job_role(
+            "AI Research Engineer / Scientist",
+            "",
+            "딥러닝 기반 추정 알고리즘 연구 및 고도화, 임상적 근거 확보를 위한 연구 설계 및 논문 작성, "
+            "연구 결과를 실제 의료기기 및 서비스로 연결하기 위한 기술 개발을 담당합니다.",
         )
         == "인공지능 리서처"
     )
@@ -6578,6 +6598,56 @@ def test_recruiter_ocr_recovery_drops_admin_tail_noise(monkeypatch: pytest.Monke
     assert "수탁연구사업 종료일" not in description_html
     assert "채용인원" not in description_html
     assert "의료 인공지능 알고리즘 개발" in description_html
+
+
+def test_recruiter_short_detail_uses_hint_text_for_researcher_recovery(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    payload = {
+        "list": [
+            {
+                "jobnoticeName": "[사업단] 계약직 채용 공고",
+                "jobnoticeSn": 777777,
+                "systemKindCode": "MRS2",
+            }
+        ]
+    }
+    detail_html = """
+    <table>
+      <tbody>
+        <tr><th>공고명</th><td><span class="view-bbs-title">[사업단] 계약직 채용 공고</span></td></tr>
+        <tr><th>채용분야</th><td>AI 실증지원사업단 연구직</td></tr>
+        <tr><th>담당업무</th><td>멀티모달 인공지능 모델 연구 및 평가</td></tr>
+        <tr><th>첨부파일</th><td><a class="fileWrapperView" href="/mrs2/attachFile/downloadFile?fileUid=notice.pdf">(공고문) notice.pdf</a></td></tr>
+      </tbody>
+    </table>
+    <textarea id="jobnoticeContents">&lt;div&gt;상세는 첨부 공고문 참고&lt;/div&gt;</textarea>
+    """
+
+    def fake_ocr(_: list[str], **__: object) -> str:
+        return "\n".join(
+            [
+                "주요업무",
+                "- 멀티모달 인공지능 모델 연구 및 성능 평가",
+                "자격요건",
+                "- 딥러닝 연구 경험 및 논문 작성 경험",
+            ]
+        )
+
+    monkeypatch.setattr(collection_module, "extract_text_from_asset_urls", fake_ocr)
+    paths = ProjectPaths.from_root(tmp_path)
+    paths.ensure_directories()
+    jobs = _build_recruiter_jobs_from_payload(
+        payload,
+        "https://example.recruiter.co.kr",
+        lambda _: detail_html,
+        paths=paths,
+        settings=AppSettings(),
+        enable_ocr_recovery=True,
+    )
+
+    assert "멀티모달 인공지능 모델 연구 및 성능 평가" in jobs[0]["description_html"]
 
 
 def test_fetch_recruiter_source_falls_back_without_state_code(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

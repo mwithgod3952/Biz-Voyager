@@ -421,8 +421,11 @@ def _install() -> None:
     research_engineer_titles = ("research engineer", "리서치 엔지니어", "연구 엔지니어")
     researcher_non_target_titles = ("ux researcher", "product researcher", "offensive security", "security researcher", "security research", "기획사원")
     researcher_non_target_corpus_terms = ("기획 사무원", "경영 기획 사무원")
+    researcher_call_for_papers_terms = ("논문 공모", "원고 모집", "논문 모집", "원고 공모")
     academic_terms = ("논문", "학회", "출판", "저널", "publication", "conference", "workshop", "journal", "박사", "phd", "benchmark")
+    research_engineer_priority_terms = ("석사", "master", "masters", "master's", "국제 학회", "국제 학술활동", "학술활동", "top-tier", "탑티어", "최신 논문", "논문 작성", "논문 게재", "논문 실적", "연구 설계", "실험 설계", "연구 동향", "벤치마크")
     delivery_terms = ("설계", "구현", "개발", "구축", "운영", "배포", "서빙", "pipeline", "파이프라인", "제품", "서비스", "customer", "고객")
+    strong_research_delivery_terms = ("고객 문제", "customer problem", "고객사", "workflow", "workflows", "agent", "agents", "제품 기획", "product planning", "서비스 운영", "service operation")
     weak_ai_software_titles = ("ai software engineer", "global software engineer", "applied ai technical engineer")
     statistical_analyst_titles = (
         "통계분석",
@@ -560,6 +563,8 @@ def _install() -> None:
             and not has_any(corpus, strong_ai_work_terms + ("인공지능", "머신러닝", "딥러닝", "기계학습", "llm", "컴퓨터 비전", "컴퓨터비전"))
         ):
             return ""
+        if has_any(corpus, researcher_call_for_papers_terms) and not has_any(corpus, researcher_required_signal_terms):
+            return ""
         if (
             has_any(title_corpus, statistical_analyst_titles)
             and not has_any(corpus, strong_ai_work_terms + ("인공지능", "머신러닝", "딥러닝", "기계학습", "llm", "컴퓨터 비전", "컴퓨터비전"))
@@ -633,14 +638,23 @@ def _install() -> None:
             if not has_any(corpus, researcher_required_signal_terms):
                 return ""
             academic_score = count_terms(corpus, academic_terms)
+            academic_score += count_terms(body_corpus, research_engineer_priority_terms)
             delivery_score = count_terms(corpus, delivery_terms)
+            if has_any(body_corpus, strong_research_delivery_terms):
+                delivery_score += 1
+            if has_any(body_corpus, ("석사", "masters", "master's", "학술활동", "연구 설계", "실험 설계", "논문 작성", "논문 게재")):
+                academic_score += 1
             if has_any(title_corpus, ("research scientist", "researcher", "리서처")) and not has_any(title_corpus, ("developer", "engineer", "개발자", "엔지니어")):
+                return "인공지능 리서처"
+            if has_any(title_corpus, ("research engineer / scientist", "research engineer scientist")) and academic_score >= delivery_score:
                 return "인공지능 리서처"
             if (
                 has_any(corpus, research_engineer_track_terms)
                 and has_any(corpus, research_engineer_output_terms)
                 and not has_any(corpus, research_engineer_delivery_blocklist)
             ):
+                return "인공지능 리서처"
+            if academic_score >= max(4, delivery_score + 1):
                 return "인공지능 리서처"
             return "인공지능 리서처" if academic_score >= delivery_score + 1 else "인공지능 엔지니어"
         if has_any(title_corpus, ("engineer", "엔지니어", "developer", "개발자")) and target_signal(corpus):
