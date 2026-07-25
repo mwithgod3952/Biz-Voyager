@@ -1,9 +1,9 @@
 {
-  "updated_at": "2026-07-25T15:50:46.748316+00:00",
-  "consecutive_failures": 11,
+  "updated_at": "2026-07-25T17:41:39.174134+00:00",
+  "consecutive_failures": 12,
   "last_result": "failure",
   "hold_reason": "",
-  "run_url": "https://github.com/mwithgod3952/Biz-Voyager/actions/runs/30163312026",
+  "run_url": "https://github.com/mwithgod3952/Biz-Voyager/actions/runs/30167166409",
   "automation_status": {
     "timestamp": "2026-05-03T15:56:10+09:00",
     "last_successful_run_id": "promote-staging-20260503155346479135-f5984a68",
